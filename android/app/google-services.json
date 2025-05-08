@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "502667330549",
+    "firebase_url": "https://nisadrive-84a1c-default-rtdb.firebaseio.com",
+    "project_id": "nisadrive-84a1c",
+    "storage_bucket": "nisadrive-84a1c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:502667330549:android:ad83acc08bfe83bad2d6bc",
+        "android_client_info": {
+          "package_name": "com.driver.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCm-oaCXij2d0tqvfJEGlC_wfz0ZbbIjag"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:502667330549:android:9dfad7ce2fa518f9d2d6bc",
+        "android_client_info": {
+          "package_name": "com.goride.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCm-oaCXij2d0tqvfJEGlC_wfz0ZbbIjag"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

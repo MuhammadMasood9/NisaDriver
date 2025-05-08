@@ -1,0 +1,2 @@
+D:/Woman Yango 2/driver/android/app/.cxx/Debug/1d2y4r72/x86/CMakeFiles/edit_cache.dir
+D:/Woman Yango 2/driver/android/app/.cxx/Debug/1d2y4r72/x86/CMakeFiles/rebuild_cache.dir
