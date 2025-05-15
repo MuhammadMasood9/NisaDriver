@@ -135,19 +135,27 @@ class OrderMapController extends GetxController {
   RxMap<PolylineId, Polyline> polyLines = <PolylineId, Polyline>{}.obs;
   PolylinePoints polylinePoints = PolylinePoints();
 
-  void getPolyline() async {
-    if (orderModel.value.sourceLocationLAtLng != null && orderModel.value.destinationLocationLAtLng != null) {
-      movePosition();
-      List<LatLng> polylineCoordinates = [];
-      PolylineRequest polylineRequest = PolylineRequest(
-        origin: PointLatLng(orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0, orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0),
-        destination: PointLatLng(orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0, orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0),
-        mode: TravelMode.driving,
-      );
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey: Constant.mapAPIKey,
-        request: polylineRequest,
-      );
+ void getPolyline() async {
+  if (orderModel.value.sourceLocationLAtLng != null && orderModel.value.destinationLocationLAtLng != null) {
+    movePosition();
+    List<LatLng> polylineCoordinates = [];
+    PolylineRequest polylineRequest = PolylineRequest(
+      origin: PointLatLng(
+          orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
+          orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0),
+      destination: PointLatLng(
+          orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
+          orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0),
+      mode: TravelMode.driving,
+    );
+
+    List<PolylineResult> results = await polylinePoints.getRouteBetweenCoordinates(
+      googleApiKey: Constant.mapAPIKey,
+      request: polylineRequest,
+    );
+
+    if (results.isNotEmpty) {
+      var result = results.first; // Use the first route
       if (result.points.isNotEmpty) {
         for (var point in result.points) {
           polylineCoordinates.add(LatLng(point.latitude, point.longitude));
@@ -155,12 +163,21 @@ class OrderMapController extends GetxController {
       } else {
         print(result.errorMessage.toString());
       }
-      _addPolyLine(polylineCoordinates);
-      addMarker(LatLng(orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0, orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0), "Source", departureIcon);
-      addMarker(LatLng(orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0, orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0), "Destination", destinationIcon);
     }
-  }
 
+    _addPolyLine(polylineCoordinates);
+    addMarker(
+        LatLng(orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
+            orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0),
+        "Source",
+        departureIcon);
+    addMarker(
+        LatLng(orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
+            orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0),
+        "Destination",
+        destinationIcon);
+  }
+}
   double zoomLevel = 0;
 
   movePosition() async {

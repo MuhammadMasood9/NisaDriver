@@ -24,6 +24,7 @@ class OrderModel {
   String? status;
   String? driverId;
   String? otp;
+  String? orderType;
   List<dynamic>? acceptedDriverId;
   List<dynamic>? rejectedDriverId;
   Positions? position;
@@ -40,40 +41,49 @@ class OrderModel {
 
   OrderModel(
       {this.position,
-        this.serviceId,
-        this.paymentType,
-        this.sourceLocationName,
-        this.destinationLocationName,
-        this.sourceLocationLAtLng,
-        this.destinationLocationLAtLng,
-        this.id,
-        this.userId,
-        this.distance,
-        this.distanceType,
-        this.status,
-        this.driverId,
-        this.otp,
-        this.offerRate,
-        this.finalRate,
-        this.paymentStatus,
-        this.createdDate,
-        this.updateDate,
-        this.taxList,
-        this.coupon,
-        this.someOneElse,
-        this.service,
-        this.adminCommission,
-        this.zone,this.zoneId});
+      this.serviceId,
+      this.paymentType,
+      this.sourceLocationName,
+      this.destinationLocationName,
+      this.sourceLocationLAtLng,
+      this.destinationLocationLAtLng,
+      this.id,
+      this.userId,
+      this.distance,
+      this.distanceType,
+      this.status,
+      this.driverId,
+      this.otp,
+      this.orderType,
+      this.offerRate,
+      this.finalRate,
+      this.paymentStatus,
+      this.createdDate,
+      this.updateDate,
+      this.taxList,
+      this.coupon,
+      this.someOneElse,
+      this.service,
+      this.adminCommission,
+      this.zone,
+      this.zoneId});
 
   OrderModel.fromJson(Map<String, dynamic> json) {
     serviceId = json['serviceId'];
     sourceLocationName = json['sourceLocationName'];
     paymentType = json['paymentType'];
     destinationLocationName = json['destinationLocationName'];
-    sourceLocationLAtLng = json['sourceLocationLAtLng'] != null ? LocationLatLng.fromJson(json['sourceLocationLAtLng']) : null;
-    destinationLocationLAtLng = json['destinationLocationLAtLng'] != null ? LocationLatLng.fromJson(json['destinationLocationLAtLng']) : null;
-    coupon = json['coupon'] != null ? CouponModel.fromJson(json['coupon']) : null;
-    someOneElse = json['someOneElse'] != null ? ContactModel.fromJson(json['someOneElse']) : null;
+    sourceLocationLAtLng = json['sourceLocationLAtLng'] != null
+        ? LocationLatLng.fromJson(json['sourceLocationLAtLng'])
+        : null;
+    destinationLocationLAtLng = json['destinationLocationLAtLng'] != null
+        ? LocationLatLng.fromJson(json['destinationLocationLAtLng'])
+        : null;
+    coupon =
+        json['coupon'] != null ? CouponModel.fromJson(json['coupon']) : null;
+    someOneElse = json['someOneElse'] != null
+        ? ContactModel.fromJson(json['someOneElse'])
+        : null;
     id = json['id'];
     userId = json['userId'];
     offerRate = json['offerRate'];
@@ -83,14 +93,19 @@ class OrderModel {
     status = json['status'];
     driverId = json['driverId'];
     otp = json['otp'];
+    orderType = json['orderType'];
     createdDate = json['createdDate'];
     updateDate = json['updateDate'];
     acceptedDriverId = json['acceptedDriverId'];
     rejectedDriverId = json['rejectedDriverId'];
     paymentStatus = json['paymentStatus'];
-    position = json['position'] != null ? Positions.fromJson(json['position']) : null;
-    service = json['service'] != null ? ServiceModel.fromJson(json['service']) : null;
-    adminCommission = json['adminCommission'] != null ? AdminCommission.fromJson(json['adminCommission']) : null;
+    position =
+        json['position'] != null ? Positions.fromJson(json['position']) : null;
+    service =
+        json['service'] != null ? ServiceModel.fromJson(json['service']) : null;
+    adminCommission = json['adminCommission'] != null
+        ? AdminCommission.fromJson(json['adminCommission'])
+        : null;
     zone = json['zone'] != null ? ZoneModel.fromJson(json['zone']) : null;
     zoneId = json['zoneId'];
     if (json['taxList'] != null) {
@@ -138,6 +153,7 @@ class OrderModel {
     data['status'] = status;
     data['driverId'] = driverId;
     data['otp'] = otp;
+    data['orderType'] = orderType;
     data['createdDate'] = createdDate;
     data['updateDate'] = updateDate;
     data['acceptedDriverId'] = acceptedDriverId;
