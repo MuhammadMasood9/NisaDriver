@@ -36,7 +36,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
         init: IntercityController(),
         builder: (controller) {
           return Scaffold(
-            backgroundColor: AppColors.primary,
+            backgroundColor: const Color.fromARGB(255, 255, 255, 255),
             resizeToAvoidBottomInset: true,
             body: Column(
               children: [

@@ -123,6 +123,27 @@ class FireStoreUtils {
     return FirebaseAuth.instance.currentUser!.uid;
   }
 
+static Future<bool> hasActiveRide() async {
+    try {
+      String driverId = getCurrentUid();
+      QuerySnapshot query = await FirebaseFirestore.instance
+          .collection(CollectionName.orders)
+          .where('acceptedDriverId', arrayContains: driverId)
+          .where('status', whereIn: [Constant.rideActive, Constant.ridePlaced])
+          .get();
+      if (query.docs.isNotEmpty) return true;
+
+      query = await FirebaseFirestore.instance
+          .collection(CollectionName.orders)
+          .where('driverId', isEqualTo: driverId)
+          .where('status', whereIn: [Constant.rideActive, Constant.ridePlaced])
+          .get();
+      return query.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking active ride: $e');
+      return false;
+    }
+  }
   static Future<DriverUserModel?> getDriverProfile(String uuid) async {
     DriverUserModel? driverModel;
     await fireStore.collection(CollectionName.driverUsers).doc(uuid).get().then((value) {
