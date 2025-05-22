@@ -127,7 +127,7 @@ class OrderMapController extends GetxController {
   RxMap<PolylineId, Polyline> polyLines = <PolylineId, Polyline>{}.obs;
   PolylinePoints polylinePoints = PolylinePoints();
 
- void getPolyline() async {
+void getPolyline() async {
   if (orderModel.value.sourceLocationLAtLng != null && orderModel.value.destinationLocationLAtLng != null) {
     movePosition();
     List<LatLng> polylineCoordinates = [];
@@ -144,17 +144,17 @@ class OrderMapController extends GetxController {
     );
 
     try {
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+      List<PolylineResult> results = await polylinePoints.getRouteBetweenCoordinates(
         googleApiKey: Constant.mapAPIKey,
         request: polylineRequest,
       );
 
-      if (result.points.isNotEmpty) {
-        for (var point in result.points) {
+      if (results.isNotEmpty && results.first.points.isNotEmpty) {
+        for (var point in results.first.points) {
           polylineCoordinates.add(LatLng(point.latitude, point.longitude));
         }
       } else {
-        ShowToastDialog.showToast("Failed to fetch route: ${result.errorMessage}".tr);
+        ShowToastDialog.showToast("Failed to fetch route: ${results.isNotEmpty ? results.first.errorMessage : 'No results'}".tr);
       }
     } catch (e) {
       ShowToastDialog.showToast("Error fetching route: $e".tr);

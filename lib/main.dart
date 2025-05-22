@@ -49,7 +49,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void getCurrentAppTheme() async {
-    themeChangeProvider.darkTheme = await themeChangeProvider.darkThemePreference.getTheme();
+    themeChangeProvider.darkTheme =
+        await themeChangeProvider.darkThemePreference.getTheme();
   }
 
   @override
@@ -79,7 +80,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           home: GetX<GlobalSettingController>(
             init: GlobalSettingController(),
             builder: (controller) {
-              return controller.isLoading.value ? Constant.loader(context) : const SplashScreen();
+              return controller.isLoading.value
+                  ? Constant.loader(context)
+                  : const SplashScreen();
             },
           ),
         );
