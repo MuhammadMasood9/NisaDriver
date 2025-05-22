@@ -33,7 +33,6 @@ class LiveTrackingScreen extends StatelessWidget {
                   onMapCreated: (GoogleMapController mapController) {
                     controller.mapController = mapController;
                     ShowToastDialog.closeLoader();
-                    // Update camera based on initial state
                     if (controller.isFollowingDriver.value) {
                       controller.updateNavigationView();
                     }
@@ -51,6 +50,10 @@ class LiveTrackingScreen extends StatelessWidget {
                         ? controller.navigationBearing.value
                         : 0.0,
                   ),
+                  onCameraMove: (CameraPosition position) {
+                    // Update zoom in controller to keep in sync
+                    controller.navigationZoom.value = position.zoom;
+                  },
                   onTap: (LatLng position) {
                     if (controller.isFollowingDriver.value) {
                       controller.toggleMapView();
@@ -86,7 +89,7 @@ class LiveTrackingScreen extends StatelessWidget {
                         controller.navigationInstruction.value,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          fontSize: controller.isNavigationView.value ? 16 : 14,
+                          fontSize: controller.isNavigationView.value ? 18 : 16, // Larger font for navigation
                           color: Colors.black87,
                         ),
                         textAlign: TextAlign.center,
@@ -140,7 +143,7 @@ class LiveTrackingScreen extends StatelessWidget {
                               controller.currentStep.value,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                                fontSize: 14, // Slightly larger for clarity
                                 color: Colors.black87,
                               ),
                             ),
@@ -158,7 +161,7 @@ class LiveTrackingScreen extends StatelessWidget {
                             style: TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,
-                              fontSize: 11,
+                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -205,8 +208,6 @@ class LiveTrackingScreen extends StatelessWidget {
                           ),
                         ),
 
-                        // Route visibility toggles
-
                         // Trip progress
                         Padding(
                           padding: const EdgeInsets.symmetric(
@@ -224,7 +225,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                         : "Approaching Pickup",
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 14,
+                                      fontSize: 16, // Larger for readability
                                       color: Colors.grey.shade700,
                                     ),
                                   ),
@@ -232,7 +233,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                     controller.tripProgress.value,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      fontSize: 14,
+                                      fontSize: 16,
                                       color: Colors.black87,
                                     ),
                                   ),
@@ -249,7 +250,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                       : AppColors.primary,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
-                                minHeight: 8,
+                                minHeight: 10, // Thicker progress bar
                               ),
                             ],
                           ),
@@ -296,7 +297,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                               "Driver",
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w700,
-                                            fontSize: 18,
+                                            fontSize: 20, // Larger for emphasis
                                             color: Colors.black87,
                                           ),
                                         ),
@@ -305,7 +306,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                               ? "Order #${controller.orderModel.value.id?.substring(0, 8) ?? 'N/A'}"
                                               : "Intercity #${controller.intercityOrderModel.value.id?.substring(0, 8) ?? 'N/A'}",
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            fontSize: 16,
                                             color: Colors.grey.shade600,
                                           ),
                                         ),
@@ -333,7 +334,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                             Icon(
                                               Icons.pin_drop,
                                               color: AppColors.primary,
-                                              size: 16,
+                                              size: 18,
                                             ),
                                             const SizedBox(width: 6),
                                             Text(
@@ -341,7 +342,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                                   controller.distance.value),
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.w700,
-                                                fontSize: 12,
+                                                fontSize: 14, // Larger for readability
                                                 color: Colors.black87,
                                               ),
                                             ),
@@ -377,14 +378,14 @@ class LiveTrackingScreen extends StatelessWidget {
                                             Icon(
                                               Icons.access_time,
                                               color: Colors.orange.shade700,
-                                              size: 16,
+                                              size: 18,
                                             ),
                                             const SizedBox(width: 6),
                                             Text(
                                               controller.estimatedTime.value,
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.w700,
-                                                fontSize: 11,
+                                                fontSize: 14,
                                                 color: Colors.black87,
                                               ),
                                             ),
@@ -420,14 +421,14 @@ class LiveTrackingScreen extends StatelessWidget {
                                             Icon(
                                               Icons.directions_car,
                                               color: Colors.green.shade700,
-                                              size: 16,
+                                              size: 18,
                                             ),
                                             const SizedBox(width: 6),
                                             Text(
                                               controller.estimatedArrival.value,
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.w700,
-                                                fontSize: 11,
+                                                fontSize: 14,
                                                 color: Colors.black87,
                                               ),
                                             ),
@@ -468,7 +469,7 @@ class LiveTrackingScreen extends StatelessWidget {
                       backgroundColor: Colors.white,
                       elevation: 4,
                       onPressed: () {
-                        controller.navigationZoom.value += 1;
+                        controller.navigationZoom.value += 0.5; // Smoother zoom increment
                         controller.mapController
                             ?.animateCamera(CameraUpdate.zoomIn());
                       },
@@ -486,7 +487,7 @@ class LiveTrackingScreen extends StatelessWidget {
                       backgroundColor: Colors.white,
                       elevation: 4,
                       onPressed: () {
-                        controller.navigationZoom.value -= 1;
+                        controller.navigationZoom.value -= 0.5; // Smoother zoom decrement
                         controller.mapController
                             ?.animateCamera(CameraUpdate.zoomOut());
                       },

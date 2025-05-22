@@ -127,64 +127,58 @@ class OrderMapController extends GetxController {
   RxMap<PolylineId, Polyline> polyLines = <PolylineId, Polyline>{}.obs;
   PolylinePoints polylinePoints = PolylinePoints();
 
-  void getPolyline() async {
-    if (orderModel.value.sourceLocationLAtLng != null && orderModel.value.destinationLocationLAtLng != null) {
-      movePosition();
-      List<LatLng> polylineCoordinates = [];
-      PolylineRequest polylineRequest = PolylineRequest(
-        origin: PointLatLng(
-          orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
-          orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
-        ),
-        destination: PointLatLng(
-          orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
-          orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
-        ),
-        mode: TravelMode.driving,
+ void getPolyline() async {
+  if (orderModel.value.sourceLocationLAtLng != null && orderModel.value.destinationLocationLAtLng != null) {
+    movePosition();
+    List<LatLng> polylineCoordinates = [];
+    PolylineRequest polylineRequest = PolylineRequest(
+      origin: PointLatLng(
+        orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
+        orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
+      ),
+      destination: PointLatLng(
+        orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
+        orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
+      ),
+      mode: TravelMode.driving,
+    );
+
+    try {
+      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+        googleApiKey: Constant.mapAPIKey,
+        request: polylineRequest,
       );
 
-      try {
-        List<PolylineResult> results = await polylinePoints.getRouteBetweenCoordinates(
-          googleApiKey: Constant.mapAPIKey,
-          request: polylineRequest,
-        );
-
-        if (results.isNotEmpty) {
-          var result = results.first; // Use the first route
-          if (result.points.isNotEmpty) {
-            for (var point in result.points) {
-              polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-            }
-          } else {
-            ShowToastDialog.showToast("Failed to fetch route: ${result.errorMessage}".tr);
-          }
-        } else {
-          ShowToastDialog.showToast("No route found between locations".tr);
+      if (result.points.isNotEmpty) {
+        for (var point in result.points) {
+          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
         }
-      } catch (e) {
-        ShowToastDialog.showToast("Error fetching route: $e".tr);
+      } else {
+        ShowToastDialog.showToast("Failed to fetch route: ${result.errorMessage}".tr);
       }
-
-      _addPolyLine(polylineCoordinates);
-      addMarker(
-        LatLng(
-          orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
-          orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
-        ),
-        "Source",
-        departureIcon,
-      );
-      addMarker(
-        LatLng(
-          orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
-          orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
-        ),
-        "Destination",
-        destinationIcon,
-      );
+    } catch (e) {
+      ShowToastDialog.showToast("Error fetching route: $e".tr);
     }
-  }
 
+    _addPolyLine(polylineCoordinates);
+    addMarker(
+      LatLng(
+        orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
+        orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
+      ),
+      "Source",
+      departureIcon,
+    );
+    addMarker(
+      LatLng(
+        orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
+        orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
+      ),
+      "Destination",
+      destinationIcon,
+    );
+  }
+}
   double zoomLevel = 0;
 
   movePosition() async {
