@@ -19,7 +19,6 @@ import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
-import 'package:flutter_html/flutter_html.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -155,9 +154,88 @@ class ActiveOrderScreen extends StatelessWidget {
                                         });
                                       },
                                     )
-                                  : SizedBox(width: 0),
+                                  : ButtonThem.buildBorderButton(
+                                      context,
+                                      title: "Pickup Customer".tr,
+                                      btnHeight: 44,
+                                      iconVisibility: false,
+                                      onPress: () async {
+                                        showDialog(
+                                          context: context,
+                                          builder: (BuildContext context) =>
+                                              otpDialog(context, controller,
+                                                  orderModel),
+                                        );
+                                      },
+                                    ),
                             ),
                             const SizedBox(width: 10),
+                            Row(
+                              children: [
+                                InkWell(
+                                  onTap: () async {
+                                    UserModel? customer =
+                                        await FireStoreUtils.getCustomer(
+                                            orderModel.userId.toString());
+                                    DriverUserModel? driver =
+                                        await FireStoreUtils.getDriverProfile(
+                                            orderModel.driverId.toString());
+                                    Get.to(ChatScreens(
+                                      driverId: driver!.id,
+                                      customerId: customer!.id,
+                                      customerName: customer.fullName,
+                                      customerProfileImage: customer.profilePic,
+                                      driverName: driver.fullName,
+                                      driverProfileImage: driver.profilePic,
+                                      orderId: orderModel.id,
+                                      token: customer.fcmToken,
+                                    ));
+                                  },
+                                  child: Container(
+                                    height: 44,
+                                    width: 44,
+                                    decoration: BoxDecoration(
+                                      color: themeChange.getThem()
+                                          ? AppColors.darkModePrimary
+                                          : AppColors.primary,
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Icon(
+                                      Icons.chat,
+                                      color: themeChange.getThem()
+                                          ? Colors.black
+                                          : Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                InkWell(
+                                  onTap: () async {
+                                    UserModel? customer =
+                                        await FireStoreUtils.getCustomer(
+                                            orderModel.userId.toString());
+                                    Constant.makePhoneCall(
+                                        "${customer!.countryCode}${customer.phoneNumber}");
+                                  },
+                                  child: Container(
+                                    height: 44,
+                                    width: 44,
+                                    decoration: BoxDecoration(
+                                      color: themeChange.getThem()
+                                          ? AppColors.darkModePrimary
+                                          : AppColors.primary,
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Icon(
+                                      Icons.call,
+                                      color: themeChange.getThem()
+                                          ? Colors.black
+                                          : Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                         const SizedBox(height: 10),

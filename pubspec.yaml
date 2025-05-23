@@ -87,6 +87,9 @@ dependencies:
   flutter_stripe: ^11.4.0
   flutter_paypal: ^0.2.1
   flutter_tts: ^4.2.2
+  retry: ^3.1.2
+  flutter_compass: ^0.8.1
+  sensors_plus: ^6.1.1
 
 dependency_overrides:
   webview_flutter: ^4.8.0
@@ -123,6 +126,7 @@ flutter:
     - assets/icons/
     - assets/audio/
     - assets/
+    - assets/map_style.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

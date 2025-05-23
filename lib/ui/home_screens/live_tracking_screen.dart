@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'dart:developer' as dev;
+
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/send_notification.dart';
@@ -13,6 +16,7 @@ import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,8 +24,35 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
 
-class LiveTrackingScreen extends StatelessWidget {
+class LiveTrackingScreen extends StatefulWidget {
   const LiveTrackingScreen({super.key});
+
+  @override
+  State<LiveTrackingScreen> createState() => _LiveTrackingScreenState();
+}
+
+class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
+  String? _mapStyle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load map style asynchronously
+    _loadMapStyle();
+  }
+
+  // Function to load map style from assets
+  Future<void> _loadMapStyle() async {
+    try {
+      final String style = await DefaultAssetBundle.of(context)
+          .loadString('assets/map_style.json');
+      setState(() {
+        _mapStyle = style;
+      });
+    } catch (e) {
+      print('Error loading map style: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,54 +68,93 @@ class LiveTrackingScreen extends StatelessWidget {
           body: Stack(
             children: [
               // Enhanced Google Map
-              Obx(
-                () => GoogleMap(
-                  myLocationEnabled: false,
-                  myLocationButtonEnabled: false,
-                  mapType: controller.isNightMode.value
-                      ? MapType.hybrid
-                      : MapType.normal,
-                  zoomControlsEnabled: false,
-                  compassEnabled: false,
-                  mapToolbarEnabled: false,
-                  polylines: Set<Polyline>.of(controller.polyLines.values),
-                  markers: Set<Marker>.of(controller.markers.values),
-                  padding: EdgeInsets.only(
-                    bottom: controller.isNavigationView.value
-                        ? (isSmallScreen ? 280 : 320)
-                        : (isSmallScreen ? 320 : 360),
-                    top: controller.isNavigationView.value
-                        ? (isSmallScreen ? 120 : 140)
-                        : (isSmallScreen ? 140 : 160),
-                  ),
-                  onMapCreated: (GoogleMapController mapController) {
-                    controller.mapController = mapController;
-                    ShowToastDialog.closeLoader();
-                    if (controller.isFollowingDriver.value) {
-                      controller.updateNavigationView();
-                    }
-                  },
-                  initialCameraPosition: CameraPosition(
-                    zoom: controller.navigationZoom.value,
-                    target: LatLng(
-                      Constant.currentLocation?.latitude ?? 45.521563,
-                      Constant.currentLocation?.longitude ?? -122.677433,
+              Obx(() => GoogleMap(
+                    compassEnabled: true,
+                    rotateGesturesEnabled: true,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: true,
+                    mapType: controller.isNightMode.value
+                        ? MapType.hybrid
+                        : MapType.normal,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    polylines: Set.of(controller.polyLines.values),
+                    markers: Set.of(controller.markers.values),
+                    padding: EdgeInsets.only(
+                      bottom: controller.isNavigationView.value
+                          ? (isSmallScreen ? 300 : 340)
+                          : (isSmallScreen ? 340 : 380),
+                      top: controller.isNavigationView.value
+                          ? (isSmallScreen ? 140 : 160)
+                          : (isSmallScreen ? 160 : 180),
                     ),
-                    tilt: controller.isNavigationView.value
-                        ? controller.navigationTilt.value
-                        : 0.0,
-                    bearing: controller.navigationBearing.value,
-                  ),
-                  onCameraMove: (CameraPosition position) {
-                    controller.navigationZoom.value = position.zoom;
-                  },
-                  onTap: (LatLng position) {
-                    if (controller.isFollowingDriver.value) {
-                      controller.toggleMapView();
-                    }
-                  },
-                ),
-              ),
+                    onMapCreated: (GoogleMapController mapController) async {
+                      controller.mapController = mapController;
+
+                      // Apply custom style to hide road names
+                      String mapStyle = '''[
+      {
+        "featureType": "road",
+        "elementType": "labels",
+        "stylers": [
+          {
+            "visibility": "off"
+          }
+        ]
+      },
+      {
+        "featureType": "transit",
+        "elementType": "labels",
+        "stylers": [
+          {
+            "visibility": "off"
+          }
+        ]
+      }
+    ]''';
+
+                      try {
+                        await mapController.setMapStyle(mapStyle);
+                      } catch (e) {
+                        print('Error applying map style: $e');
+                      }
+
+                      ShowToastDialog.closeLoader();
+                      if (controller.isFollowingDriver.value) {
+                        if (controller.is3DNavigationMode.value) {
+                          controller.updateNavigationViewAligned();
+                        } else {
+                          controller.updateNavigationView();
+                        }
+                      }
+                    },
+                    initialCameraPosition: CameraPosition(
+                      zoom: controller.navigationZoom.value,
+                      target: LatLng(
+                        controller.currentPosition.value?.latitude ??
+                            Constant.currentLocation?.latitude ??
+                            45.521563,
+                        controller.currentPosition.value?.longitude ??
+                            Constant.currentLocation?.longitude ??
+                            -122.677433,
+                      ),
+                      tilt: controller.isNavigationView.value
+                          ? controller.navigationTilt.value
+                          : 0.0,
+                      bearing: controller.deviceBearing.value,
+                    ),
+                    onCameraMove: (CameraPosition position) {
+                      controller.navigationZoom.value = position.zoom;
+                      controller.navigationTilt.value = position.tilt;
+                      controller.deviceBearing.value = position.bearing;
+                      dev.log(
+                          'Device bearing: ${controller.deviceBearing.value} Map Bearing: ${position.bearing}');
+                      // Do NOT update deviceBearing here; let compass control it
+                    },
+                    onTap: (LatLng position) {
+                      controller.onMapTap(position);
+                    },
+                  )),
 
               // Modern Status Bar
               _buildStatusBar(context, controller),
@@ -92,7 +162,7 @@ class LiveTrackingScreen extends StatelessWidget {
               // Off-route warning with modern design
               _buildOffRouteWarning(context, controller),
 
-              // Modern Navigation Instruction Card
+              // Modern Navigation Instruction Card with Lane Guidance
               _buildNavigationCard(context, controller),
 
               // Modern Control Buttons
@@ -100,6 +170,9 @@ class LiveTrackingScreen extends StatelessWidget {
 
               // Modern Bottom Panel
               _buildBottomPanel(context, controller, themeChange),
+
+              // Traffic Report Dialog Trigger
+              _buildTrafficReportTrigger(controller),
             ],
           ),
         );
@@ -179,21 +252,18 @@ class LiveTrackingScreen extends StatelessWidget {
                           icon: Icons.speed,
                           text:
                               "${controller.currentSpeed.value.toStringAsFixed(0)} km/h",
-                          color: Colors.white.withOpacity(0.9),
+                          color: controller.currentSpeed.value >
+                                  (double.tryParse(
+                                          controller.speedLimit.value) ??
+                                      50)
+                              ? Colors.red.withOpacity(0.9)
+                              : Colors.white.withOpacity(0.9),
                         )),
                     const SizedBox(width: 8),
                     Obx(() => _buildInfoChip(
                           icon: Icons.traffic,
-                          text: controller.trafficLevel.value == 0
-                              ? "Light"
-                              : controller.trafficLevel.value == 1
-                                  ? "Moderate"
-                                  : "Heavy",
-                          color: controller.trafficLevel.value == 0
-                              ? Colors.green.withOpacity(0.9)
-                              : controller.trafficLevel.value == 1
-                                  ? Colors.orange.withOpacity(0.9)
-                                  : Colors.red.withOpacity(0.9),
+                          text: controller.getTrafficLevelText(),
+                          color: controller.getTrafficLevelColor(),
                         )),
                   ],
                 ),
@@ -256,11 +326,30 @@ class LiveTrackingScreen extends StatelessWidget {
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            "Off route! Recalculating...",
+                            "Off route! Follow the red path to return.",
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => controller.recalculateRoute(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              "Reroute",
+                              style: TextStyle(
+                                color: Colors.red.shade600,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ),
@@ -278,7 +367,7 @@ class LiveTrackingScreen extends StatelessWidget {
       BuildContext context, LiveTrackingController controller) {
     return Positioned(
       top: controller.isOffRoute.value
-          ? MediaQuery.of(context).padding.top + 60
+          ? MediaQuery.of(context).padding.top + 140
           : MediaQuery.of(context).padding.top + 50,
       left: 16,
       right: 16,
@@ -342,7 +431,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                 controller.navigationInstruction.value,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 14,
+                                  fontSize: 10,
                                   color: Colors.black87,
                                   height: 1.2,
                                 ),
@@ -376,6 +465,40 @@ class LiveTrackingScreen extends StatelessWidget {
                   ],
                 ),
 
+                // Lane Guidance
+                // Obx(() => controller.currentLanes.isNotEmpty
+                //     ? Column(
+                //         children: [
+                //           const SizedBox(height: 10),
+                //           Container(
+                //             padding: const EdgeInsets.all(8),
+                //             decoration: BoxDecoration(
+                //               color: Colors.grey.shade100,
+                //               borderRadius: BorderRadius.circular(12),
+                //             ),
+                //             child: Row(
+                //               mainAxisAlignment: MainAxisAlignment.center,
+                //               children: controller.currentLanes.map((lane) {
+                //                 bool isRecommended =
+                //                     lane == controller.recommendedLane.value;
+                //                 return Padding(
+                //                   padding:
+                //                       const EdgeInsets.symmetric(horizontal: 4),
+                //                   child: Icon(
+                //                     _getLaneIcon(lane),
+                //                     size: 24,
+                //                     color: isRecommended
+                //                         ? AppColors.primary
+                //                         : Colors.grey.shade600,
+                //                   ),
+                //                 );
+                //               }).toList(),
+                //             ),
+                //           ),
+                //         ],
+                //       )
+                //     : const SizedBox.shrink()),
+
                 // Next turn instruction
                 Obx(() => controller.nextTurnInstruction.value.isNotEmpty
                     ? Column(
@@ -403,7 +526,7 @@ class LiveTrackingScreen extends StatelessWidget {
                                   child: Text(
                                     "Then ${controller.nextTurnInstruction.value}",
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 10,
                                       color: Colors.grey.shade700,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -428,27 +551,27 @@ class LiveTrackingScreen extends StatelessWidget {
       bottom: 360,
       right: 16,
       child: Obx(() => Column(
+            mainAxisSize: MainAxisSize.min,
             spacing: 10,
             children: [
               _buildControlButton(
                 icon: Icons.volume_up_rounded,
                 iconOff: Icons.volume_off_rounded,
                 isActive: controller.isVoiceEnabled.value,
-                onPressed: () {
-                  controller.isVoiceEnabled.value =
-                      !controller.isVoiceEnabled.value;
-                },
+                onPressed: () => controller.toggleVoiceGuidance(),
               ),
-              // const SizedBox(height: 12),
               _buildControlButton(
                 icon: Icons.wb_sunny_rounded,
                 iconOff: Icons.nights_stay_rounded,
                 isActive: controller.isNightMode.value,
-                onPressed: () {
-                  controller.isNightMode.value = !controller.isNightMode.value;
-                },
+                onPressed: () => controller.toggleNightMode(),
               ),
-              // const SizedBox(height: 12),
+              _buildControlButton(
+                icon: Icons.threed_rotation_rounded,
+                iconOff: Icons.two_k_rounded,
+                isActive: controller.is3DNavigationMode.value,
+                onPressed: () => controller.toggle3DNavigationMode(),
+              ),
               _buildControlButton(
                 icon: Icons.add_rounded,
                 onPressed: () {
@@ -457,7 +580,6 @@ class LiveTrackingScreen extends StatelessWidget {
                       ?.animateCamera(CameraUpdate.zoomIn());
                 },
               ),
-              // const SizedBox(height: 12),
               _buildControlButton(
                 icon: Icons.remove_rounded,
                 onPressed: () {
@@ -466,14 +588,11 @@ class LiveTrackingScreen extends StatelessWidget {
                       ?.animateCamera(CameraUpdate.zoomOut());
                 },
               ),
-              // const SizedBox(height: 12),
               _buildControlButton(
                 icon: Icons.my_location_rounded,
                 iconOff: Icons.location_searching_rounded,
-                isActive: controller.isNavigationView.value,
-                onPressed: () {
-                  controller.toggleMapView();
-                },
+                isActive: controller.isFollowingDriver.value,
+                onPressed: () => controller.toggleMapView(),
                 isPrimary: true,
               ),
             ],
@@ -484,456 +603,517 @@ class LiveTrackingScreen extends StatelessWidget {
   Widget _buildBottomPanel(BuildContext context,
       LiveTrackingController controller, DarkThemeProvider themeChange) {
     return Positioned(
-        left: 0,
-        right: 0,
-        bottom: 0,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOutCubic,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, -8),
-              ),
-            ],
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Drag handle
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
               ),
+            ),
 
-              // Trip Progress Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Obx(() => Text(
-                              controller.status.value == Constant.rideInProgress
-                                  ? "Trip Progress"
-                                  : "Approaching Pickup",
+            // Trip Progress Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Obx(() => Text(
+                            controller.currentStep.value,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          )),
+                      Obx(() => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              controller.tripProgress.value,
                               style: TextStyle(
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 12,
-                                color: Colors.grey.shade600,
+                                color: Colors.green.shade700,
                               ),
-                            )),
-                        Obx(() => Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                controller.tripProgress.value,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                  color: Colors.green.shade700,
-                                ),
-                              ),
-                            )),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Obx(() => LinearProgressIndicator(
-                              value: controller.tripProgressValue.value,
-                              backgroundColor: Colors.transparent,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                controller.status.value ==
-                                        Constant.rideInProgress
-                                    ? Colors.green.shade500
-                                    : AppColors.primary,
-                              ),
-                            )),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Driver and Trip Info Card
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.grey.shade50,
-                      Colors.white,
+                            ),
+                          )),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.grey.shade200,
-                    width: 1,
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Obx(() => LinearProgressIndicator(
+                            value: controller.tripProgressValue.value,
+                            backgroundColor: Colors.transparent,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              controller.status.value == Constant.rideInProgress
+                                  ? Colors.green.shade500
+                                  : AppColors.primary,
+                            ),
+                          )),
+                    ),
                   ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Driver and Trip Info Card
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.grey.shade50,
+                    Colors.white,
+                  ],
                 ),
-                child: Column(
-                  children: [
-                    // Driver Info
-                    Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.primary,
-                                AppColors.primary.withOpacity(0.8),
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Driver Info
+                  Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary,
+                              AppColors.primary.withOpacity(0.8),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Obx(() => Text(
-                                    controller.driverUserModel.value.fullName ??
-                                        "Driver",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                      color: Colors.black87,
-                                    ),
-                                  )),
-                              const SizedBox(height: 2),
-                              Obx(() => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      controller.type.value == "orderModel"
-                                          ? "Order #${controller.orderModel.value.id?.substring(0, 8) ?? 'N/A'}"
-                                          : "Intercity #${controller.intercityOrderModel.value.id?.substring(0, 8) ?? 'N/A'}",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.blue.shade700,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  )),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // Trip Stats
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      spacing: 4,
-                      children: [
-                        Expanded(
-                          child: Obx(() => _buildStatItem(
-                                icon: Icons.pin_drop_rounded,
-                                value: controller
-                                    .formatDistance(controller.distance.value),
-                                label: "Distance",
-                                color: AppColors.primary,
-                              )),
-                        ),
-                        Container(
-                          height: 40,
-                          width: 1,
-                          color: Colors.grey.shade300,
-                        ),
-                        Expanded(
-                          child: Obx(() => _buildStatItem(
-                                icon: Icons.access_time_rounded,
-                                value: controller.estimatedTime.value,
-                                label: "Time Left",
-                                color: Colors.orange.shade600,
-                              )),
-                        ),
-                        Container(
-                          height: 40,
-                          width: 1,
-                          color: Colors.grey.shade300,
-                        ),
-                        Expanded(
-                          child: Obx(() => _buildStatItem(
-                                icon: Icons.schedule_rounded,
-                                value: controller.estimatedArrival.value,
-                                label: "ETA",
-                                color: Colors.green.shade600,
-                              )),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Action Buttons
-                    Row(
-                      children: [
-                        // Only the button depends on status, so wrap it with Obx
-                        Expanded(
-                          child: Obx(() {
-                            final isRideInProgress = controller.status.value ==
-                                Constant.rideInProgress;
-                            return ButtonThem.buildBorderButton(
-                              context,
-                              title: isRideInProgress
-                                  ? "Complete Ride".tr
-                                  : "Pickup Customer".tr,
-                              btnHeight: 34,
-                              txtSize: 12,
-                              borderRadius: 5,
-                              iconVisibility: false,
-                              onPress: () async {
-                                if (isRideInProgress) {
-                                  ShowToastDialog.showLoader(
-                                      "Completing ride...".tr);
-                                  OrderModel orderModel =
-                                      controller.orderModel.value;
-                                  orderModel.status = Constant.rideComplete;
-
-                                  await FireStoreUtils.getCustomer(
-                                          orderModel.userId.toString())
-                                      .then((value) async {
-                                    if (value != null &&
-                                        value.fcmToken != null) {
-                                      Map<String, dynamic> playLoad =
-                                          <String, dynamic>{
-                                        "type": "city_order_complete",
-                                        "orderId": orderModel.id,
-                                      };
-                                      await SendNotification
-                                          .sendOneNotification(
-                                        token: value.fcmToken.toString(),
-                                        title: 'Ride complete!'.tr,
-                                        body:
-                                            'Please complete your payment.'.tr,
-                                        payload: playLoad,
-                                      );
-                                    }
-                                  });
-
-                                  await FireStoreUtils.setOrder(orderModel)
-                                      .then((value) {
-                                    if (value == true) {
-                                      ShowToastDialog.closeLoader();
-                                      ShowToastDialog.showToast(
-                                          "Ride completed successfully".tr);
-                                      Get.back(); // Navigate back to previous screen
-                                    }
-                                  });
-                                } else {
-                                  showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) =>
-                                        _otpDialog(context, controller),
-                                  );
-                                }
-                              },
-                            );
-                          }),
-                        ),
-                        const SizedBox(width: 10),
-                        // Chat and Call buttons are static
-                        Row(
-                          children: [
-                            InkWell(
-                              onTap: () async {
-                                UserModel? customer =
-                                    await FireStoreUtils.getCustomer(controller
-                                        .orderModel.value.userId
-                                        .toString());
-                                DriverUserModel? driver =
-                                    await FireStoreUtils.getDriverProfile(
-                                        controller.orderModel.value.driverId
-                                            .toString());
-                                Get.to(ChatScreens(
-                                  driverId: driver!.id,
-                                  customerId: customer!.id,
-                                  customerName: customer.fullName,
-                                  customerProfileImage: customer.profilePic,
-                                  driverName: driver.fullName,
-                                  driverProfileImage: driver.profilePic,
-                                  orderId: controller.orderModel.value.id,
-                                  token: customer.fcmToken,
-                                ));
-                              },
-                              child: Container(
-                                height: 34,
-                                width: 44,
-                                decoration: BoxDecoration(
-                                  color: themeChange.getThem()
-                                      ? AppColors.darkModePrimary
-                                      : AppColors.primary,
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: Icon(
-                                  Icons.chat,
-                                  color: themeChange.getThem()
-                                      ? Colors.black
-                                      : Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            InkWell(
-                              onTap: () async {
-                                UserModel? customer =
-                                    await FireStoreUtils.getCustomer(controller
-                                        .orderModel.value.userId
-                                        .toString());
-                                Constant.makePhoneCall(
-                                    "${customer!.countryCode}${customer.phoneNumber}");
-                              },
-                              child: Container(
-                                height: 34,
-                                width: 44,
-                                decoration: BoxDecoration(
-                                  color: themeChange.getThem()
-                                      ? AppColors.darkModePrimary
-                                      : AppColors.primary,
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: Icon(
-                                  Icons.call,
-                                  color: themeChange.getThem()
-                                      ? Colors.black
-                                      : Colors.white,
-                                ),
-                              ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Obx(() => Text(
+                                  controller.driverUserModel.value.fullName ??
+                                      "Driver",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
+                                )),
+                            const SizedBox(height: 2),
+                            Obx(() => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    controller.type.value == "orderModel"
+                                        ? "Order #${controller.orderModel.value.id?.substring(0, 8) ?? 'N/A'}"
+                                        : "Intercity #${controller.intercityOrderModel.value.id?.substring(0, 8) ?? 'N/A'}",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.blue.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                )),
+                          ],
+                        ),
+                      ),
+                      // Share Location Button
+                      InkWell(
+                        onTap: () => controller.shareLocation(),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.share_location_rounded,
+                            color: Colors.grey.shade700,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Trip Stats
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Obx(() => _buildStatItem(
+                              icon: Icons.pin_drop_rounded,
+                              value: controller
+                                  .formatDistance(controller.distance.value),
+                              label: "Distance",
+                              color: AppColors.primary,
+                            )),
+                      ),
+                      Container(
+                        height: 40,
+                        width: 1,
+                        color: Colors.grey.shade300,
+                      ),
+                      Expanded(
+                        child: Obx(() => _buildStatItem(
+                              icon: Icons.access_time_rounded,
+                              value: controller.estimatedTime.value,
+                              label: "Time Left",
+                              color: Colors.orange.shade600,
+                            )),
+                      ),
+                      Container(
+                        height: 40,
+                        width: 1,
+                        color: Colors.grey.shade300,
+                      ),
+                      Expanded(
+                        child: Obx(() => _buildStatItem(
+                              icon: Icons.schedule_rounded,
+                              value: controller.estimatedArrival.value,
+                              label: "ETA",
+                              color: Colors.green.shade600,
+                            )),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      // Main Action Button
+                      Expanded(
+                        child: Obx(() {
+                          final isRideInProgress = controller.status.value ==
+                              Constant.rideInProgress;
+                          return ButtonThem.buildBorderButton(
+                            context,
+                            title: isRideInProgress
+                                ? "Complete Ride".tr
+                                : "Pickup Customer".tr,
+                            btnHeight: 34,
+                            txtSize: 12,
+                            borderRadius: 5,
+                            iconVisibility: false,
+                            onPress: () async {
+                              if (isRideInProgress) {
+                                ShowToastDialog.showLoader(
+                                    "Completing ride...".tr);
+                                OrderModel orderModel =
+                                    controller.orderModel.value;
+                                orderModel.status = Constant.rideComplete;
+
+                                await FireStoreUtils.getCustomer(
+                                        orderModel.userId.toString())
+                                    .then((value) async {
+                                  if (value != null && value.fcmToken != null) {
+                                    Map<String, dynamic> playLoad =
+                                        <String, dynamic>{
+                                      "type": "city_order_complete",
+                                      "orderId": orderModel.id,
+                                    };
+                                    await SendNotification.sendOneNotification(
+                                      token: value.fcmToken.toString(),
+                                      title: 'Ride complete!'.tr,
+                                      body: 'Please complete your payment.'.tr,
+                                      payload: playLoad,
+                                    );
+                                  }
+                                });
+
+                                await FireStoreUtils.setOrder(orderModel)
+                                    .then((value) {
+                                  if (value == true) {
+                                    ShowToastDialog.closeLoader();
+                                    ShowToastDialog.showToast(
+                                        "Ride completed successfully".tr);
+                                    Get.back();
+                                  }
+                                });
+                              } else {
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) =>
+                                      _otpDialog(context, controller),
+                                );
+                              }
+                            },
+                          );
+                        }),
+                      ),
+                      const SizedBox(width: 10),
+                      // Chat and Call Buttons
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap: () async {
+                              UserModel? customer =
+                                  await FireStoreUtils.getCustomer(controller
+                                      .orderModel.value.userId
+                                      .toString());
+                              DriverUserModel? driver =
+                                  await FireStoreUtils.getDriverProfile(
+                                      controller.orderModel.value.driverId
+                                          .toString());
+                              Get.to(ChatScreens(
+                                driverId: driver!.id,
+                                customerId: customer!.id,
+                                customerName: customer.fullName,
+                                customerProfileImage: customer.profilePic,
+                                driverName: driver.fullName,
+                                driverProfileImage: driver.profilePic,
+                                orderId: controller.orderModel.value.id,
+                                token: customer.fcmToken,
+                              ));
+                            },
+                            child: Container(
+                              height: 34,
+                              width: 44,
+                              decoration: BoxDecoration(
+                                color: themeChange.getThem()
+                                    ? AppColors.darkModePrimary
+                                    : AppColors.primary,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Icon(
+                                Icons.chat,
+                                color: themeChange.getThem()
+                                    ? Colors.black
+                                    : Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          InkWell(
+                            onTap: () async {
+                              UserModel? customer =
+                                  await FireStoreUtils.getCustomer(controller
+                                      .orderModel.value.userId
+                                      .toString());
+                              Constant.makePhoneCall(
+                                  "${customer!.countryCode}${customer.phoneNumber}");
+                            },
+                            child: Container(
+                              height: 34,
+                              width: 44,
+                              decoration: BoxDecoration(
+                                color: themeChange.getThem()
+                                    ? AppColors.darkModePrimary
+                                    : AppColors.primary,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Icon(
+                                Icons.call,
+                                color: themeChange.getThem()
+                                    ? Colors.black
+                                    : Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Cancel Ride Button
+                  ButtonThem.buildBorderButton(
+                    context,
+                    title: "Cancel Ride".tr,
+                    btnHeight: 34,
+                    borderRadius: 5,
+                    txtSize: 12,
+                    iconVisibility: false,
+                    onPress: () async {
+                      bool? confirmCancel = await showDialog<bool>(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text("Confirm Cancel".tr),
+                            content: Text(
+                                "Are you sure you want to cancel this ride?"
+                                    .tr),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text("No".tr),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: Text("Yes".tr),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (confirmCancel == true) {
+                        ShowToastDialog.showLoader("Cancelling ride...".tr);
+                        OrderModel orderModel = controller.orderModel.value;
+                        orderModel.status = Constant.rideCanceled;
+
+                        await FireStoreUtils.getCustomer(
+                                orderModel.userId.toString())
+                            .then((value) async {
+                          if (value != null && value.fcmToken != null) {
+                            Map<String, dynamic> playLoad = <String, dynamic>{
+                              "type": "city_order_cancelled",
+                              "orderId": orderModel.id,
+                            };
+                            await SendNotification.sendOneNotification(
+                              token: value.fcmToken.toString(),
+                              title: 'Ride Cancelled'.tr,
+                              body:
+                                  'Your ride has been cancelled by the driver.'
+                                      .tr,
+                              payload: playLoad,
+                            );
+                          }
+                        });
+
+                        await FireStoreUtils.setOrder(orderModel).then((value) {
+                          if (value == true) {
+                            ShowToastDialog.closeLoader();
+                            ShowToastDialog.showToast(
+                                "Ride cancelled successfully".tr);
+                            Get.back();
+                          }
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrafficReportTrigger(LiveTrackingController controller) {
+    return Positioned(
+      bottom: 360,
+      left: 16,
+      child: Obx(() => _buildControlButton(
+            icon: Icons.traffic_rounded,
+            isActive: controller.trafficLevel.value > 0,
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text("Report Traffic".tr),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: Text("Light Traffic".tr),
+                          onTap: () {
+                            controller.reportTraffic(0);
+                            Navigator.pop(context);
+                          },
+                        ),
+                        ListTile(
+                          title: Text("Moderate Traffic".tr),
+                          onTap: () {
+                            controller.reportTraffic(1);
+                            Navigator.pop(context);
+                          },
+                        ),
+                        ListTile(
+                          title: Text("Heavy Traffic".tr),
+                          onTap: () {
+                            controller.reportTraffic(2);
+                            Navigator.pop(context);
+                          },
+                        ),
                       ],
                     ),
-
-                    const SizedBox(height: 10),
-
-                    // Cancel Ride Button (no need for Obx if appearance doesn't change)
-                    ButtonThem.buildBorderButton(
-                      context,
-                      title: "Cancel Ride".tr,
-                      btnHeight: 34,
-                      borderRadius: 5,
-                      txtSize: 12,
-                      iconVisibility: false,
-                      onPress: () async {
-                        bool? confirmCancel = await showDialog<bool>(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: Text("Confirm Cancel".tr),
-                              content: Text(
-                                  "Are you sure you want to cancel this ride?"
-                                      .tr),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: Text("No".tr),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: Text("Yes".tr),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-
-                        if (confirmCancel == true) {
-                          ShowToastDialog.showLoader("Cancelling ride...".tr);
-                          OrderModel orderModel = controller.orderModel.value;
-                          orderModel.status = Constant.rideCanceled;
-
-                          await FireStoreUtils.getCustomer(
-                                  orderModel.userId.toString())
-                              .then((value) async {
-                            if (value != null && value.fcmToken != null) {
-                              Map<String, dynamic> playLoad = <String, dynamic>{
-                                "type": "city_order_cancelled",
-                                "orderId": orderModel.id,
-                              };
-                              await SendNotification.sendOneNotification(
-                                token: value.fcmToken.toString(),
-                                title: 'Ride Cancelled'.tr,
-                                body:
-                                    'Your ride has been cancelled by the driver.'
-                                        .tr,
-                                payload: playLoad,
-                              );
-                            }
-                          });
-
-                          await FireStoreUtils.setOrder(orderModel)
-                              .then((value) {
-                            if (value == true) {
-                              ShowToastDialog.closeLoader();
-                              ShowToastDialog.showToast(
-                                  "Ride cancelled successfully".tr);
-                              Get.back(); // Navigate back to previous screen
-                            }
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
-            ],
-          ),
-        ));
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text("Cancel".tr),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          )),
+    );
   }
 
   Dialog _otpDialog(BuildContext context, LiveTrackingController controller) {
@@ -987,7 +1167,7 @@ class LiveTrackingScreen extends StatelessWidget {
                 enableActiveFill: true,
                 cursorColor: AppColors.primary,
                 controller: otpController,
-                onCompleted: (v) async {
+                onCompleted: (v) {
                   otpValue = v;
                   print("OTP Completed: $v");
                 },
@@ -1012,25 +1192,25 @@ class LiveTrackingScreen extends StatelessWidget {
                       controller.orderModel.value.otp.toString().trim();
 
                   print(
-                      "OTP Verification - Model OTP: '$modelOtp', Input OTP: '$inputOtp', Controller Text: '${otpController.text}'");
+                      "OTP Verification - Model OTP: '$modelOtp', Input OTP: '$inputOtp'");
 
                   if (modelOtp == inputOtp) {
                     Get.back();
-                    ShowToastDialog.showLoader("Please wait...".tr);
+                    ShowToastDialog.showLoader("Starting ride...".tr);
                     OrderModel orderModel = controller.orderModel.value;
                     orderModel.status = Constant.rideInProgress;
 
                     await FireStoreUtils.getCustomer(
                             orderModel.userId.toString())
                         .then((value) async {
-                      if (value != null) {
+                      if (value != null && value.fcmToken != null) {
                         await SendNotification.sendOneNotification(
                           token: value.fcmToken.toString(),
                           title: 'Ride Started'.tr,
                           body:
                               'The ride has officially started. Please follow the designated route to the destination.'
                                   .tr,
-                          payload: {},
+                          payload: {"type": "city_order_started"},
                         );
                       }
                     });
@@ -1039,12 +1219,13 @@ class LiveTrackingScreen extends StatelessWidget {
                       if (value == true) {
                         ShowToastDialog.closeLoader();
                         ShowToastDialog.showToast(
-                            "Customer pickup successfully".tr);
+                            "Customer pickup successful".tr);
                         controller.status.value = Constant.rideInProgress;
+                        controller.updateRouteVisibility();
                       }
                     });
                   } else {
-                    ShowToastDialog.showToast("OTP Invalid".tr,
+                    ShowToastDialog.showToast("Invalid OTP".tr,
                         position: EasyLoadingToastPosition.center);
                     print(
                         "OTP Comparison - Model OTP: '$modelOtp', Input OTP: '$inputOtp'");
@@ -1216,6 +1397,8 @@ class LiveTrackingScreen extends StatelessWidget {
         return Icons.arrow_forward_rounded;
       case 'straight':
         return Icons.arrow_upward_rounded;
+      case 'roundabout':
+        return Icons.roundabout_right_rounded;
       default:
         return Icons.arrow_upward_rounded;
     }
