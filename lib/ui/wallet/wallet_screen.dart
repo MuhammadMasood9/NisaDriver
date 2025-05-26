@@ -33,1354 +33,800 @@ class WalletScreen extends StatelessWidget {
     final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GetX<WalletController>(
-        init: WalletController(),
-        builder: (controller) {
-          return Scaffold(
-            backgroundColor: AppColors.primary,
-            body: controller.isLoading.value
-                ? Constant.loader(context)
-                : Column(
-                    children: [
-                      Container(
-                        height: Responsive.width(24, context),
-                        width: Responsive.width(100, context),
-                        color: AppColors.primary,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Total Balance".tr,
-                                      style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
-                                    ),
-                                    Text(
-                                      Constant.amountShow(amount: controller.driverUserModel.value.walletAmount.toString()),
-                                      style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 24),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Transform.translate(
-                                offset: const Offset(0, -22),
-                                child: MaterialButton(
-                                  onPressed: () {
-                                    paymentMethodDialog(context, controller);
-                                  },
-                                  height: 40,
-                                  elevation: 0.5,
-                                  minWidth: 0.40,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  color: themeChange.getThem() ? AppColors.darkModePrimary : Colors.white,
-                                  child: Text(
-                                    "Topup Wallet".tr.toUpperCase(),
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.background, borderRadius: const BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(25))),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: controller.transactionList.isEmpty
-                                ? Center(child: Text("No transaction found".tr))
-                                : ListView.builder(
-                                    itemCount: controller.transactionList.length,
-                                    itemBuilder: (context, index) {
-                                      WalletTransactionModel walletTransactionModel = controller.transactionList[index];
-                                      return InkWell(
-                                        onTap: () async {
-                                          if (walletTransactionModel.orderType == "city") {
-                                            await FireStoreUtils.getOrder(walletTransactionModel.transactionId.toString()).then((value) {
-                                              if (value != null) {
-                                                OrderModel orderModel = value;
-                                                Get.to(const CompleteOrderScreen(), arguments: {
-                                                  "orderModel": orderModel,
-                                                });
-                                              }
-                                            });
-                                          } else if (walletTransactionModel.orderType == "intercity") {
-                                            await FireStoreUtils.getInterCityOrder(walletTransactionModel.transactionId.toString()).then((value) {
-                                              if (value != null) {
-                                                InterCityOrderModel orderModel = value;
-                                                Get.to(const CompleteIntercityOrderScreen(), arguments: {
-                                                  "orderModel": orderModel,
-                                                });
-                                              }
-                                            });
-                                          } else {
-                                            showTransactionDetails(context: context, walletTransactionModel: walletTransactionModel);
-                                          }
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Container(
-                                              decoration: BoxDecoration(
-                                                color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
-                                                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                                border: Border.all(color: themeChange.getThem() ? AppColors.darkContainerBorder : AppColors.containerBorder, width: 0.5),
-                                                boxShadow: themeChange.getThem()
-                                                    ? null
-                                                    : [
-                                                        BoxShadow(
-                                                          color: Colors.grey.withOpacity(0.5),
-                                                          blurRadius: 8,
-                                                          offset: const Offset(0, 2), // changes position of shadow
-                                                        ),
-                                                      ],
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(8.0),
-                                                child: Row(
-                                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                                  children: [
-                                                    Container(
-                                                        decoration: BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.circular(50)),
-                                                        child: Padding(
-                                                          padding: const EdgeInsets.all(12.0),
-                                                          child: SvgPicture.asset(
-                                                            'assets/icons/ic_wallet.svg',
-                                                            width: 24,
-                                                            color: Colors.black,
-                                                          ),
-                                                        )),
-                                                    const SizedBox(
-                                                      width: 10,
-                                                    ),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Row(
-                                                            children: [
-                                                              Expanded(
-                                                                child: Text(
-                                                                  Constant.dateFormatTimestamp(walletTransactionModel.createdDate),
-                                                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                                                                ),
-                                                              ),
-                                                              Text(
-                                                                "${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? "(-" : "+"}${Constant.amountShow(amount: walletTransactionModel.amount.toString().replaceAll("-", ""))}${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? ")" : ""}",
-                                                                style: GoogleFonts.poppins(
-                                                                    fontWeight: FontWeight.w600,
-                                                                    color: Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? Colors.red : Colors.green),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          Text(
-                                                            walletTransactionModel.note.toString(),
-                                                            style: GoogleFonts.poppins(fontWeight: FontWeight.w400),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              )),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-            bottomNavigationBar: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ButtonThem.buildBorderButton(
-                      context,
-                      title: "withdraw".tr,
-                      onPress: () async {
-                        if (double.parse(controller.driverUserModel.value.walletAmount.toString()) <= 0) {
-                          ShowToastDialog.showToast("Insufficient balance".tr);
-                        } else {
-                          ShowToastDialog.showLoader("Please wait".tr);
-                          await FireStoreUtils.bankDetailsIsAvailable().then((value) {
-                            ShowToastDialog.closeLoader();
-                            if (value == true) {
-                              withdrawAmountBottomSheet(context, controller);
-                            } else {
-                              ShowToastDialog.showToast("Your bank details is not available.Please add bank details".tr);
-                            }
-                          });
-                        }
-                      },
+      init: WalletController(),
+      builder: (controller) {
+        return Scaffold(
+          backgroundColor: AppColors.containerBackground,
+          body: controller.isLoading.value
+              ? Constant.loader(context)
+              : Column(
+                  children: [
+                    _buildHeader(context, controller, themeChange),
+                    Expanded(
+                      child: _buildTransactionList(context, controller, themeChange),
                     ),
+                  ],
+                ),
+          bottomNavigationBar: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ButtonThem.buildBorderButton(
+                    context,
+                    title: "withdraw".tr,
+                    
+                    onPress: () async {
+                      if (double.parse(controller.driverUserModel.value.walletAmount.toString()) <= 0) {
+                        ShowToastDialog.showToast("Insufficient balance".tr);
+                      } else {
+                        ShowToastDialog.showLoader("Please wait".tr);
+                        await FireStoreUtils.bankDetailsIsAvailable().then((value) {
+                          ShowToastDialog.closeLoader();
+                          if (value == true) {
+                            withdrawAmountBottomSheet(context, controller, themeChange);
+                          } else {
+                            ShowToastDialog.showToast("Your bank details is not available.Please add bank details".tr);
+                          }
+                        });
+                      }
+                    },
                   ),
-                  const SizedBox(
-                    width: 10,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ButtonThem.buildButton(
+                    context,
+                    title: "Withdrawal history".tr,
+                  
+                    onPress: () {
+                      Get.to(const WithDrawHistoryScreen());
+                    },
                   ),
-                  Expanded(
-                    child: ButtonThem.buildButton(
-                      context,
-                      title: "Withdrawal history".tr,
-                      onPress: () {
-                        Get.to(const WithDrawHistoryScreen());
-                      },
-                    ),
-                  )
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        });
+          ),
+        );
+      },
+    );
   }
 
-  paymentMethodDialog(BuildContext context, WalletController controller) {
-    return showModalBottomSheet(
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(topRight: Radius.circular(30), topLeft: Radius.circular(30))),
-        context: context,
-        isScrollControlled: true,
-        isDismissible: false,
-        builder: (context1) {
-          final themeChange = Provider.of<DarkThemeProvider>(context1);
+  Widget _buildHeader(BuildContext context, WalletController controller, DarkThemeProvider themeChange) {
+    return Container(
+      height: Responsive.width(65, context),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 40),
+          Text(
+            "Wallet Balance".tr,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 22,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            Constant.amountShow(amount: controller.driverUserModel.value.walletAmount.toString()),
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              fontSize: 20,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ButtonThem.roundButton(
+              context,
+              title: "Topup Wallet".tr,
+             
+              btnWidthRatio: 0.5,
+              btnHeight: 50,
+              onPress: () async {
+                paymentMethodDialog(context, controller, themeChange);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-          return FractionallySizedBox(
-            heightFactor: 0.9,
-            child: StatefulBuilder(builder: (context1, setState) {
-              return Obx(
-                () => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            InkWell(
-                                onTap: () {
-                                  Get.back();
-                                },
-                                child: const Icon(Icons.arrow_back_ios)),
-                            Expanded(
-                                child: Center(
-                                    child: Text(
-                              "Topup Wallet".tr,
-                              style: GoogleFonts.poppins(),
-                            ))),
-                          ],
+  Widget _buildTransactionList(BuildContext context, WalletController controller, DarkThemeProvider themeChange) {
+    return Container(
+      decoration: BoxDecoration(
+        color: themeChange.getThem() ? AppColors.darkBackground : AppColors.background,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: controller.transactionList.isEmpty
+            ? Center(
+                child: Text(
+                  "No transactions found".tr,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: AppColors.darkBackground.withOpacity(0.6),
+                  ),
+                ),
+              )
+            : ListView.builder(
+                itemCount: controller.transactionList.length,
+                itemBuilder: (context, index) {
+                  WalletTransactionModel walletTransactionModel = controller.transactionList[index];
+                  return AnimatedOpacity(
+                    opacity: 1.0,
+                    duration: Duration(milliseconds: 300 + (index * 100)),
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.2),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: ModalRoute.of(context)!.animation!,
+                          curve: Curves.easeOut,
                         ),
                       ),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: _buildTransactionCard(context, walletTransactionModel, themeChange),
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionCard(BuildContext context, WalletTransactionModel walletTransactionModel, DarkThemeProvider themeChange) {
+    return InkWell(
+      onTap: () async {
+        if (walletTransactionModel.orderType == "city") {
+          await FireStoreUtils.getOrder(walletTransactionModel.transactionId.toString()).then((value) {
+            if (value != null) {
+              OrderModel orderModel = value;
+              Get.to(const CompleteOrderScreen(), arguments: {"orderModel": orderModel});
+            }
+          });
+        } else if (walletTransactionModel.orderType == "intercity") {
+          await FireStoreUtils.getInterCityOrder(walletTransactionModel.transactionId.toString()).then((value) {
+            if (value != null) {
+              InterCityOrderModel orderModel = value;
+              Get.to(const CompleteIntercityOrderScreen(), arguments: {"orderModel": orderModel});
+            }
+          });
+        } else {
+          showTransactionDetails(context: context, walletTransactionModel: walletTransactionModel, themeChange: themeChange);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: themeChange.getThem() ? AppColors.darkContainerBackground : Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGray,
+                  shape: BoxShape.circle,
+                ),
+                child: SvgPicture.asset(
+                  'assets/icons/ic_wallet.svg',
+                  width: 24,
+                  color: AppColors.darkBackground,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          Constant.dateFormatTimestamp(walletTransactionModel.createdDate),
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppColors.darkBackground,
+                          ),
+                        ),
+                        Text(
+                          "${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? "(-" : "+"}${Constant.amountShow(amount: walletTransactionModel.amount.toString().replaceAll("-", ""))}${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? ")" : ""}",
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? Colors.red : Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            walletTransactionModel.note.toString(),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 12,
+                              color: AppColors.darkBackground.withOpacity(0.7),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          walletTransactionModel.paymentType.toString().toUpperCase(),
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void paymentMethodDialog(BuildContext context, WalletController controller, DarkThemeProvider themeChange) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      isDismissible: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context1) {
+        return SafeArea(
+          top: true,
+          child: FractionallySizedBox(
+            heightFactor: 0.65,
+            child: StatefulBuilder(
+              builder: (context1, setState) {
+                return Obx(
+                  () => Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_ios, color: AppColors.darkBackground),
+                              onPressed: () => Get.back(),
+                            ),
+                            Expanded(
+                              child: Center(
+                                child: Text(
+                                  "Topup Wallet".tr,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18,
+                                    color: AppColors.darkBackground,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 40),
+                          ],
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   "Add Topup Amount".tr,
-                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: AppColors.darkBackground,
+                                  ),
                                 ),
-                                const SizedBox(
-                                  height: 5,
-                                ),
+                                const SizedBox(height: 10),
                                 TextFieldThem.buildTextFiled(
                                   context,
                                   hintText: 'Enter Amount'.tr,
                                   controller: controller.amountController.value,
-                                  inputFormatters: <TextInputFormatter>[
-                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9*]')),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
                                   ],
                                 ),
-                                const SizedBox(
-                                  height: 10,
-                                ),
+                                const SizedBox(height: 20),
                                 Text(
                                   "Select Payment Option".tr,
-                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                                ),
-                                Visibility(
-                                  visible: controller.paymentModel.value.strip!.enable == true,
-                                  child: Obx(
-                                    () => Column(
-                                      children: [
-                                        const SizedBox(
-                                          height: 10,
-                                        ),
-                                        InkWell(
-                                          onTap: () {
-                                            controller.selectedPaymentMethod.value = controller.paymentModel.value.strip!.name.toString();
-                                          },
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                              border: Border.all(
-                                                  color: controller.selectedPaymentMethod.value == controller.paymentModel.value.strip!.name.toString()
-                                                      ? themeChange.getThem()
-                                                          ? AppColors.darkModePrimary
-                                                          : AppColors.primary
-                                                      : AppColors.textFieldBorder,
-                                                  width: 1),
-                                            ),
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                              child: Row(
-                                                children: [
-                                                  Container(
-                                                    height: 40,
-                                                    width: 80,
-                                                    decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                    child: Padding(
-                                                      padding: const EdgeInsets.all(8.0),
-                                                      child: Image.asset('assets/images/stripe.png'),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(
-                                                    width: 10,
-                                                  ),
-                                                  Expanded(
-                                                    child: Text(
-                                                      controller.paymentModel.value.strip!.name.toString(),
-                                                      style: GoogleFonts.poppins(),
-                                                    ),
-                                                  ),
-                                                  Radio(
-                                                    value: controller.paymentModel.value.strip!.name.toString(),
-                                                    groupValue: controller.selectedPaymentMethod.value,
-                                                    activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                    onChanged: (value) {
-                                                      controller.selectedPaymentMethod.value = controller.paymentModel.value.strip!.name.toString();
-                                                    },
-                                                  )
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: AppColors.darkBackground,
                                   ),
                                 ),
+                                const SizedBox(height: 10),
                                 Visibility(
-                                  visible: controller.paymentModel.value.paypal!.enable == true,
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      InkWell(
-                                        onTap: () {
-                                          controller.selectedPaymentMethod.value = controller.paymentModel.value.paypal!.name.toString();
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                            border: Border.all(
-                                                color: controller.selectedPaymentMethod.value == controller.paymentModel.value.paypal!.name.toString()
-                                                    ? themeChange.getThem()
-                                                        ? AppColors.darkModePrimary
-                                                        : AppColors.primary
-                                                    : AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  height: 40,
-                                                  width: 80,
-                                                  decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
-                                                    child: Image.asset('assets/images/paypal.png'),
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  width: 10,
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    controller.paymentModel.value.paypal!.name.toString(),
-                                                    style: GoogleFonts.poppins(),
-                                                  ),
-                                                ),
-                                                Radio(
-                                                  value: controller.paymentModel.value.paypal!.name.toString(),
-                                                  groupValue: controller.selectedPaymentMethod.value,
-                                                  activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                  onChanged: (value) {
-                                                    controller.selectedPaymentMethod.value = controller.paymentModel.value.paypal!.name.toString();
-                                                  },
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  visible: controller.paymentModel.value.strip?.enable == true,
+                                  child: _buildPaymentOption(
+                                    context,
+                                    controller,
+                                    controller.paymentModel.value.strip!.name.toString(),
+                                    'assets/images/stripe.png',
+                                    themeChange,
                                   ),
                                 ),
-                                Visibility(
-                                  visible: controller.paymentModel.value.payStack!.enable == true,
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      InkWell(
-                                        onTap: () {
-                                          controller.selectedPaymentMethod.value = controller.paymentModel.value.payStack!.name.toString();
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                            border: Border.all(
-                                                color: controller.selectedPaymentMethod.value == controller.paymentModel.value.payStack!.name.toString()
-                                                    ? themeChange.getThem()
-                                                        ? AppColors.darkModePrimary
-                                                        : AppColors.primary
-                                                    : AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  height: 40,
-                                                  width: 80,
-                                                  decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
-                                                    child: Image.asset('assets/images/paystack.png'),
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  width: 10,
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    controller.paymentModel.value.payStack!.name.toString(),
-                                                    style: GoogleFonts.poppins(),
-                                                  ),
-                                                ),
-                                                Radio(
-                                                  value: controller.paymentModel.value.payStack!.name.toString(),
-                                                  groupValue: controller.selectedPaymentMethod.value,
-                                                  activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                  onChanged: (value) {
-                                                    controller.selectedPaymentMethod.value = controller.paymentModel.value.payStack!.name.toString();
-                                                  },
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Visibility(
-                                  visible: controller.paymentModel.value.mercadoPago!.enable == true,
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      InkWell(
-                                        onTap: () {
-                                          controller.selectedPaymentMethod.value = controller.paymentModel.value.mercadoPago!.name.toString();
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                            border: Border.all(
-                                                color: controller.selectedPaymentMethod.value == controller.paymentModel.value.mercadoPago!.name.toString()
-                                                    ? themeChange.getThem()
-                                                        ? AppColors.darkModePrimary
-                                                        : AppColors.primary
-                                                    : AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  height: 40,
-                                                  width: 80,
-                                                  decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
-                                                    child: Image.asset('assets/images/mercadopago.png'),
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  width: 10,
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    controller.paymentModel.value.mercadoPago!.name.toString(),
-                                                    style: GoogleFonts.poppins(),
-                                                  ),
-                                                ),
-                                                Radio(
-                                                  value: controller.paymentModel.value.mercadoPago!.name.toString(),
-                                                  groupValue: controller.selectedPaymentMethod.value,
-                                                  activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                  onChanged: (value) {
-                                                    controller.selectedPaymentMethod.value = controller.paymentModel.value.mercadoPago!.name.toString();
-                                                  },
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Visibility(
-                                  visible: controller.paymentModel.value.flutterWave!.enable == true,
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      InkWell(
-                                        onTap: () {
-                                          controller.selectedPaymentMethod.value = controller.paymentModel.value.flutterWave!.name.toString();
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                            border: Border.all(
-                                                color: controller.selectedPaymentMethod.value == controller.paymentModel.value.flutterWave!.name.toString()
-                                                    ? themeChange.getThem()
-                                                        ? AppColors.darkModePrimary
-                                                        : AppColors.primary
-                                                    : AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  height: 40,
-                                                  width: 80,
-                                                  decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
-                                                    child: Image.asset('assets/images/flutterwave.png'),
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  width: 10,
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    controller.paymentModel.value.flutterWave!.name.toString(),
-                                                    style: GoogleFonts.poppins(),
-                                                  ),
-                                                ),
-                                                Radio(
-                                                  value: controller.paymentModel.value.flutterWave!.name.toString(),
-                                                  groupValue: controller.selectedPaymentMethod.value,
-                                                  activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                  onChanged: (value) {
-                                                    controller.selectedPaymentMethod.value = controller.paymentModel.value.flutterWave!.name.toString();
-                                                  },
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Visibility(
-                                  visible: controller.paymentModel.value.payfast!.enable == true,
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      InkWell(
-                                        onTap: () {
-                                          controller.selectedPaymentMethod.value = controller.paymentModel.value.payfast!.name.toString();
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                            border: Border.all(
-                                                color: controller.selectedPaymentMethod.value == controller.paymentModel.value.payfast!.name.toString()
-                                                    ? themeChange.getThem()
-                                                        ? AppColors.darkModePrimary
-                                                        : AppColors.primary
-                                                    : AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  height: 40,
-                                                  width: 80,
-                                                  decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
-                                                    child: Image.asset('assets/images/payfast.png'),
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  width: 10,
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    controller.paymentModel.value.payfast!.name.toString(),
-                                                    style: GoogleFonts.poppins(),
-                                                  ),
-                                                ),
-                                                Radio(
-                                                  value: controller.paymentModel.value.payfast!.name.toString(),
-                                                  groupValue: controller.selectedPaymentMethod.value,
-                                                  activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                  onChanged: (value) {
-                                                    controller.selectedPaymentMethod.value = controller.paymentModel.value.payfast!.name.toString();
-                                                  },
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Visibility(
-                                  visible: controller.paymentModel.value.paytm!.enable == true,
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      InkWell(
-                                        onTap: () {
-                                          controller.selectedPaymentMethod.value = controller.paymentModel.value.paytm!.name.toString();
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                            border: Border.all(
-                                                color: controller.selectedPaymentMethod.value == controller.paymentModel.value.paytm!.name.toString()
-                                                    ? themeChange.getThem()
-                                                        ? AppColors.darkModePrimary
-                                                        : AppColors.primary
-                                                    : AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  height: 40,
-                                                  width: 80,
-                                                  decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
-                                                    child: Image.asset('assets/images/paytam.png'),
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  width: 10,
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    controller.paymentModel.value.paytm!.name.toString(),
-                                                    style: GoogleFonts.poppins(),
-                                                  ),
-                                                ),
-                                                Radio(
-                                                  value: controller.paymentModel.value.paytm!.name.toString(),
-                                                  groupValue: controller.selectedPaymentMethod.value,
-                                                  activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                  onChanged: (value) {
-                                                    controller.selectedPaymentMethod.value = controller.paymentModel.value.paytm!.name.toString();
-                                                  },
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Visibility(
-                                  visible: controller.paymentModel.value.razorpay!.enable == true,
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      InkWell(
-                                        onTap: () {
-                                          controller.selectedPaymentMethod.value = controller.paymentModel.value.razorpay!.name.toString();
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                            border: Border.all(
-                                                color: controller.selectedPaymentMethod.value == controller.paymentModel.value.razorpay!.name.toString()
-                                                    ? themeChange.getThem()
-                                                        ? AppColors.darkModePrimary
-                                                        : AppColors.primary
-                                                    : AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  height: 40,
-                                                  width: 80,
-                                                  decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
-                                                    child: Image.asset('assets/images/razorpay.png'),
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  width: 10,
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    controller.paymentModel.value.razorpay!.name.toString(),
-                                                    style: GoogleFonts.poppins(),
-                                                  ),
-                                                ),
-                                                Radio(
-                                                  value: controller.paymentModel.value.razorpay!.name.toString(),
-                                                  groupValue: controller.selectedPaymentMethod.value,
-                                                  activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                  onChanged: (value) {
-                                                    controller.selectedPaymentMethod.value = controller.paymentModel.value.razorpay!.name.toString();
-                                                  },
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                controller.paymentModel.value.midtrans != null && controller.paymentModel.value.midtrans!.enable == true
-                                    ? Column(
-                                        children: [
-                                          const SizedBox(
-                                            height: 10,
-                                          ),
-                                          InkWell(
-                                            onTap: () {
-                                              controller.selectedPaymentMethod.value = controller.paymentModel.value.midtrans!.name.toString();
-                                            },
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                                border: Border.all(
-                                                    color: controller.selectedPaymentMethod.value == controller.paymentModel.value.midtrans!.name.toString()
-                                                        ? themeChange.getThem()
-                                                            ? AppColors.darkModePrimary
-                                                            : AppColors.primary
-                                                        : AppColors.textFieldBorder,
-                                                    width: 1),
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                                child: Row(
-                                                  children: [
-                                                    Container(
-                                                      height: 40,
-                                                      width: 80,
-                                                      decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Image.asset('assets/images/midtrans.png'),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(
-                                                      width: 10,
-                                                    ),
-                                                    Expanded(
-                                                      child: Text(
-                                                        controller.paymentModel.value.midtrans!.name.toString(),
-                                                        style: GoogleFonts.poppins(),
-                                                      ),
-                                                    ),
-                                                    Radio(
-                                                      value: controller.paymentModel.value.midtrans!.name.toString(),
-                                                      groupValue: controller.selectedPaymentMethod.value,
-                                                      activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                      onChanged: (value) {
-                                                        controller.selectedPaymentMethod.value = controller.paymentModel.value.midtrans!.name.toString();
-                                                      },
-                                                    )
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : const SizedBox(),
-                                controller.paymentModel.value.xendit != null && controller.paymentModel.value.xendit!.enable == true
-                                    ? Column(
-                                        children: [
-                                          const SizedBox(
-                                            height: 10,
-                                          ),
-                                          InkWell(
-                                            onTap: () {
-                                              controller.selectedPaymentMethod.value = controller.paymentModel.value.xendit!.name.toString();
-                                            },
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                                border: Border.all(
-                                                    color: controller.selectedPaymentMethod.value == controller.paymentModel.value.xendit!.name.toString()
-                                                        ? themeChange.getThem()
-                                                            ? AppColors.darkModePrimary
-                                                            : AppColors.primary
-                                                        : AppColors.textFieldBorder,
-                                                    width: 1),
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                                child: Row(
-                                                  children: [
-                                                    Container(
-                                                      height: 40,
-                                                      width: 80,
-                                                      decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Image.asset('assets/images/xendit.png'),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(
-                                                      width: 10,
-                                                    ),
-                                                    Expanded(
-                                                      child: Text(
-                                                        controller.paymentModel.value.xendit!.name.toString(),
-                                                        style: GoogleFonts.poppins(),
-                                                      ),
-                                                    ),
-                                                    Radio(
-                                                      value: controller.paymentModel.value.xendit!.name.toString(),
-                                                      groupValue: controller.selectedPaymentMethod.value,
-                                                      activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                      onChanged: (value) {
-                                                        controller.selectedPaymentMethod.value = controller.paymentModel.value.xendit!.name.toString();
-                                                      },
-                                                    )
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : const SizedBox(),
-                                controller.paymentModel.value.orangePay != null && controller.paymentModel.value.orangePay!.enable == true
-                                    ? Column(
-                                        children: [
-                                          const SizedBox(
-                                            height: 10,
-                                          ),
-                                          InkWell(
-                                            onTap: () {
-                                              controller.selectedPaymentMethod.value = controller.paymentModel.value.orangePay!.name.toString();
-                                            },
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                                border: Border.all(
-                                                    color: controller.selectedPaymentMethod.value == controller.paymentModel.value.orangePay!.name.toString()
-                                                        ? themeChange.getThem()
-                                                            ? AppColors.darkModePrimary
-                                                            : AppColors.primary
-                                                        : AppColors.textFieldBorder,
-                                                    width: 1),
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                                child: Row(
-                                                  children: [
-                                                    Container(
-                                                      height: 40,
-                                                      width: 80,
-                                                      decoration: const BoxDecoration(color: AppColors.lightGray, borderRadius: BorderRadius.all(Radius.circular(5))),
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: Image.asset('assets/images/orange_money.png'),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(
-                                                      width: 10,
-                                                    ),
-                                                    Expanded(
-                                                      child: Text(
-                                                        controller.paymentModel.value.orangePay!.name.toString(),
-                                                        style: GoogleFonts.poppins(),
-                                                      ),
-                                                    ),
-                                                    Radio(
-                                                      value: controller.paymentModel.value.orangePay!.name.toString(),
-                                                      groupValue: controller.selectedPaymentMethod.value,
-                                                      activeColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-                                                      onChanged: (value) {
-                                                        controller.selectedPaymentMethod.value = controller.paymentModel.value.orangePay!.name.toString();
-                                                      },
-                                                    )
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : const SizedBox(),
                               ],
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      ButtonThem.buildButton(context, title: "Topup".tr, onPress: () {
-                        if (controller.amountController.value.text.isNotEmpty) {
-
-                          if (controller.selectedPaymentMethod.value == controller.paymentModel.value.strip!.name) {
-                            controller.stripeMakePayment(amount: controller.amountController.value.text);
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.paypal!.name) {
-                            controller.paypalPaymentSheet(controller.amountController.value.text, context1);
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.payStack!.name) {
-                            controller.payStackPayment(controller.amountController.value.text);
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.mercadoPago!.name) {
-                            controller.mercadoPagoMakePayment(context: context, amount: controller.amountController.value.text);
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.flutterWave!.name) {
-                            controller.flutterWaveInitiatePayment(context: context, amount: controller.amountController.value.text);
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.payfast!.name) {
-                            controller.payFastPayment(context: context, amount: controller.amountController.value.text);
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.paytm!.name) {
-                            controller.getPaytmCheckSum(context, amount: double.parse(controller.amountController.value.text));
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.razorpay!.name) {
-                            RazorPayController()
-                                .createOrderRazorPay(amount: int.parse(controller.amountController.value.text), razorpayModel: controller.paymentModel.value.razorpay)
-                                .then((value) {
-                              if (value == null) {
-                                Get.back();
-                                ShowToastDialog.showToast("Something went wrong, please contact admin.".tr);
+                        const SizedBox(height: 10),
+                        ButtonThem.buildButton(
+                          context,
+                          title: "Topup".tr,
+                         
+                          onPress: () {
+                            if (controller.amountController.value.text.isNotEmpty) {
+                              Get.back();
+                              if (controller.selectedPaymentMethod.value == controller.paymentModel.value.strip!.name) {
+                                controller.stripeMakePayment(amount: controller.amountController.value.text);
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.paypal?.name) {
+                                controller.paypalPaymentSheet(controller.amountController.value.text, context1);
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.payStack?.name) {
+                                controller.payStackPayment(controller.amountController.value.text);
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.mercadoPago?.name) {
+                                controller.mercadoPagoMakePayment(context: context, amount: controller.amountController.value.text);
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.flutterWave?.name) {
+                                controller.flutterWaveInitiatePayment(context: context, amount: controller.amountController.value.text);
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.payfast?.name) {
+                                controller.payFastPayment(context: context, amount: controller.amountController.value.text);
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.paytm?.name) {
+                                controller.getPaytmCheckSum(context, amount: double.parse(controller.amountController.value.text));
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.razorpay?.name) {
+                                RazorPayController()
+                                    .createOrderRazorPay(
+                                  amount: int.parse(controller.amountController.value.text),
+                                  razorpayModel: controller.paymentModel.value.razorpay,
+                                )
+                                    .then((value) {
+                                  if (value == null) {
+                                    Get.back();
+                                    ShowToastDialog.showToast("Something went wrong, please contact admin.".tr);
+                                  } else {
+                                    CreateRazorPayOrderModel result = value;
+                                    controller.openCheckout(amount: controller.amountController.value.text, orderId: result.id);
+                                  }
+                                });
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.midtrans?.name) {
+                                controller.midtransMakePayment(context: context, amount: controller.amountController.value.text);
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.orangePay?.name) {
+                                controller.orangeMakePayment(context: context, amount: controller.amountController.value.text);
+                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.xendit?.name) {
+                                controller.xenditPayment(context, controller.amountController.value.text);
                               } else {
-                                CreateRazorPayOrderModel result = value;
-                                controller.openCheckout(amount: controller.amountController.value.text, orderId: result.id);
+                                ShowToastDialog.showToast("Please select payment method".tr);
                               }
-                            });
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.midtrans!.name) {
-                            controller.midtransMakePayment(context: context, amount: controller.amountController.value.text);
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.orangePay!.name) {
-                            controller.orangeMakePayment(context: context, amount: controller.amountController.value.text);
-                          } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.xendit!.name) {
-                            controller.xenditPayment(context, controller.amountController.value.text);
-                          } else {
-                            ShowToastDialog.showToast("Please select payment method".tr);
-                          }
-                        } else {
-                          ShowToastDialog.showToast("Please enter amount".tr);
-                        }
-                      }),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                    ],
+                            } else {
+                              ShowToastDialog.showToast("Please enter amount".tr);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }),
-          );
-        });
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
-  showTransactionDetails({required BuildContext context, required WalletTransactionModel walletTransactionModel}) {
-    return showModalBottomSheet(
-        elevation: 5,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(topLeft: Radius.circular(15), topRight: Radius.circular(15))),
-        context: context,
-        builder: (context) {
-          return StatefulBuilder(builder: (context, setState) {
-            final themeChange = Provider.of<DarkThemeProvider>(context);
-
-            return SingleChildScrollView(
+  Widget _buildPaymentOption(
+    BuildContext context,
+    WalletController controller,
+    String paymentMethod,
+    String imagePath,
+    DarkThemeProvider themeChange,
+  ) {
+    return InkWell(
+      onTap: () {
+        controller.selectedPaymentMethod.value = paymentMethod;
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: controller.selectedPaymentMethod.value == paymentMethod
+                ? AppColors.primary
+                : AppColors.textFieldBorder,
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              height: 40,
+              width: 80,
+              decoration: BoxDecoration(
+                color: AppColors.lightGray,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10.0),
-                      child: Text(
-                        "Transaction Details".tr,
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
-                        borderRadius: const BorderRadius.all(Radius.circular(10)),
-                        border: Border.all(color: themeChange.getThem() ? AppColors.darkContainerBorder : AppColors.containerBorder, width: 0.5),
-                        boxShadow: themeChange.getThem()
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.10),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 4), // changes position of shadow
-                                ),
-                              ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Transaction ID".tr,
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                const SizedBox(
-                                  height: 5,
-                                ),
-                                Text(
-                                  "#${walletTransactionModel.transactionId!.toUpperCase()}",
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
-                        borderRadius: const BorderRadius.all(Radius.circular(10)),
-                        border: Border.all(color: themeChange.getThem() ? AppColors.darkContainerBorder : AppColors.containerBorder, width: 0.5),
-                        boxShadow: themeChange.getThem()
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.10),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 4), // changes position of shadow
-                                ),
-                              ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Payment Details".tr,
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      height: 5,
-                                    ),
-                                    Row(
-                                      children: [
-                                        Opacity(
-                                          opacity: 0.7,
-                                          child: Text(
-                                            "Pay Via".tr,
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ),
-                                        Text(
-                                          " ${walletTransactionModel.paymentType}",
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 16,
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10),
-                              child: Divider(),
-                            ),
-                            Row(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Date in UTC Format".tr,
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        height: 5,
-                                      ),
-                                      Opacity(
-                                        opacity: 0.7,
-                                        child: Text(
-                                          DateFormat('KK:mm:ss a, dd MMM yyyy').format(walletTransactionModel.createdDate!.toDate()).toUpperCase(),
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    )
-                  ],
+                padding: const EdgeInsets.all(8),
+                child: Image.asset(imagePath),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                paymentMethod,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  color: AppColors.darkBackground,
                 ),
               ),
-            );
-          });
-        });
+            ),
+            Radio(
+              value: paymentMethod,
+              groupValue: controller.selectedPaymentMethod.value,
+              activeColor: AppColors.primary,
+              onChanged: (value) {
+                controller.selectedPaymentMethod.value = paymentMethod;
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  withdrawAmountBottomSheet(BuildContext context, WalletController controller) {
-    return showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(25)),
-        ),
-        builder: (context) {
-          final themeChange = Provider.of<DarkThemeProvider>(context);
-
-          return StatefulBuilder(builder: (context, setState) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  void showTransactionDetails({
+    required BuildContext context,
+    required WalletTransactionModel walletTransactionModel,
+    required DarkThemeProvider themeChange,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Transaction Details".tr,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    color: AppColors.darkBackground,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildDetailCard(
+                  title: "Transaction ID".tr,
+                  value: "#${walletTransactionModel.transactionId!.toUpperCase()}",
+                  themeChange: themeChange,
+                ),
+                const SizedBox(height: 12),
+                _buildDetailCard(
+                  title: "Payment Details".tr,
+                  themeChange: themeChange,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 25.0, bottom: 10),
-                      child: Text(
-                        "Withdraw".tr,
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
+                    Row(
+                      children: [
+                        Text(
+                          "Pay Via".tr,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppColors.darkBackground.withOpacity(0.7),
+                          ),
                         ),
+                        const SizedBox(width: 8),
+                        Text(
+                          walletTransactionModel.paymentType ?? "Unknown",
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppColors.darkBackground,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Text(
+                      "Date in UTC Format".tr,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.darkBackground,
                       ),
                     ),
-                    Container(
-                        decoration: BoxDecoration(
-                          color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
-                          borderRadius: const BorderRadius.all(Radius.circular(10)),
-                          border: Border.all(color: themeChange.getThem() ? AppColors.darkContainerBorder : AppColors.containerBorder, width: 0.5),
-                          boxShadow: themeChange.getThem()
-                              ? null
-                              : [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.5),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2), // changes position of shadow
-                                  ),
-                                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      DateFormat('KK:mm:ss a, dd MMM yyyy').format(walletTransactionModel.createdDate!.toDate()).toUpperCase(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: AppColors.darkBackground.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailCard({
+    required String title,
+    String? value,
+    List<Widget>? children,
+    required DarkThemeProvider themeChange,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: themeChange.getThem() ? AppColors.darkContainerBackground : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: AppColors.darkBackground,
+            ),
+          ),
+          if (value != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 14,
+                color: AppColors.darkBackground.withOpacity(0.7),
+              ),
+            ),
+          ],
+          if (children != null) ...children,
+        ],
+      ),
+    );
+  }
+
+  void withdrawAmountBottomSheet(BuildContext context, WalletController controller, DarkThemeProvider themeChange) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Withdraw".tr,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      color: AppColors.darkBackground,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: themeChange.getThem() ? AppColors.darkContainerBackground : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    controller.bankDetailsModel.value.bankName.toString(),
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.account_balance,
-                                    size: 40,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 2,
-                              ),
                               Text(
-                                controller.bankDetailsModel.value.accountNumber.toString(),
+                                controller.bankDetailsModel.value.bankName.toString(),
                                 style: GoogleFonts.poppins(
-                                  fontSize: 20,
                                   fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 5,
-                              ),
-                              Text(
-                                controller.bankDetailsModel.value.holderName.toString(),
-                                style: GoogleFonts.poppins(
                                   fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.darkBackground,
                                 ),
                               ),
-                              const SizedBox(
-                                height: 4,
-                              ),
-                              Text(
-                                controller.bankDetailsModel.value.branchName.toString(),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                ),
-                              ),
-                              Text(
-                                controller.bankDetailsModel.value.otherInformation.toString(),
-                                style: GoogleFonts.poppins(),
-                              ),
-                              const SizedBox(
-                                height: 10,
+                              const Icon(
+                                Icons.account_balance,
+                                size: 40,
+                                color: AppColors.darkBackground,
                               ),
                             ],
                           ),
-                        )),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                    RichText(
-                      text: TextSpan(
-                        text: "Amount to Withdraw".tr,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                        ),
+                          const SizedBox(height: 4),
+                          Text(
+                            controller.bankDetailsModel.value.accountNumber.toString(),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                              color: AppColors.darkBackground.withOpacity(0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            controller.bankDetailsModel.value.holderName.toString(),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                              color: AppColors.darkBackground,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            controller.bankDetailsModel.value.branchName.toString(),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
+                              color: AppColors.darkBackground.withOpacity(0.7),
+                            ),
+                          ),
+                          Text(
+                            controller.bankDetailsModel.value.otherInformation.toString(),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
+                              color: AppColors.darkBackground.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(
-                      height: 10,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "Amount to Withdraw".tr,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: AppColors.darkBackground,
                     ),
-                    TextFieldThem.buildTextFiled(context, hintText: 'Enter Amount'.tr, controller: controller.withdrawalAmountController.value),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    TextFieldThem.buildTextFiled(context, hintText: 'Notes'.tr, maxLine: 3, controller: controller.noteController.value),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ButtonThem.buildButton(
-                          context,
-                          title: "Withdrawal".tr,
-                          onPress: () async {
-                            if (double.parse(controller.driverUserModel.value.walletAmount.toString()) < double.parse(controller.withdrawalAmountController.value.text)) {
-                              ShowToastDialog.showToast("Insufficient balance".tr);
-                            } else if (double.parse(Constant.minimumAmountToWithdrawal) > double.parse(controller.withdrawalAmountController.value.text)) {
-                              ShowToastDialog.showToast(
-                                  "Withdraw amount must be greater or equal to ${Constant.amountShow(amount: Constant.minimumAmountToWithdrawal.toString())}".tr);
-                            } else {
-                              ShowToastDialog.showLoader("Please wait".tr);
-                              WithdrawModel withdrawModel = WithdrawModel();
-                              withdrawModel.id = Constant.getUuid();
-                              withdrawModel.userId = FireStoreUtils.getCurrentUid();
-                              withdrawModel.paymentStatus = "pending";
-                              withdrawModel.amount = controller.withdrawalAmountController.value.text;
-                              withdrawModel.note = controller.noteController.value.text;
-                              withdrawModel.createdDate = Timestamp.now();
+                  ),
+                  const SizedBox(height: 10),
+                  TextFieldThem.buildTextFiled(
+                    context,
+                    hintText: 'Enter Amount'.tr,
+                    controller: controller.withdrawalAmountController.value,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextFieldThem.buildTextFiled(
+                    context,
+                    hintText: 'Notes'.tr,
+                    maxLine: 3,
+                    controller: controller.noteController.value,
+                  ),
+                  const SizedBox(height: 20),
+                  ButtonThem.buildButton(
+                    context,
+                    title: "Withdrawal".tr,
+                   
+                    onPress: () async {
+                      if (double.parse(controller.driverUserModel.value.walletAmount.toString()) < double.parse(controller.withdrawalAmountController.value.text)) {
+                        ShowToastDialog.showToast("Insufficient balance".tr);
+                      } else if (double.parse(Constant.minimumAmountToWithdrawal) > double.parse(controller.withdrawalAmountController.value.text)) {
+                        ShowToastDialog.showToast(
+                            "Withdraw amount must be greater or equal to ${Constant.amountShow(amount: Constant.minimumAmountToWithdrawal.toString())}".tr);
+                      } else {
+                        ShowToastDialog.showLoader("Please wait".tr);
+                        WithdrawModel withdrawModel = WithdrawModel();
+                        withdrawModel.id = Constant.getUuid();
+                        withdrawModel.userId = FireStoreUtils.getCurrentUid();
+                        withdrawModel.paymentStatus = "pending";
+                        withdrawModel.amount = controller.withdrawalAmountController.value.text;
+                        withdrawModel.note = controller.noteController.value.text;
+                        withdrawModel.createdDate = Timestamp.now();
 
-                              await FireStoreUtils.updatedDriverWallet(amount: "-${controller.withdrawalAmountController.value.text}");
+                        await FireStoreUtils.updatedDriverWallet(amount: "-${controller.withdrawalAmountController.value.text}");
 
-                              await FireStoreUtils.setWithdrawRequest(withdrawModel).then((value) {
-                                controller.getUser();
-                                ShowToastDialog.closeLoader();
-                                ShowToastDialog.showToast("Request sent to admin".tr);
-                                Get.back();
-                              });
-                            }
-                          },
-                        )
-                      ],
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                  ],
-                ),
+                        await FireStoreUtils.setWithdrawRequest(withdrawModel).then((value) {
+                          controller.getUser();
+                          ShowToastDialog.closeLoader();
+                          ShowToastDialog.showToast("Request sent to admin".tr);
+                          Get.back();
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
-            );
-          });
+            ),
+          );
         });
+      },
+    );
   }
 }

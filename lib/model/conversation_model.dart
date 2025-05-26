@@ -10,6 +10,8 @@ class ConversationModel {
   String? videoThumbnail;
   Url? url;
   Timestamp? createdAt;
+  String? repliedToMessageId;
+  String? repliedToMessageContent;
 
   ConversationModel({
     this.id,
@@ -21,6 +23,8 @@ class ConversationModel {
     this.videoThumbnail,
     this.url,
     this.createdAt,
+    this.repliedToMessageId,
+    this.repliedToMessageContent,
   });
 
   factory ConversationModel.fromJson(Map<String, dynamic> parsedJson) {
@@ -38,6 +42,8 @@ class ConversationModel {
               : null
           : Url(),
       createdAt: parsedJson['createdAt'] ?? Timestamp.now(),
+      repliedToMessageId: parsedJson['repliedToMessageId'] ?? '',
+      repliedToMessageContent: parsedJson['repliedToMessageContent'] ?? '',
     );
   }
 
@@ -52,21 +58,25 @@ class ConversationModel {
       'videoThumbnail': videoThumbnail,
       'url': url == null ? null : url!.toJson(),
       'createdAt': createdAt,
+      'repliedToMessageId': repliedToMessageId,
+      'repliedToMessageContent': repliedToMessageContent,
     };
   }
 }
 
 class Url {
   String mime;
-
   String url;
-
   String? videoThumbnail;
 
   Url({this.mime = '', this.url = '', this.videoThumbnail});
 
   factory Url.fromJson(Map<dynamic, dynamic> parsedJson) {
-    return Url(mime: parsedJson['mime'] ?? '', url: parsedJson['url'] ?? '', videoThumbnail: parsedJson['videoThumbnail'] ?? '');
+    return Url(
+      mime: parsedJson['mime'] ?? '',
+      url: parsedJson['url'] ?? '',
+      videoThumbnail: parsedJson['videoThumbnail'] ?? '',
+    );
   }
 
   Map<String, dynamic> toJson() {

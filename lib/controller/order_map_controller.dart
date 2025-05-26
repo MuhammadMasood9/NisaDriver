@@ -144,17 +144,19 @@ void getPolyline() async {
     );
 
     try {
-      List<PolylineResult> results = await polylinePoints.getRouteBetweenCoordinates(
+      // Change this line - assign to single PolylineResult instead of List
+      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
         googleApiKey: Constant.mapAPIKey,
         request: polylineRequest,
       );
 
-      if (results.isNotEmpty && results.first.points.isNotEmpty) {
-        for (var point in results.first.points) {
+      // Update the condition to check the single result
+      if (result.points.isNotEmpty) {
+        for (var point in result.points) {
           polylineCoordinates.add(LatLng(point.latitude, point.longitude));
         }
       } else {
-        ShowToastDialog.showToast("Failed to fetch route: ${results.isNotEmpty ? results.first.errorMessage : 'No results'}".tr);
+        ShowToastDialog.showToast("Failed to fetch route: ${result.errorMessage ?? 'No points found'}".tr);
       }
     } catch (e) {
       ShowToastDialog.showToast("Error fetching route: $e".tr);

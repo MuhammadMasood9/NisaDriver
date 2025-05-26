@@ -13,102 +13,225 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:driver/themes/typography.dart'; // Added for AppTypography
 
 class ReviewScreen extends StatelessWidget {
   const ReviewScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return GetX<RatingController>(
         init: RatingController(),
         builder: (controller) {
           return Scaffold(
-            appBar: AppBar(
-              backgroundColor: AppColors.primary,
-              title: Text("Review".tr),
-              leading: InkWell(
-                  onTap: () {
-                    Get.back();
-                  },
-                  child: const Icon(
-                    Icons.arrow_back,
-                  )),
-            ),
-            backgroundColor: AppColors.primary,
+            backgroundColor: const Color.fromARGB(255, 255, 255, 255),
             body: controller.isLoading.value == true
                 ? Constant.loader(context)
-                : Stack(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 20, right: 20, top: 42, bottom: 20),
-                        child: Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          child: SingleChildScrollView(
+                : SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 200, // Adjust height based on design needs
+                          child: Stack(
+                            children: [
+                              // Background Image
+                              Image.asset(
+                                "assets/Background.png",
+                                fit: BoxFit.fill,
+                                width: double.infinity,
+                                height: 156,
+                              ),
+                              // Bike Image
+                              Positioned(
+                                top: 80, // Padding from the top
+                                left: 0,
+                                right: 0,
+                                child: Center(
+                                  child: Image.asset(
+                                    "assets/bike.png",
+                                    width: 150,
+                                    height: 150,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 50, // Padding from the top
+                                left: 0,
+                                right: 0,
+                                child: Center(
+                                    child: Text(
+                                        "Rate Your Passenger".tr, // Updated for driver context
+                                        style: AppTypography.h2(context).copyWith(
+                                            color: Colors.white,
+                                            letterSpacing: 0.8))),
+                              ),
+                              Positioned(
+                                top: 40, // Padding from the top
+                                left: 10,
+                                child: FloatingActionButton(
+                                  onPressed: () => Get.back(),
+                                  mini: true,
+                                  backgroundColor: Colors.white,
+                                  child: Icon(
+                                    Icons.arrow_back,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(
+                              left: 0, right: 0, top: 5, bottom: 0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 5,
+                                    offset: Offset(6, 0),
+                                  ),
+                                ],
+                                borderRadius: BorderRadius.circular(20)),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 10),
                               child: Column(
                                 children: [
-                                  const SizedBox(
-                                    height: 80,
+                                  Container(
+                                    padding: EdgeInsets.all(10),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(60),
+                                                color: Colors.white,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.10),
+                                                    blurRadius: 5,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(60),
+                                                child: CachedNetworkImage(
+                                                  imageUrl: controller.userModel
+                                                      .value.profilePic
+                                                      .toString(),
+                                                  height: 50,
+                                                  width: 50,
+                                                  fit: BoxFit.cover,
+                                                  placeholder: (context, url) =>
+                                                      Constant.loader(context),
+                                                  errorWidget:
+                                                      (context, url, error) =>
+                                                          Image.network(
+                                                              Constant
+                                                                  .userPlaceHolder),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${controller.userModel.value.fullName}',
+                                                  textAlign: TextAlign.center,
+                                                  style: AppTypography.h3(context)
+                                                      .copyWith(
+                                                          letterSpacing: 0.8,
+                                                          fontWeight:
+                                                              FontWeight.w800),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.star,
+                                              size: 22,
+                                              color: AppColors.ratingColour,
+                                            ),
+                                            const SizedBox(
+                                              width: 5,
+                                            ),
+                                            Text(
+                                                Constant.calculateReview(
+                                                    reviewCount: controller
+                                                        .userModel
+                                                        .value
+                                                        .reviewsCount
+                                                        .toString(),
+                                                    reviewSum: controller
+                                                        .userModel
+                                                        .value
+                                                        .reviewsSum
+                                                        .toString()),
+                                                style: GoogleFonts.poppins(
+                                                    fontWeight:
+                                                        FontWeight.w500)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  Text(
-                                    '${controller.userModel.value.fullName}',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.poppins(letterSpacing: 0.8, fontWeight: FontWeight.w800),
-                                  ),
-                                  const SizedBox(
-                                    height: 8,
-                                  ),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.star,
-                                        size: 22,
-                                        color: AppColors.ratingColour,
-                                      ),
-                                      const SizedBox(
-                                        width: 5,
-                                      ),
-                                      Text(
-                                          Constant.calculateReview(
-                                                  reviewCount: controller.userModel.value.reviewsCount.toString(), reviewSum: controller.userModel.value.reviewsSum.toString())
-                                              .toString(),
-                                          style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                  const SizedBox(
-                                    height: 20,
-                                  ),
-                                  const MySeparator(color: Colors.grey),
+                                  SizedBox(height: 10),
+                                  const MySeparator(
+                                      color: Color.fromARGB(255, 227, 227, 227)),
+                                  SizedBox(height: 10),
                                   Padding(
                                     padding: const EdgeInsets.only(top: 20),
                                     child: Text(
-                                      'Rate for'.tr,
+                                      'How Was Your Passenger Experience'.tr, // Updated for driver context
                                       textAlign: TextAlign.center,
-                                      style: GoogleFonts.poppins(letterSpacing: 0.8),
+                                      style: AppTypography.h2(context).copyWith(
+                                        letterSpacing: 0.9,
+                                      ),
                                     ),
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Text(
-                                      "${controller.userModel.value.fullName}",
-                                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, letterSpacing: 2),
+                                  SizedBox(height: 20),
+                                  Text(
+                                    'Your Overall Rating'.tr,
+                                    textAlign: TextAlign.center,
+                                    style: AppTypography.bodyMedium(context)
+                                        .copyWith(
+                                      letterSpacing: 0.9,
+                                      color:
+                                          const Color.fromARGB(255, 92, 92, 92),
                                     ),
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.only(top: 10),
                                     child: RatingBar.builder(
+                                      glowRadius: 0,
+                                      unratedColor: const Color.fromARGB(
+                                          255, 236, 236, 236),
                                       initialRating: controller.rating.value,
-                                      minRating: 0,
+                                      minRating: 1,
                                       direction: Axis.horizontal,
                                       allowHalfRating: true,
                                       itemCount: 5,
-                                      itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                      itemPadding: const EdgeInsets.symmetric(
+                                          horizontal: 4.0),
                                       itemBuilder: (context, _) => const Icon(
                                         Icons.star,
                                         color: Colors.amber,
@@ -120,96 +243,126 @@ class ReviewScreen extends StatelessWidget {
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.only(top: 30),
-                                    child: TextFieldThem.buildTextFiled(context, hintText: 'Comment..'.tr, controller: controller.commentController.value, maxLine: 5),
+                                    child: TextFieldThem.buildTextFiled(
+                                        context,
+                                        hintText: 'Comment..'.tr,
+                                        controller:
+                                            controller.commentController.value,
+                                        maxLine: 5),
                                   ),
-                                  const SizedBox(
-                                    height: 10,
-                                  ),
-                                  ButtonThem.buildButton(context, title: "Submit".tr, onPress: () async {
-                                    if (controller.rating.value > 0 && controller.commentController.value.text.isNotEmpty) {
-                                      ShowToastDialog.showLoader("Please wait".tr);
+                                  const SizedBox(height: 10),
+                                  ButtonThem.buildButton(
+                                    context,
+                                    title: "Submit".tr,
+                                    onPress: () async {
+                                      if (controller.rating.value > 0 &&
+                                          controller.commentController.value.text
+                                              .isNotEmpty) {
+                                        ShowToastDialog.showLoader(
+                                            "Please wait".tr);
 
-                                      await FireStoreUtils.getCustomer(controller.type.value == "orderModel"
-                                              ? controller.orderModel.value.userId.toString()
-                                              : controller.intercityOrderModel.value.userId.toString())
-                                          .then((value) async {
-                                        if (value != null) {
-                                          UserModel userModel = value;
+                                        await FireStoreUtils.getCustomer(
+                                                controller.type.value ==
+                                                        "orderModel"
+                                                    ? controller
+                                                        .orderModel.value.userId
+                                                        .toString()
+                                                    : controller
+                                                        .intercityOrderModel
+                                                        .value
+                                                        .userId
+                                                        .toString())
+                                            .then((value) async {
+                                          if (value != null) {
+                                            UserModel userModel = value;
 
-                                          if (controller.reviewModel.value.id != null) {
-                                            userModel.reviewsSum =
-                                                (double.parse(userModel.reviewsSum.toString()) - double.parse(controller.reviewModel.value.rating.toString())).toString();
-                                            userModel.reviewsCount = (double.parse(userModel.reviewsCount.toString()) - 1).toString();
+                                            if (controller
+                                                    .reviewModel.value.id !=
+                                                null) {
+                                              userModel.reviewsSum = (double.parse(
+                                                          userModel.reviewsSum
+                                                              .toString()) -
+                                                      double.parse(controller
+                                                          .reviewModel
+                                                          .value
+                                                          .rating
+                                                          .toString()))
+                                                  .toString();
+                                              userModel.reviewsCount =
+                                                  (double.parse(userModel
+                                                              .reviewsCount
+                                                              .toString()) -
+                                                          1)
+                                                      .toString();
+                                            }
+                                            userModel.reviewsSum = (double.parse(
+                                                        userModel.reviewsSum
+                                                            .toString()) +
+                                                    double.parse(controller
+                                                        .rating.value
+                                                        .toString()))
+                                                .toString();
+                                            userModel.reviewsCount =
+                                                (double.parse(userModel
+                                                            .reviewsCount
+                                                            .toString()) +
+                                                        1)
+                                                    .toString();
+                                            await FireStoreUtils.updateUser(
+                                                userModel);
                                           }
-                                          userModel.reviewsSum = (double.parse(userModel.reviewsSum.toString()) + double.parse(controller.rating.value.toString())).toString();
-                                          userModel.reviewsCount = (double.parse(userModel.reviewsCount.toString()) + 1).toString();
-                                          await FireStoreUtils.updateUser(userModel);
-                                        }
-                                      });
+                                        });
 
-                                      controller.reviewModel.value.id =
-                                          controller.type.value == "orderModel" ? controller.orderModel.value.id : controller.intercityOrderModel.value.id;
-                                      controller.reviewModel.value.comment = controller.commentController.value.text;
-                                      controller.reviewModel.value.rating = controller.rating.value.toString();
-                                      controller.reviewModel.value.customerId = FireStoreUtils.getCurrentUid();
-                                      controller.reviewModel.value.driverId =
-                                          controller.type.value == "orderModel" ? controller.orderModel.value.driverId : controller.intercityOrderModel.value.driverId;
-                                      controller.reviewModel.value.date = Timestamp.now();
-                                      controller.reviewModel.value.type = controller.type.value == "orderModel" ? "city" : "intercity";
+                                        controller.reviewModel.value.id =
+                                            controller.type.value == "orderModel"
+                                                ? controller.orderModel.value.id
+                                                : controller.intercityOrderModel
+                                                    .value.id;
+                                        controller.reviewModel.value.comment =
+                                            controller
+                                                .commentController.value.text;
+                                        controller.reviewModel.value.rating =
+                                            controller.rating.value.toString();
+                                        controller.reviewModel.value.customerId =
+                                            FireStoreUtils.getCurrentUid();
+                                        controller.reviewModel.value.driverId =
+                                            controller.type.value == "orderModel"
+                                                ? controller
+                                                    .orderModel.value.driverId
+                                                : controller.intercityOrderModel
+                                                    .value.driverId;
+                                        controller.reviewModel.value.date =
+                                            Timestamp.now();
+                                        controller.reviewModel.value.type =
+                                            controller.type.value == "orderModel"
+                                                ? "city"
+                                                : "intercity";
 
-                                      FireStoreUtils.setReview(controller.reviewModel.value).then((value) {
-                                        if (value != null && value == true) {
-                                          ShowToastDialog.closeLoader();
-                                          ShowToastDialog.showToast("Review submit successfully".tr);
-                                          Get.back();
-                                        }
-                                      });
-                                    } else {
-                                      ShowToastDialog.showToast("Please give rate in star and add feedback comment.".tr);
-                                    }
-                                  }),
-                                  const SizedBox(
-                                    height: 10,
+                                        await FireStoreUtils.setReview(
+                                                controller.reviewModel.value)
+                                            .then((value) {
+                                          if (value != null && value == true) {
+                                            ShowToastDialog.closeLoader();
+                                            ShowToastDialog.showToast(
+                                                "Review submit successfully".tr);
+                                            Get.back();
+                                          }
+                                        });
+                                      } else {
+                                        ShowToastDialog.showToast(
+                                            "Please give rate in star and add feedback comment."
+                                                .tr);
+                                      }
+                                    },
                                   ),
+                                  const SizedBox(height: 10),
                                 ],
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: Column(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(60),
-                                color: Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.15),
-                                    blurRadius: 8,
-                                    spreadRadius: 6,
-                                    offset: const Offset(0, 0),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(60),
-                                child: CachedNetworkImage(
-                                  imageUrl: controller.userModel.value.profilePic.toString(),
-                                  height: 110,
-                                  width: 110,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Constant.loader(context),
-                                  errorWidget: (context, url, error) => Image.network(Constant.userPlaceHolder),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
           );
         });

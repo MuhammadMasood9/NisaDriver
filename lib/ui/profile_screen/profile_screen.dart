@@ -7,274 +7,507 @@ import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/profile_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
-import 'package:driver/themes/text_field_them.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return GetX<ProfileController>(
-        init: ProfileController(),
-        builder: (controller) {
-          return Scaffold(
-              backgroundColor: AppColors.primary,
-              body: Column(
-                children: [
-                  SizedBox(
-                    height: Responsive.width(45, context),
-                    width: Responsive.width(100, context),
-                    child: Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: [
-                        Positioned(
-                          bottom: 50,
-                          child: Center(
-                            child: controller.profileImage.isEmpty
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(60),
-                                    child: CachedNetworkImage(
-                                      imageUrl: Constant.userPlaceHolder,
-                                      fit: BoxFit.fill,
-                                      height: Responsive.width(30, context),
-                                      width: Responsive.width(30, context),
-                                      placeholder: (context, url) => Constant.loader(context),
-                                      errorWidget: (context, url, error) => Image.network(Constant.userPlaceHolder),
-                                    ),
-                                  )
-                                : ClipRRect(
-                                    borderRadius: BorderRadius.circular(60),
-                                    child: Constant().hasValidUrl(controller.profileImage.value) == false
-                                        ? Image.file(
-                                            File(controller.profileImage.value),
-                                            height: Responsive.width(30, context),
-                                            width: Responsive.width(30, context),
-                                            fit: BoxFit.fill,
-                                          )
-                                        : CachedNetworkImage(
-                                            imageUrl: controller.profileImage.value.toString(),
-                                            fit: BoxFit.fill,
-                                            height: Responsive.width(30, context),
-                                            width: Responsive.width(30, context),
-                                            placeholder: (context, url) => Constant.loader(context),
-                                            errorWidget: (context, url, error) => Image.network(Constant.userPlaceHolder),
-                                          ),
-                                  ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 50,
-                          right: Responsive.width(36, context),
-                          child: InkWell(
-                            onTap: () {
-                              buildBottomSheet(context, controller);
-                            },
-                            child: ClipOval(
-                              child: Container(
-                                color: Colors.white,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: SvgPicture.asset(
-                                    'assets/icons/ic_edit_profile.svg',
-                                    width: 22,
-                                    height: 22,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: controller.isLoading.value
-                        ? Constant.loader(context)
-                        : Container(
-                            decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.background,
-                                borderRadius: const BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(25))),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 20),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  child: SingleChildScrollView(
-                                    child: Column(
-                                      children: [
-                                        TextFieldThem.buildTextFiled(context, hintText: 'Full name'.tr, controller: controller.fullNameController.value),
-                                        const SizedBox(
-                                          height: 10,
-                                        ),
-                                        TextFormField(
-                                            validator: (value) => value != null && value.isNotEmpty ? null : 'Required',
-                                            keyboardType: TextInputType.number,
-                                            textCapitalization: TextCapitalization.sentences,
-                                            controller: controller.phoneNumberController.value,
-                                            textAlign: TextAlign.start,
-                                            enabled: false,
-                                            decoration: InputDecoration(
-                                                isDense: true,
-                                                filled: true,
-                                                fillColor: themeChange.getThem() ? AppColors.darkTextField : AppColors.textField,
-                                                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                                                prefixIcon: CountryCodePicker(
-                                                  onChanged: (value) {
-                                                    controller.countryCode.value = value.dialCode.toString();
-                                                  },
-                                                  dialogBackgroundColor: themeChange.getThem() ? AppColors.darkBackground : AppColors.background,
-                                                  initialSelection: controller.countryCode.value,
-                                                  comparator: (a, b) => b.name!.compareTo(a.name.toString()),
-                                                  flagDecoration: const BoxDecoration(
-                                                    borderRadius: BorderRadius.all(Radius.circular(2)),
-                                                  ),
-                                                ),
-                                                disabledBorder: OutlineInputBorder(
-                                                  borderRadius: const BorderRadius.all(Radius.circular(4)),
-                                                  borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: const BorderRadius.all(Radius.circular(4)),
-                                                  borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
-                                                ),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: const BorderRadius.all(Radius.circular(4)),
-                                                  borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
-                                                ),
-                                                errorBorder: OutlineInputBorder(
-                                                  borderRadius: const BorderRadius.all(Radius.circular(4)),
-                                                  borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
-                                                ),
-                                                border: OutlineInputBorder(
-                                                  borderRadius: const BorderRadius.all(Radius.circular(4)),
-                                                  borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
-                                                ),
-                                                hintText: "Phone number".tr)),
-                                        const SizedBox(
-                                          height: 10,
-                                        ),
-                                        TextFieldThem.buildTextFiled(context, hintText: 'Email'.tr, controller: controller.emailController.value, enable: false),
-                                        const SizedBox(
-                                          height: 20,
-                                        ),
-                                        ButtonThem.buildButton(
-                                          context,
-                                          title: "Update Profile".tr,
-                                          onPress: () async {
-                                            if (controller.fullNameController.value.text.isEmpty) {
-                                              ShowToastDialog.showToast("Please enter full name");
-                                            } else {
-                                              ShowToastDialog.showLoader("Please wait".tr);
-                                              if (controller.profileImage.value.isNotEmpty &&Constant().hasValidUrl(controller.profileImage.value) == false) {
-                                                controller.profileImage.value = await Constant.uploadUserImageToFireStorage(File(controller.profileImage.value),
-                                                    "profileImage/${FireStoreUtils.getCurrentUid()}", File(controller.profileImage.value).path.split('/').last);
-                                              }
-
-                                              DriverUserModel driverUserModel = controller.driverModel.value;
-                                              driverUserModel.fullName = controller.fullNameController.value.text;
-                                              driverUserModel.profilePic = controller.profileImage.value;
-
-                                              await FireStoreUtils.updateDriverUser(driverUserModel).then((value) {
-                                                ShowToastDialog.closeLoader();
-                                                controller.getData();
-                                                ShowToastDialog.showToast("Profile update successfully".tr);
-                                              });
-                                            }
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                  ),
-                ],
-              ));
-        });
+      init: ProfileController(),
+      builder: (controller) {
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: Column(
+            children: [
+              _buildProfileHeader(context, controller),
+              Expanded(
+                child: controller.isLoading.value
+                    ? Center(child: Constant.loader(context))
+                    : _buildProfileForm(context, controller),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  buildBottomSheet(BuildContext context, ProfileController controller) {
+  Widget _buildProfileHeader(BuildContext context, ProfileController controller) {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 30),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(75),
+                  child: _buildProfileImage(context, controller),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => buildBottomSheet(context, controller),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkBackground,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileImage(BuildContext context, ProfileController controller) {
+    final size = Responsive.width(30, context);
+
+    if (controller.profileImage.isEmpty) {
+      return CachedNetworkImage(
+        imageUrl: Constant.userPlaceHolder,
+        fit: BoxFit.cover,
+        height: size,
+        width: size,
+        placeholder: (context, url) => Constant.loader(context),
+        errorWidget: (context, url, error) =>
+            Image.network(Constant.userPlaceHolder),
+      );
+    } else if (Constant().hasValidUrl(controller.profileImage.value) == false) {
+      return Image.file(
+        File(controller.profileImage.value),
+        height: size,
+        width: size,
+        fit: BoxFit.cover,
+      );
+    } else {
+      return CachedNetworkImage(
+        imageUrl: controller.profileImage.value,
+        fit: BoxFit.cover,
+        height: size,
+        width: size,
+        placeholder: (context, url) => Constant.loader(context),
+        errorWidget: (context, url, error) =>
+            Image.network(Constant.userPlaceHolder),
+      );
+    }
+  }
+
+  Widget _buildProfileForm(BuildContext context, ProfileController controller) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle("Personal Information".tr),
+            const SizedBox(height: 20),
+            _buildInputField(
+              context,
+              label: "Full Name".tr,
+              icon: Icons.person_outline,
+              controller: controller.fullNameController.value,
+            ),
+            const SizedBox(height: 20),
+            _buildPhoneField(context, controller),
+            const SizedBox(height: 20),
+            _buildInputField(
+              context,
+              label: "Email".tr,
+              icon: Icons.email_outlined,
+              controller: controller.emailController.value,
+              enabled: false,
+            ),
+            const SizedBox(height: 40),
+            _buildUpdateButton(context, controller),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: Colors.black87,
+      ),
+    );
+  }
+
+  Widget _buildInputField(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required TextEditingController controller,
+    bool enabled = true,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            enabled: enabled,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+            decoration: InputDecoration(
+              hintText: label,
+              hintStyle: TextStyle(color: Colors.black38),
+              prefixIcon: Icon(icon, color: AppColors.darkBackground),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    BorderSide(color: AppColors.darkBackground, width: 1),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: enabled ? Colors.white : Colors.grey[100],
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhoneField(BuildContext context, ProfileController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Phone Number".tr,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[100],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller.phoneNumberController.value,
+            enabled: false,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+            decoration: InputDecoration(
+              hintText: "Phone number".tr,
+              hintStyle: TextStyle(color: Colors.black38),
+              prefixIcon: CountryCodePicker(
+                onChanged: (value) {
+                  controller.countryCode.value = value.dialCode.toString();
+                },
+                dialogBackgroundColor: Colors.white,
+                initialSelection: controller.countryCode.value,
+                comparator: (a, b) => b.name!.compareTo(a.name.toString()),
+                flagDecoration: const BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(2)),
+                ),
+                textStyle: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+                searchDecoration: InputDecoration(
+                  hintText: "Search country".tr,
+                  hintStyle: TextStyle(color: Colors.black38),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.grey[100],
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUpdateButton(BuildContext context, ProfileController controller) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () async {
+          if (controller.fullNameController.value.text.isEmpty) {
+            ShowToastDialog.showToast("Please enter full name".tr);
+          } else {
+            ShowToastDialog.showLoader("Please wait".tr);
+
+            if (controller.profileImage.value.isNotEmpty &&
+                Constant().hasValidUrl(controller.profileImage.value) == false) {
+              controller.profileImage.value =
+                  await Constant.uploadUserImageToFireStorage(
+                File(controller.profileImage.value),
+                "profileImage/${FireStoreUtils.getCurrentUid()}",
+                File(controller.profileImage.value).path.split('/').last,
+              );
+            }
+
+            DriverUserModel driverUserModel = controller.driverModel.value;
+            driverUserModel.fullName = controller.fullNameController.value.text;
+            driverUserModel.profilePic = controller.profileImage.value;
+
+            await FireStoreUtils.updateDriverUser(driverUserModel).then((value) {
+              ShowToastDialog.closeLoader();
+              controller.getData();
+              ShowToastDialog.showToast("Profile update successfully".tr);
+            });
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.darkBackground,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 0,
+        ),
+        child: Text(
+          "Update Profile".tr,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<dynamic> buildBottomSheet(
+      BuildContext context, ProfileController controller) {
     return showModalBottomSheet(
-        context: context,
-        builder: (context) {
-          return StatefulBuilder(builder: (context, setState) {
-            return SizedBox(
-              height: Responsive.height(22, context),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 15),
-                    child: Text(
-                      "Please Select".tr,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Text(
+                      "Select Media".tr,
+                      style: TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
+                        color: Colors.black87,
                       ),
                     ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(18.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            IconButton(
-                                onPressed: () => controller.pickFile(source: ImageSource.camera),
-                                icon: const Icon(
-                                  Icons.camera_alt,
-                                  size: 32,
-                                )),
-                            Padding(
-                              padding: EdgeInsets.only(top: 3),
-                              child: Text("Camera".tr),
-                            ),
-                          ],
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          size: 20,
+                          color: Colors.black54,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(18.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            IconButton(
-                                onPressed: () => controller.pickFile(source: ImageSource.gallery),
-                                icon: const Icon(
-                                  Icons.photo_library_sharp,
-                                  size: 32,
-                                )),
-                            Padding(
-                              padding: EdgeInsets.only(top: 3),
-                              child: Text("Gallery".tr),
-                            ),
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            );
-          });
-        });
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildMediaOption(
+                        context,
+                        icon: Icons.camera_alt_rounded,
+                        label: "Camera".tr,
+                        color: AppColors.darkBackground,
+                        onTap: () {
+                          Navigator.pop(context);
+                          controller.pickFile(source: ImageSource.camera);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: _buildMediaOption(
+                        context,
+                        icon: Icons.photo_library_rounded,
+                        label: "Gallery".tr,
+                        color: AppColors.darkBackground,
+                        onTap: () {
+                          Navigator.pop(context);
+                          controller.pickFile(source: ImageSource.gallery);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaOption(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 32,
+              color: color,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
