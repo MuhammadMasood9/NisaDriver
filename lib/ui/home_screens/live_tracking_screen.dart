@@ -37,11 +37,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
   @override
   void initState() {
     super.initState();
-    // Load map style asynchronously
     _loadMapStyle();
   }
 
-  // Function to load map style from assets
   Future<void> _loadMapStyle() async {
     try {
       final String style = await DefaultAssetBundle.of(context)
@@ -60,6 +58,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenHeight < 700;
     final themeChange = Provider.of<DarkThemeProvider>(context);
+    final double controlButtonsBottom = screenHeight * 0.45;
 
     return GetBuilder<LiveTrackingController>(
       init: LiveTrackingController(),
@@ -67,12 +66,11 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
         return Scaffold(
           body: Stack(
             children: [
-              // Enhanced Google Map
               Obx(() => GoogleMap(
                     compassEnabled: true,
                     rotateGesturesEnabled: true,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
+                    myLocationEnabled: false,
+                    myLocationButtonEnabled: false,
                     mapType: controller.isNightMode.value
                         ? MapType.hybrid
                         : MapType.normal,
@@ -91,7 +89,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                     onMapCreated: (GoogleMapController mapController) async {
                       controller.mapController = mapController;
 
-                      // Apply custom style to hide road names
                       String mapStyle = '''[
       {
         "featureType": "road",
@@ -146,33 +143,20 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                     onCameraMove: (CameraPosition position) {
                       controller.navigationZoom.value = position.zoom;
                       controller.navigationTilt.value = position.tilt;
-                      controller.deviceBearing.value = position.bearing;
+                      controller.deviceBearing.value;
                       dev.log(
                           'Device bearing: ${controller.deviceBearing.value} Map Bearing: ${position.bearing}');
-                      // Do NOT update deviceBearing here; let compass control it
                     },
                     onTap: (LatLng position) {
                       controller.onMapTap(position);
                     },
                   )),
-
-              // Modern Status Bar
               _buildStatusBar(context, controller),
-
-              // Off-route warning with modern design
               _buildOffRouteWarning(context, controller),
-
-              // Modern Navigation Instruction Card with Lane Guidance
               _buildNavigationCard(context, controller),
-
-              // Modern Control Buttons
-              _buildControlButtons(controller),
-
-              // Modern Bottom Panel
+              _buildControlButtons(controller, controlButtonsBottom),
               _buildBottomPanel(context, controller, themeChange),
-
-              // Traffic Report Dialog Trigger
-              _buildTrafficReportTrigger(controller),
+              _buildTrafficReportTrigger(controller, controlButtonsBottom),
             ],
           ),
         );
@@ -205,7 +189,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Status chip
                 Obx(() => Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
@@ -239,13 +222,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                              fontSize: 10,
                             ),
                           ),
                         ],
                       ),
                     )),
-                // Speed and traffic info
                 Row(
                   children: [
                     Obx(() => _buildInfoChip(
@@ -395,7 +377,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Main instruction
                 Row(
                   children: [
                     Obx(() => Container(
@@ -464,42 +445,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                     ),
                   ],
                 ),
-
-                // Lane Guidance
-                // Obx(() => controller.currentLanes.isNotEmpty
-                //     ? Column(
-                //         children: [
-                //           const SizedBox(height: 10),
-                //           Container(
-                //             padding: const EdgeInsets.all(8),
-                //             decoration: BoxDecoration(
-                //               color: Colors.grey.shade100,
-                //               borderRadius: BorderRadius.circular(12),
-                //             ),
-                //             child: Row(
-                //               mainAxisAlignment: MainAxisAlignment.center,
-                //               children: controller.currentLanes.map((lane) {
-                //                 bool isRecommended =
-                //                     lane == controller.recommendedLane.value;
-                //                 return Padding(
-                //                   padding:
-                //                       const EdgeInsets.symmetric(horizontal: 4),
-                //                   child: Icon(
-                //                     _getLaneIcon(lane),
-                //                     size: 24,
-                //                     color: isRecommended
-                //                         ? AppColors.primary
-                //                         : Colors.grey.shade600,
-                //                   ),
-                //                 );
-                //               }).toList(),
-                //             ),
-                //           ),
-                //         ],
-                //       )
-                //     : const SizedBox.shrink()),
-
-                // Next turn instruction
                 Obx(() => controller.nextTurnInstruction.value.isNotEmpty
                     ? Column(
                         children: [
@@ -546,9 +491,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     );
   }
 
-  Widget _buildControlButtons(LiveTrackingController controller) {
+  Widget _buildControlButtons(
+      LiveTrackingController controller, double bottom) {
     return Positioned(
-      bottom: 360,
+      bottom: bottom,
       right: 16,
       child: Obx(() => Column(
             mainAxisSize: MainAxisSize.min,
@@ -626,7 +572,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag handle
             Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
               width: 36,
@@ -636,8 +581,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Trip Progress Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -694,10 +637,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // Driver and Trip Info Card
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(15),
@@ -718,7 +658,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
               ),
               child: Column(
                 children: [
-                  // Driver Info
                   Row(
                     children: [
                       Container(
@@ -782,7 +721,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                           ],
                         ),
                       ),
-                      // Share Location Button
                       InkWell(
                         onTap: () => controller.shareLocation(),
                         child: Container(
@@ -800,10 +738,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 10),
-
-                  // Trip Stats
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -844,13 +779,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-
-                  // Action Buttons
                   Row(
                     children: [
-                      // Main Action Button
                       Expanded(
                         child: Obx(() {
                           final isRideInProgress = controller.status.value ==
@@ -911,7 +842,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                         }),
                       ),
                       const SizedBox(width: 10),
-                      // Chat and Call Buttons
                       Row(
                         children: [
                           InkWell(
@@ -983,10 +913,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 10),
-
-                  // Cancel Ride Button
                   ButtonThem.buildBorderButton(
                     context,
                     title: "Cancel Ride".tr,
@@ -1055,7 +982,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 ],
               ),
             ),
-
             SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
           ],
         ),
@@ -1063,9 +989,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     );
   }
 
-  Widget _buildTrafficReportTrigger(LiveTrackingController controller) {
+  Widget _buildTrafficReportTrigger(
+      LiveTrackingController controller, double bottom) {
     return Positioned(
-      bottom: 360,
+      bottom: bottom,
       left: 16,
       child: Obx(() => _buildControlButton(
             icon: Icons.traffic_rounded,
@@ -1266,12 +1193,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.black87),
+          Icon(icon, size: 12, color: Colors.black87),
           const SizedBox(width: 4),
           Text(
             text,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
             ),

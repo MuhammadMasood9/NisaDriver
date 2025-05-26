@@ -18,8 +18,10 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class OrderMapController extends GetxController {
-  final Completer<GoogleMapController> mapController = Completer<GoogleMapController>();
-  Rx<TextEditingController> enterOfferRateController = TextEditingController().obs;
+  final Completer<GoogleMapController> mapController =
+      Completer<GoogleMapController>();
+  Rx<TextEditingController> enterOfferRateController =
+      TextEditingController().obs;
 
   RxBool isLoading = true.obs;
 
@@ -37,7 +39,8 @@ class OrderMapController extends GetxController {
   }
 
   acceptOrder() async {
-    if (double.parse(driverModel.value.walletAmount.toString()) >= double.parse(Constant.minimumDepositToRideAccept)) {
+    if (double.parse(driverModel.value.walletAmount.toString()) >=
+        double.parse(Constant.minimumDepositToRideAccept)) {
       ShowToastDialog.showLoader("Please wait".tr);
       List<dynamic> newAcceptedDriverId = [];
       if (orderModel.value.acceptedDriverId != null) {
@@ -50,12 +53,15 @@ class OrderMapController extends GetxController {
       // orderModel.value.offerRate = newAmount.value;
       await FireStoreUtils.setOrder(orderModel.value);
 
-      await FireStoreUtils.getCustomer(orderModel.value.userId.toString()).then((value) async {
+      await FireStoreUtils.getCustomer(orderModel.value.userId.toString())
+          .then((value) async {
         if (value != null) {
           await SendNotification.sendOneNotification(
             token: value.fcmToken.toString(),
             title: 'New Driver Bid'.tr,
-            body: 'Driver has offered ${Constant.amountShow(amount: newAmount.value)} for your journey.🚗'.tr,
+            body:
+                'Driver has offered ${Constant.amountShow(amount: newAmount.value)} for your journey.🚗'
+                    .tr,
             payload: {},
           );
         }
@@ -66,18 +72,23 @@ class OrderMapController extends GetxController {
         acceptedRejectTime: cloudFirestore.Timestamp.now(),
         offerAmount: newAmount.value,
       );
-      FireStoreUtils.acceptRide(orderModel.value, driverIdAcceptReject).then((value) async {
+      FireStoreUtils.acceptRide(orderModel.value, driverIdAcceptReject)
+          .then((value) async {
         ShowToastDialog.closeLoader();
         ShowToastDialog.showToast("Ride Accepted".tr);
         if (driverModel.value.subscriptionTotalOrders != "-1") {
-          driverModel.value.subscriptionTotalOrders = (int.parse(driverModel.value.subscriptionTotalOrders.toString()) - 1).toString();
+          driverModel.value.subscriptionTotalOrders =
+              (int.parse(driverModel.value.subscriptionTotalOrders.toString()) -
+                      1)
+                  .toString();
           await FireStoreUtils.updateDriverUser(driverModel.value);
         }
         Get.back(result: true);
       });
     } else {
       ShowToastDialog.showToast(
-        "You have to minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} wallet amount to Accept Order and place a bid".tr,
+        "You have to minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} wallet amount to Accept Order and place a bid"
+            .tr,
       );
     }
   }
@@ -93,11 +104,16 @@ class OrderMapController extends GetxController {
       String orderId = argumentData['orderModel'];
       await getData(orderId);
       newAmount.value = orderModel.value.offerRate.toString();
-      enterOfferRateController.value.text = orderModel.value.offerRate.toString();
+      enterOfferRateController.value.text =
+          orderModel.value.offerRate.toString();
       getPolyline();
     }
 
-    FireStoreUtils.fireStore.collection(CollectionName.driverUsers).doc(FireStoreUtils.getCurrentUid()).snapshots().listen((event) {
+    FireStoreUtils.fireStore
+        .collection(CollectionName.driverUsers)
+        .doc(FireStoreUtils.getCurrentUid())
+        .snapshots()
+        .listen((event) {
       if (event.exists) {
         driverModel.value = DriverUserModel.fromJson(event.data()!);
       }
@@ -117,8 +133,10 @@ class OrderMapController extends GetxController {
   BitmapDescriptor? destinationIcon;
 
   addMarkerSetup() async {
-    final Uint8List departure = await Constant().getBytesFromAsset('assets/images/pickup.png', 100);
-    final Uint8List destination = await Constant().getBytesFromAsset('assets/images/dropoff.png', 100);
+    final Uint8List departure =
+        await Constant().getBytesFromAsset('assets/images/pickup.png', 100);
+    final Uint8List destination =
+        await Constant().getBytesFromAsset('assets/images/dropoff.png', 100);
     departureIcon = BitmapDescriptor.fromBytes(departure);
     destinationIcon = BitmapDescriptor.fromBytes(destination);
   }
@@ -127,77 +145,92 @@ class OrderMapController extends GetxController {
   RxMap<PolylineId, Polyline> polyLines = <PolylineId, Polyline>{}.obs;
   PolylinePoints polylinePoints = PolylinePoints();
 
-void getPolyline() async {
-  if (orderModel.value.sourceLocationLAtLng != null && orderModel.value.destinationLocationLAtLng != null) {
-    movePosition();
-    List<LatLng> polylineCoordinates = [];
-    PolylineRequest polylineRequest = PolylineRequest(
-      origin: PointLatLng(
-        orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
-        orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
-      ),
-      destination: PointLatLng(
-        orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
-        orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
-      ),
-      mode: TravelMode.driving,
-    );
-
-    try {
-      // Change this line - assign to single PolylineResult instead of List
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey: Constant.mapAPIKey,
-        request: polylineRequest,
+  void getPolyline() async {
+    if (orderModel.value.sourceLocationLAtLng != null &&
+        orderModel.value.destinationLocationLAtLng != null) {
+      movePosition();
+      List<LatLng> polylineCoordinates = [];
+      PolylineRequest polylineRequest = PolylineRequest(
+        origin: PointLatLng(
+          orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
+          orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
+        ),
+        destination: PointLatLng(
+          orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
+          orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
+        ),
+        mode: TravelMode.driving,
       );
 
-      // Update the condition to check the single result
-      if (result.points.isNotEmpty) {
-        for (var point in result.points) {
-          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-        }
-      } else {
-        ShowToastDialog.showToast("Failed to fetch route: ${result.errorMessage ?? 'No points found'}".tr);
-      }
-    } catch (e) {
-      ShowToastDialog.showToast("Error fetching route: $e".tr);
-    }
+      try {
+        // Change variable to List<PolylineResult> to match the method's return type
+        List<PolylineResult> results =
+            await polylinePoints.getRouteBetweenCoordinates(
+          googleApiKey: Constant.mapAPIKey,
+          request: polylineRequest,
+        );
 
-    _addPolyLine(polylineCoordinates);
-    addMarker(
-      LatLng(
-        orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
-        orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
-      ),
-      "Source",
-      departureIcon,
-    );
-    addMarker(
-      LatLng(
-        orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
-        orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
-      ),
-      "Destination",
-      destinationIcon,
-    );
+        // Check if the list has at least one result
+        if (results.isNotEmpty) {
+          // Use the first route from the list
+          PolylineResult result = results.first;
+          if (result.points.isNotEmpty) {
+            for (var point in result.points) {
+              polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+            }
+          } else {
+            ShowToastDialog.showToast(
+                "Failed to fetch route: ${result.errorMessage ?? 'No points found'}"
+                    .tr);
+          }
+        } else {
+          ShowToastDialog.showToast("No routes found".tr);
+        }
+      } catch (e) {
+        ShowToastDialog.showToast("Error fetching route: $e".tr);
+      }
+
+      _addPolyLine(polylineCoordinates);
+      addMarker(
+        LatLng(
+          orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
+          orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
+        ),
+        "Source",
+        departureIcon,
+      );
+      addMarker(
+        LatLng(
+          orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
+          orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
+        ),
+        "Destination",
+        destinationIcon,
+      );
+    }
   }
-}
+
   double zoomLevel = 0;
 
   movePosition() async {
-    if (orderModel.value.sourceLocationLAtLng == null || orderModel.value.destinationLocationLAtLng == null) return;
+    if (orderModel.value.sourceLocationLAtLng == null ||
+        orderModel.value.destinationLocationLAtLng == null) return;
 
-    double distance = double.parse((
-            prefix.Geolocator.distanceBetween(
+    double distance = double.parse((prefix.Geolocator.distanceBetween(
               orderModel.value.sourceLocationLAtLng!.latitude ?? 0.0,
               orderModel.value.sourceLocationLAtLng!.longitude ?? 0.0,
               orderModel.value.destinationLocationLAtLng!.latitude ?? 0.0,
               orderModel.value.destinationLocationLAtLng!.longitude ?? 0.0,
             ) /
-                1609.32)
+            1609.32)
         .toString());
     LatLng center = LatLng(
-      (orderModel.value.sourceLocationLAtLng!.latitude! + orderModel.value.destinationLocationLAtLng!.latitude!) / 2,
-      (orderModel.value.sourceLocationLAtLng!.longitude! + orderModel.value.destinationLocationLAtLng!.longitude!) / 2,
+      (orderModel.value.sourceLocationLAtLng!.latitude! +
+              orderModel.value.destinationLocationLAtLng!.latitude!) /
+          2,
+      (orderModel.value.sourceLocationLAtLng!.longitude! +
+              orderModel.value.destinationLocationLAtLng!.longitude!) /
+          2,
     );
 
     double radiusElevated = (distance / 2) + ((distance / 2) / 2);

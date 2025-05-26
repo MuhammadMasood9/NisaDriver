@@ -109,14 +109,14 @@ class LiveTrackingController extends GetxController {
   RxDouble navigationTilt = 70.0.obs; // Adjusted for better road visibility
   RxDouble navigationBearing = 0.0.obs;
   RxInt nextRoutePointIndex = 0.obs;
-
+  Timer? _bearingUpdateTimer;
   Position? _previousPosition;
   DateTime? _previousTime;
 
   RxList<String> currentLanes = <String>[].obs;
   RxString recommendedLane = "".obs;
 
-  RxDouble navigation3DTilt = 70.0.obs; // Adjusted for better road view
+  RxDouble navigation3DTilt = 00.0.obs; // Adjusted for better road view
   RxDouble navigation3DZoom = 19.0.obs;
   RxBool is3DNavigationMode = true.obs;
 
@@ -133,15 +133,25 @@ class LiveTrackingController extends GetxController {
     is3DNavigationMode.value = true;
     navigationTilt.value = 70.0;
     navigationZoom.value = 19.0;
-    // bool? hasCompass = FlutterCompass.events?.first != null;
-    // dev.log("Debug: Has compass: $hasCompass");
-    // if (hasCompass != true) {
-    //   ShowToastDialog.showToast("Compass not available on this device");
-    //   return;
-    // }
-    // Start compass tracking
 
-    dev.log("Debug: Device bearing: ");
+    // Set up continuous magnetometer subscription for live bearing
+    _magnetometerSubscription = magnetometerEventStream().listen(
+      (MagnetometerEvent event) {
+        double rawBearing = atan2(event.y, event.x) * (180.0 / pi);
+        if (rawBearing < 0) rawBearing += 360.0;
+        deviceBearing.value = 0.8 * deviceBearing.value + 0.2 * rawBearing;
+      },
+    );
+
+    // Set up periodic timer to update map and marker
+    _bearingUpdateTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
+      if (isFollowingDriver.value && isNavigationView.value) {
+        updateNavigationViewAligned();
+        addDeviceMarker();
+      }
+    });
+
+    dev.log("Debug: Device bearing initialized");
     addDeviceMarker();
     startLocationTracking();
     startEstimationUpdates();
@@ -161,6 +171,8 @@ class LiveTrackingController extends GetxController {
     _autoNavigationTimer?.cancel();
     _trafficUpdateTimer?.cancel();
     _positionStream?.cancel();
+    _magnetometerSubscription?.cancel(); // Cancel magnetometer subscription
+    _bearingUpdateTimer?.cancel(); // Cancel bearing update timer
     mapController?.dispose();
     _flutterTts?.stop();
     ShowToastDialog.closeLoader();
@@ -330,7 +342,7 @@ class LiveTrackingController extends GetxController {
 
   void updateDeviceLocation(Position position) {
     currentPosition.value = position;
-    currentSpeed.value = position.speed * 3.6;
+    currentSpeed.value = position.speed * 3.6; // Convert m/s to km/h
 
     final now = DateTime.now();
 
@@ -342,13 +354,24 @@ class LiveTrackingController extends GetxController {
         position.longitude,
       );
       dev.log("Debug: Distance moved: $distanceMeters");
+
+      // Use GPS bearing only if moving significantly and speed is above threshold
+      if (distanceMeters > 5 && currentSpeed.value > 10) {
+        double gpsBearing = position.heading;
+        if (gpsBearing >= 0 &&
+            gpsBearing <= 360 &&
+            position.headingAccuracy <= 30) {
+          // Blend GPS bearing with magnetometer bearing
+          deviceBearing.value = 0.7 * deviceBearing.value + 0.3 * gpsBearing;
+          dev.log("Debug: Blended bearing with GPS: ${deviceBearing.value}");
+        }
+      }
     }
 
     _previousPosition = position;
     _previousTime = now;
 
-    // Marker update (rotation handled by compass)
-    addDeviceMarker();
+    addDeviceMarker(); // Update marker with smoothed bearing
     fetchSpeedLimit(LatLng(position.latitude, position.longitude));
 
     if (isFollowingDriver.value && isNavigationView.value) {
@@ -369,12 +392,12 @@ class LiveTrackingController extends GetxController {
     markers.removeWhere((key, value) => key.value == "Device");
 
     addMarker(
-      latitude: currentPosition.value!.latitude,
-      longitude: currentPosition.value!.longitude,
-      id: "Device",
-      descriptor: driverIcon!,
-      rotation: deviceBearing.value, // Use compass heading for marker rotation
-    );
+        latitude: currentPosition.value!.latitude,
+        longitude: currentPosition.value!.longitude,
+        id: "Device",
+        descriptor: driverIcon!,
+        rotation: deviceBearing.value // Use compass heading for marker rotation
+        );
   }
 
   double interpolateBearing3D(double currentBearing, double targetBearing) {
@@ -940,19 +963,19 @@ class LiveTrackingController extends GetxController {
       print("Debug: Cannot update camera, mapController or location is null");
       return;
     }
-
     LatLng deviceLocation = LatLng(
       currentPosition.value!.latitude,
       currentPosition.value!.longitude,
     );
-
     await mapController!.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
           target: deviceLocation,
           zoom: navigationZoom.value,
           tilt: 0.0,
-          bearing: navigationBearing.value,
+          bearing: is3DNavigationMode.value
+              ? deviceBearing.value - 83
+              : deviceBearing.value + 83,
         ),
       ),
     );
@@ -1023,79 +1046,78 @@ class LiveTrackingController extends GetxController {
   //   print("Current Device Bearing: ${deviceBearing.value}");
   // }
 
+  void updateNavigationInstructions() async {
+    // Step 1: Get device bearing
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      deviceBearing.value = position.heading;
+    } catch (e) {
+      deviceBearing.value = 0.0;
+    }
 
+    // Step 2: Check step availability
+    if (navigationSteps.isEmpty ||
+        currentStepIndex.value >= navigationSteps.length) {
+      navigationInstruction.value = "Follow the route";
+      nextTurnInstruction.value = "";
+      return;
+    }
 
+    NavigationStep currentStep = navigationSteps[currentStepIndex.value];
 
-void updateNavigationInstructions() async {
-  // Step 1: Get device bearing
-  try {
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-    deviceBearing.value = position.heading;
-  } catch (e) {
-    deviceBearing.value = 0.0;
+    // Step 3: Handle off-route
+    if (isOffRoute.value) {
+      navigationInstruction.value = "Off route! Recalculating...";
+      nextTurnInstruction.value = "Please return to the highlighted route";
+      return;
+    }
+
+    // Step 4: Set current instruction
+    navigationInstruction.value = currentStep.instruction;
+
+    // Step 5: Extract compass heading (e.g., "Head southeast") and convert to angle
+    // double? extractedBearing =
+    //     extractBearingFromInstruction(currentStep.instruction);
+    // if (extractedBearing != null) {
+    //   deviceBearing.value = extractedBearing;
+    //   print("Step Bearing: $extractedBearing°");
+    // }
+
+    // Step 6: Set next instruction
+    if (currentStepIndex.value + 1 < navigationSteps.length) {
+      NavigationStep nextStep = navigationSteps[currentStepIndex.value + 1];
+      nextTurnInstruction.value = "Then ${nextStep.instruction}";
+    } else {
+      String target =
+          showDriverToPickupRoute.value ? "pickup location" : "destination";
+      nextTurnInstruction.value = "Approaching $target";
+    }
   }
 
-  // Step 2: Check step availability
-  if (navigationSteps.isEmpty ||
-      currentStepIndex.value >= navigationSteps.length) {
-    navigationInstruction.value = "Follow the route";
-    nextTurnInstruction.value = "";
-    return;
+  double? extractBearingFromInstruction(String instruction) {
+    final directions = {
+      "north": 0.0,
+      "northeast": 45.0,
+      "east": 90.0,
+      "southeast": 135.0,
+      "south": 180.0,
+      "southwest": 225.0,
+      "west": 270.0,
+      "northwest": 315.0,
+    };
+
+    final regex = RegExp(
+        r'Head (north|northeast|east|southeast|south|southwest|west|northwest)',
+        caseSensitive: false);
+    final match = regex.firstMatch(instruction);
+    if (match != null) {
+      final direction = match.group(1)!.toLowerCase();
+      return directions[direction];
+    }
+    return null; // No direction found
   }
-
-  NavigationStep currentStep = navigationSteps[currentStepIndex.value];
-
-  // Step 3: Handle off-route
-  if (isOffRoute.value) {
-    navigationInstruction.value = "Off route! Recalculating...";
-    nextTurnInstruction.value = "Please return to the highlighted route";
-    return;
-  }
-
-  // Step 4: Set current instruction
-  navigationInstruction.value = currentStep.instruction;
-
-  // Step 5: Extract compass heading (e.g., "Head southeast") and convert to angle
-  double? extractedBearing = extractBearingFromInstruction(currentStep.instruction);
-  if (extractedBearing != null) {
-    deviceBearing.value = extractedBearing;
-    print("Step Bearing: $extractedBearing°");
-  }
-
-  // Step 6: Set next instruction
-  if (currentStepIndex.value + 1 < navigationSteps.length) {
-    NavigationStep nextStep = navigationSteps[currentStepIndex.value + 1];
-    nextTurnInstruction.value = "Then ${nextStep.instruction}";
-  } else {
-    String target =
-        showDriverToPickupRoute.value ? "pickup location" : "destination";
-    nextTurnInstruction.value = "Approaching $target";
-  }
-}
-double? extractBearingFromInstruction(String instruction) {
-  final directions = {
-    "north": 0.0,
-    "northeast": 45.0,
-    "east": 90.0,
-    "southeast": 135.0,
-    "south": 180.0,
-    "southwest": 225.0,
-    "west": 270.0,
-    "northwest": 315.0,
-  };
-
-  final regex = RegExp(r'Head (north|northeast|east|southeast|south|southwest|west|northwest)', caseSensitive: false);
-  final match = regex.firstMatch(instruction);
-  if (match != null) {
-    final direction = match.group(1)!.toLowerCase();
-    return directions[direction];
-  }
-  return null; // No direction found
-}
-
-
 
   void updateRouteVisibility() {
     bool wasShowingPickup = showDriverToPickupRoute.value;
@@ -1622,30 +1644,17 @@ double? extractBearingFromInstruction(String instruction) {
 
   void updateNavigationViewAligned() async {
     try {
+      if (currentPosition.value == null || mapController == null) {
+        dev.log(
+            "Debug: Cannot update navigation view, position or mapController is null");
+        return;
+      }
+
       LatLng deviceLocation = LatLng(
         currentPosition.value!.latitude,
         currentPosition.value!.longitude,
       );
 
-      const double alpha = 0.8; // Smoothing factor
-      double filteredBearing = 0.0;
-      // Listen to magnetometer events for compass bearing
-      _magnetometerSubscription?.cancel(); // Cancel any existing subscription
-      dev.log("Debug: Entering event1");
-      _magnetometerSubscription = magnetometerEventStream().listen(
-        (MagnetometerEvent event) {
-          dev.log("Debug: Magnetometer event: $event");
-          double rawBearing = atan2(event.y, event.x) * (180.0 / pi);
-          if (rawBearing < 0) rawBearing += 360.0;
-          filteredBearing = alpha * filteredBearing + (1 - alpha) * rawBearing;
-          deviceBearing.value = filteredBearing;
-        },
-        onError: (error) {
-          dev.log("Debug: Magnetometer error: $error");
-        },
-      );
-
-      // Update camera with bearing
       await mapController!.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
@@ -1654,16 +1663,15 @@ double? extractBearingFromInstruction(String instruction) {
                 ? navigation3DZoom.value
                 : navigationZoom.value,
             tilt: is3DNavigationMode.value ? navigation3DTilt.value : 0.0,
-            bearing: deviceBearing.value, // Align map with compass bearing
+            bearing: is3DNavigationMode.value
+                ? deviceBearing.value - 83
+                : deviceBearing.value + 83, // Use live compass bearing
           ),
         ),
       );
 
-      dev.log("Debug: Map bearing: ${deviceBearing.value.toStringAsFixed(1)}°");
-
-      // Cancel subscription after use
-      await Future.delayed(Duration(milliseconds: 100));
-      _magnetometerSubscription?.cancel();
+      dev.log(
+          "Debug: Map bearing updated: ${deviceBearing.value.toStringAsFixed(1)}°");
     } catch (e) {
       dev.log("Debug: Error updating navigation view: $e");
     }

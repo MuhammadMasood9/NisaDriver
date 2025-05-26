@@ -21,7 +21,7 @@ class ParcelDetailsScreen extends StatelessWidget {
         builder: (controller) {
           return Scaffold(
               appBar: AppBar(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.background,
                 leading: InkWell(
                     onTap: () {
                       Get.back();
@@ -41,50 +41,77 @@ class ParcelDetailsScreen extends StatelessWidget {
                     child: controller.isLoading.value
                         ? Constant.loader(context)
                         : Container(
-                            decoration:
-                                BoxDecoration(color: Theme.of(context).colorScheme.background, borderRadius: const BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(25))),
+                            decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.background,
+                                borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(25),
+                                    topRight: Radius.circular(25))),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
                               child: Padding(
                                 padding: const EdgeInsets.only(top: 20),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Visibility(
-                                      visible: controller.orderModel.value.intercityServiceId == "Kn2VEnPI3ikF58uK8YqY" ? false : true,
+                                      visible: controller.orderModel.value
+                                                  .intercityServiceId ==
+                                              "Kn2VEnPI3ikF58uK8YqY"
+                                          ? false
+                                          : true,
                                       child: Container(
                                         decoration: BoxDecoration(
-                                          color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
-                                          borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                          border: Border.all(color: themeChange.getThem() ? AppColors.darkContainerBorder : AppColors.containerBorder, width: 0.5),
+                                          color: themeChange.getThem()
+                                              ? AppColors
+                                                  .darkContainerBackground
+                                              : AppColors.containerBackground,
+                                          borderRadius: const BorderRadius.all(
+                                              Radius.circular(10)),
+                                          border: Border.all(
+                                              color: themeChange.getThem()
+                                                  ? AppColors
+                                                      .darkContainerBorder
+                                                  : AppColors.containerBorder,
+                                              width: 0.5),
                                           boxShadow: themeChange.getThem()
                                               ? null
                                               : [
                                                   BoxShadow(
-                                                    color: Colors.black.withOpacity(0.10),
+                                                    color: Colors.black
+                                                        .withOpacity(0.10),
                                                     blurRadius: 5,
-                                                    offset: const Offset(0, 4), // changes position of shadow
+                                                    offset: const Offset(0,
+                                                        4), // changes position of shadow
                                                   ),
                                                 ],
                                         ),
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Row(
                                                 children: [
                                                   Expanded(
                                                     child: Text(
                                                       "Parcel Weight".tr,
-                                                      style: GoogleFonts.poppins(color: AppColors.subTitleColor),
+                                                      style: GoogleFonts.poppins(
+                                                          color: AppColors
+                                                              .subTitleColor),
                                                     ),
                                                   ),
                                                   Row(
                                                     children: [
                                                       Text(
-                                                        "${controller.orderModel.value.parcelWeight} Kg.".tr,
-                                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                                        "${controller.orderModel.value.parcelWeight} Kg."
+                                                            .tr,
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600),
                                                       ),
                                                     ],
                                                   ),
@@ -96,14 +123,21 @@ class ParcelDetailsScreen extends StatelessWidget {
                                                   Expanded(
                                                     child: Text(
                                                       "Parcel dimension".tr,
-                                                      style: GoogleFonts.poppins(color: AppColors.subTitleColor),
+                                                      style: GoogleFonts.poppins(
+                                                          color: AppColors
+                                                              .subTitleColor),
                                                     ),
                                                   ),
                                                   Row(
                                                     children: [
                                                       Text(
-                                                        "${controller.orderModel.value.parcelDimension} ft.".tr,
-                                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                                        "${controller.orderModel.value.parcelDimension} ft."
+                                                            .tr,
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600),
                                                       ),
                                                     ],
                                                   ),
@@ -115,26 +149,59 @@ class ParcelDetailsScreen extends StatelessWidget {
                                       ),
                                     ),
                                     Expanded(
-                                      child: controller.orderModel.value.parcelImage!.isEmpty
-                                          ? const Center(child: Text("No Image available"))
+                                      child: controller.orderModel.value
+                                              .parcelImage!.isEmpty
+                                          ? const Center(
+                                              child: Text("No Image available"))
                                           : GridView.builder(
-                                              itemCount: controller.orderModel.value.parcelImage!.length,
-                                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: (MediaQuery.of(context).orientation == Orientation.portrait) ? 2 : 3),
-                                              itemBuilder: (BuildContext context, int index) {
+                                              itemCount: controller.orderModel
+                                                  .value.parcelImage!.length,
+                                              gridDelegate:
+                                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                                      crossAxisCount: (MediaQuery
+                                                                      .of(
+                                                                          context)
+                                                                  .orientation ==
+                                                              Orientation
+                                                                  .portrait)
+                                                          ? 2
+                                                          : 3),
+                                              itemBuilder:
+                                                  (BuildContext context,
+                                                      int index) {
                                                 return Padding(
-                                                  padding: const EdgeInsets.all(8.0),
+                                                  padding:
+                                                      const EdgeInsets.all(8.0),
                                                   child: ClipRRect(
-                                                    borderRadius: BorderRadius.circular(10),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
                                                     child: CachedNetworkImage(
-                                                      imageUrl: controller.orderModel.value.parcelImage![index].toString(),
-                                                      imageBuilder: (context, imageProvider) => Container(
-                                                        decoration: BoxDecoration(
-                                                          borderRadius: BorderRadius.circular(10),
-                                                          image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
+                                                      imageUrl: controller
+                                                          .orderModel
+                                                          .value
+                                                          .parcelImage![index]
+                                                          .toString(),
+                                                      imageBuilder: (context,
+                                                              imageProvider) =>
+                                                          Container(
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                          image: DecorationImage(
+                                                              image:
+                                                                  imageProvider,
+                                                              fit:
+                                                                  BoxFit.cover),
                                                         ),
                                                       ),
-                                                      placeholder: (context, url) => const Center(
-                                                        child: CircularProgressIndicator(),
+                                                      placeholder:
+                                                          (context, url) =>
+                                                              const Center(
+                                                        child:
+                                                            CircularProgressIndicator(),
                                                       ),
                                                       fit: BoxFit.cover,
                                                     ),

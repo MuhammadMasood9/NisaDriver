@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:driver/constant/constant.dart';
@@ -15,131 +14,377 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+class EnhancedDateSelector extends StatefulWidget {
+  final String label;
+  final String hintText;
+  final DateTime? selectedDate;
+  final Function(DateTime) onDateSelected;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
+  final bool isRequired;
+  final String? errorText;
+  final Color primaryColor;
+  final bool showClearButton;
+  final String dateFormat;
+
+  const EnhancedDateSelector({
+    Key? key,
+    required this.label,
+    required this.hintText,
+    required this.onDateSelected,
+    this.selectedDate,
+    this.firstDate,
+    this.lastDate,
+    this.isRequired = false,
+    this.errorText,
+    this.primaryColor = Colors.blue,
+    this.showClearButton = true,
+    this.dateFormat = "dd-MM-yyyy",
+  }) : super(key: key);
+
+  @override
+  State<EnhancedDateSelector> createState() => _EnhancedDateSelectorState();
+}
+
+class _EnhancedDateSelectorState extends State<EnhancedDateSelector>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: widget.selectedDate ?? DateTime.now(),
+      firstDate: widget.firstDate ?? DateTime(1900),
+      lastDate: widget.lastDate ?? DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: widget.primaryColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      widget.onDateSelected(picked);
+    }
+  }
+
+  void _clearDate() {
+    widget.onDateSelected(DateTime.now());
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasError =
+        widget.errorText != null && widget.errorText!.isNotEmpty;
+    final bool hasValue = widget.selectedDate != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              widget.label,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: hasError ? Colors.red[700] : Colors.grey[800],
+              ),
+            ),
+            if (widget.isRequired)
+              Text(
+                ' *',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              child: GestureDetector(
+                onTapDown: (_) {
+                  setState(() => _isPressed = true);
+                  _animationController.forward();
+                },
+                onTapUp: (_) {
+                  setState(() => _isPressed = false);
+                  _animationController.reverse();
+                  _selectDate();
+                },
+                onTapCancel: () {
+                  setState(() => _isPressed = false);
+                  _animationController.reverse();
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: hasError
+                          ? Colors.red
+                          : hasValue
+                              ? Colors.grey[200]!
+                              : Colors.grey[200]!,
+                      width: hasError || hasValue ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _isPressed
+                            ? widget.primaryColor.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
+                        spreadRadius: _isPressed ? 2 : 1,
+                        blurRadius: _isPressed ? 12 : 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: hasValue
+                                ? widget.primaryColor.withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.calendar_today_rounded,
+                            color: hasValue
+                                ? widget.primaryColor
+                                : Colors.grey[600],
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            hasValue
+                                ? DateFormat(widget.dateFormat)
+                                    .format(widget.selectedDate!)
+                                : widget.hintText,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight:
+                                  hasValue ? FontWeight.w500 : FontWeight.w400,
+                              color: hasValue
+                                  ? Colors.grey[800]
+                                  : Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                        if (hasValue && widget.showClearButton)
+                          GestureDetector(
+                            onTap: _clearDate,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        if (hasError) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 16,
+                color: Colors.red[700],
+              ),
+              const SizedBox(width: 4),
+              Text(
+                widget.errorText!,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.red[700],
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+}
+
 class DetailsUploadScreen extends StatelessWidget {
   const DetailsUploadScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetX<DetailsUploadController>(
-        init: DetailsUploadController(),
-        builder: (controller) {
-          return Scaffold(
-            backgroundColor: AppColors.primary,
-            body: CustomScrollView(
-              slivers: [
-                // Modern App Bar
-                SliverAppBar(
-                  expandedHeight: 120,
-                  floating: false,
-                  pinned: true,
-                  backgroundColor: AppColors.primary,
-                  elevation: 0,
-                  leading: Container(
-                    margin: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      onPressed: () => Get.back(),
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-                    ),
-                  ),
-                  flexibleSpace: FlexibleSpaceBar(
-                    centerTitle: true,
-                    title: Text(
-                      Constant.localizationTitle(controller.documentModel.value.title),
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    background: Container(
+      init: DetailsUploadController(),
+      builder: (controller) {
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(60),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color.fromARGB(255, 255, 255, 255),
+                    const Color.fromARGB(255, 255, 255, 255).withOpacity(0.85)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: InkWell(
+                    onTap: () => Get.back(),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppColors.primary,
-                            AppColors.primary.withOpacity(0.8),
-                          ],
-                        ),
+                        color: AppColors.background.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: AppColors.darkTextFieldBorder,
+                        size: 25,
                       ),
                     ),
                   ),
                 ),
-                
-                // Content
-                SliverToBoxAdapter(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.background,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                    ),
-                    child: controller.isLoading.value
-                        ? SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.7,
-                            child: Constant.loader(context),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Progress Indicator
-                                _buildProgressIndicator(controller),
-                                
-                                const SizedBox(height: 32),
-                                
-                                // Document Number Section
-                                _buildDocumentNumberSection(context, controller),
-                                
-                                // Expiry Date Section
-                                if (controller.documentModel.value.expireAt == true)
-                                  _buildExpiryDateSection(context, controller),
-                                
-                                // Front Side Section
-                                if (controller.documentModel.value.frontSide == true)
-                                  _buildImageUploadSection(
-                                    context,
-                                    controller,
-                                    "Front Side",
-                                    controller.frontImage.value,
-                                    "front",
-                                    Icons.credit_card,
-                                  ),
-                                
-                                // Back Side Section
-                                if (controller.documentModel.value.backSide == true)
-                                  _buildImageUploadSection(
-                                    context,
-                                    controller,
-                                    "Back Side",
-                                    controller.backImage.value,
-                                    "back",
-                                    Icons.flip_to_back,
-                                  ),
-                                
-                                const SizedBox(height: 40),
-                                
-                                // Action Button
-                                if (controller.documents.value.verified != true)
-                                  _buildActionButton(context, controller),
-                                
-                                const SizedBox(height: 20),
-                              ],
-                            ),
-                          ),
+                title: Text(
+                  Constant.localizationTitle(
+                      controller.documentModel.value.title),
+                  style: GoogleFonts.poppins(
+                    color: AppColors.tabBarSelected,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
+                centerTitle: true,
+              ),
             ),
-          );
-        });
+          ),
+          body: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                  ),
+                  child: controller.isLoading.value
+                      ? SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.7,
+                          child: Constant.loader(context),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildProgressIndicator(controller),
+                              const SizedBox(height: 24),
+                              _buildDocumentNumberSection(context, controller),
+                              if (controller.documentModel.value.expireAt ==
+                                  true)
+                                _buildExpiryDateSection(context, controller),
+                              if (controller.documentModel.value.frontSide ==
+                                  true)
+                                _buildImageUploadSection(
+                                  context,
+                                  controller,
+                                  "Front Side",
+                                  controller.frontImage.value,
+                                  "front",
+                                  Icons.credit_card,
+                                ),
+                              if (controller.documentModel.value.backSide ==
+                                  true)
+                                _buildImageUploadSection(
+                                  context,
+                                  controller,
+                                  "Back Side",
+                                  controller.backImage.value,
+                                  "back",
+                                  Icons.flip_to_back,
+                                ),
+                              const SizedBox(height: 32),
+                              if (controller.documents.value.verified != true)
+                                _buildActionButton(context, controller),
+                              const SizedBox(height: 20),
+                            ],
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildProgressIndicator(DetailsUploadController controller) {
@@ -147,19 +392,24 @@ class DetailsUploadScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isVerified ? Colors.green.withOpacity(0.1) : AppColors.primary.withOpacity(0.1),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isVerified ? Colors.green.withOpacity(0.3) : AppColors.primary.withOpacity(0.3),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.15),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: isVerified ? Colors.green : AppColors.primary,
-              borderRadius: BorderRadius.circular(12),
+              shape: BoxShape.circle,
             ),
             child: Icon(
               isVerified ? Icons.verified : Icons.upload_file,
@@ -167,7 +417,7 @@ class DetailsUploadScreen extends StatelessWidget {
               size: 24,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,8 +430,9 @@ class DetailsUploadScreen extends StatelessWidget {
                     color: isVerified ? Colors.green : AppColors.primary,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  isVerified 
+                  isVerified
                       ? "Your document has been verified successfully".tr
                       : "Please upload all required documents".tr,
                   style: GoogleFonts.poppins(
@@ -197,102 +448,40 @@ class DetailsUploadScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDocumentNumberSection(BuildContext context, DetailsUploadController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Document Details".tr,
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Colors.grey[800],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: TextFieldThem.buildTextFiled(
-              context,
-              hintText: "Enter ${Constant.localizationTitle(controller.documentModel.value.title)} Number".tr,
-              controller: controller.documentNumberController.value,
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
+  Widget _buildDocumentNumberSection(
+      BuildContext context, DetailsUploadController controller) {
+    return _buildModernTextField(
+      context,
+      label: "Document Details".tr,
+      hint:
+          "Enter ${Constant.localizationTitle(controller.documentModel.value.title)} Number"
+              .tr,
+      controller: controller.documentNumberController.value,
+      icon: Icons.document_scanner,
+      enabled: false,
     );
   }
 
-  Widget _buildExpiryDateSection(BuildContext context, DetailsUploadController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Expiry Date".tr,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
-          ),
-        ),
-        const SizedBox(height: 12),
-        InkWell(
-          onTap: () async {
-            await Constant.selectFetureDate(context).then((value) {
-              if (value != null) {
-                controller.selectedDate.value = value;
-                controller.expireAtController.value.text = DateFormat("dd-MM-yyyy").format(value);
-              }
-            });
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: TextFieldThem.buildTextFiledWithSuffixIcon(
-                context,
-                hintText: "Select Expiry Date".tr,
-                controller: controller.expireAtController.value,
-                enable: false,
-                suffixIcon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.calendar_month, color: AppColors.primary),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
+  Widget _buildExpiryDateSection(
+      BuildContext context, DetailsUploadController controller) {
+    return EnhancedDateSelector(
+      label: "Expiry Date".tr,
+      hintText: "Select Expiry Date".tr,
+      selectedDate: controller.selectedDate.value,
+      onDateSelected: (DateTime date) {
+        controller.selectedDate.value = date;
+        controller.expireAtController.value.text =
+            DateFormat("dd-MM-yyyy").format(date);
+      },
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+      isRequired: true,
+      primaryColor: AppColors.primary,
+      showClearButton: true,
+      dateFormat: "dd-MM-yyyy",
+      errorText: controller.expireAtController.value.text.isEmpty
+          ? "Please select an expiry date".tr
+          : null,
     );
   }
 
@@ -306,83 +495,87 @@ class DetailsUploadScreen extends StatelessWidget {
   ) {
     bool hasImage = imagePath.isNotEmpty;
     bool isVerified = controller.documents.value.verified == true;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, color: AppColors.primary, size: 24),
+            Icon(icon, color: AppColors.primary, size: 22),
             const SizedBox(width: 8),
             Text(
-              "$title of ${Constant.localizationTitle(controller.documentModel.value.title)}".tr,
+              "$title of ${Constant.localizationTitle(controller.documentModel.value.title)}"
+                  .tr,
               style: GoogleFonts.poppins(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: 12),
         InkWell(
-          onTap: () {
-            if (!isVerified) {
-              buildBottomSheet(context, controller, type);
-            }
-          },
-          child: Container(
+          onTap: isVerified
+              ? null
+              : () => buildBottomSheet(context, controller, type),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             width: double.infinity,
+            height: Responsive.height(25, context),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.1),
                   spreadRadius: 1,
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
-              border: hasImage && isVerified 
-                  ? Border.all(color: Colors.green.withOpacity(0.3), width: 2)
-                  : null,
             ),
             child: hasImage
                 ? _buildImagePreview(context, controller, imagePath, isVerified)
                 : _buildImagePlaceholder(context),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  Widget _buildImagePreview(BuildContext context, DetailsUploadController controller, String imagePath, bool isVerified) {
+  Widget _buildImagePreview(BuildContext context,
+      DetailsUploadController controller, String imagePath, bool isVerified) {
     return Stack(
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
             height: Responsive.height(25, context),
             width: double.infinity,
-            child: Constant().hasValidUrl(imagePath) == false
-                ? Image.file(
-                    File(imagePath),
-                    fit: BoxFit.cover,
-                  )
-                : CachedNetworkImage(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.grey[200]!, Colors.grey[300]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Constant().hasValidUrl(imagePath)
+                ? CachedNetworkImage(
                     imageUrl: imagePath,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[100],
-                      child: Center(child: Constant.loader(context)),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[100],
-                      child: Icon(Icons.error, color: Colors.red[300]),
-                    ),
+                    placeholder: (context, url) =>
+                        Center(child: Constant.loader(context)),
+                    errorWidget: (context, url, error) =>
+                        Icon(Icons.error, color: Colors.red[300]),
+                  )
+                : Image.file(
+                    File(imagePath),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Icon(Icons.error, color: Colors.red[300]),
                   ),
           ),
         ),
@@ -392,18 +585,18 @@ class DetailsUploadScreen extends StatelessWidget {
             right: 12,
             child: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.green,
-                borderRadius: BorderRadius.circular(20),
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 8,
+                    color: Colors.black26,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(Icons.check, color: Colors.white, size: 20),
+              child: const Icon(Icons.check, color: Colors.white, size: 18),
             ),
           ),
         if (!isVerified)
@@ -414,16 +607,16 @@ class DetailsUploadScreen extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: AppColors.primary,
-                borderRadius: BorderRadius.circular(20),
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 8,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(Icons.edit, color: Colors.white, size: 18),
+              child: const Icon(Icons.edit, color: Colors.white, size: 16),
             ),
           ),
       ],
@@ -433,40 +626,37 @@ class DetailsUploadScreen extends StatelessWidget {
   Widget _buildImagePlaceholder(BuildContext context) {
     return DottedBorder(
       borderType: BorderType.RRect,
-      radius: const Radius.circular(20),
-      dashPattern: const [8, 4],
-      color: AppColors.primary.withOpacity(0.4),
-      strokeWidth: 2,
+      radius: const Radius.circular(16),
+      dashPattern: const [6, 4],
+      color: AppColors.primary.withOpacity(0.5),
+      strokeWidth: 1.5,
       child: Container(
         height: Responsive.height(25, context),
         width: double.infinity,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
+            colors: [Colors.grey[100]!, Colors.grey[200]!],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary.withOpacity(0.05),
-              AppColors.primary.withOpacity(0.1),
-            ],
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
+                color: AppColors.primary.withOpacity(0.15),
+                shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.cloud_upload_outlined,
-                size: 48,
+                size: 40,
                 color: AppColors.primary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               "Tap to upload photo".tr,
               style: GoogleFonts.poppins(
@@ -489,13 +679,14 @@ class DetailsUploadScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(BuildContext context, DetailsUploadController controller) {
+  Widget _buildActionButton(
+      BuildContext context, DetailsUploadController controller) {
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          colors: [AppColors.primary, AppColors.primary.withOpacity(0.9)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -503,9 +694,9 @@ class DetailsUploadScreen extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withOpacity(0.3),
-            spreadRadius: 1,
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            spreadRadius: 2,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -513,15 +704,17 @@ class DetailsUploadScreen extends StatelessWidget {
         onPressed: () {
           if (controller.documentNumberController.value.text.isEmpty) {
             ShowToastDialog.showToast("Please enter document number".tr);
+          } else if (controller.documentModel.value.frontSide == true &&
+              controller.frontImage.value.isEmpty) {
+            ShowToastDialog.showToast(
+                "Please upload front side of document.".tr);
+          } else if (controller.documentModel.value.backSide == true &&
+              controller.backImage.value.isEmpty) {
+            ShowToastDialog.showToast(
+                "Please upload back side of document.".tr);
           } else {
-            if (controller.documentModel.value.frontSide == true && controller.frontImage.value.isEmpty) {
-              ShowToastDialog.showToast("Please upload front side of document.".tr);
-            } else if (controller.documentModel.value.backSide == true && controller.backImage.value.isEmpty) {
-              ShowToastDialog.showToast("Please upload back side of document.".tr);
-            } else {
-              ShowToastDialog.showLoader("Please wait..".tr);
-              controller.uploadDocument();
-            }
+            ShowToastDialog.showLoader("Please wait..".tr);
+            controller.uploadDocument();
           }
         },
         style: ElevatedButton.styleFrom(
@@ -530,103 +723,118 @@ class DetailsUploadScreen extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+          padding: EdgeInsets.zero,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.cloud_upload, color: Colors.white),
-            const SizedBox(width: 12),
-            Text(
-              "Upload Document".tr,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+        child: Obx(
+          () => Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (controller.isLoading.value)
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              else
+                const Icon(Icons.cloud_upload, color: Colors.white, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                controller.isLoading.value
+                    ? "Uploading...".tr
+                    : "Upload Document".tr,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  buildBottomSheet(BuildContext context, DetailsUploadController controller, String type) {
+  Future<void> buildBottomSheet(
+      BuildContext context, DetailsUploadController controller, String type) {
     return showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
+        return AnimatedPadding(
+          duration: const Duration(milliseconds: 300),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle bar
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                Text(
-                  "Choose Photo Source".tr,
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Select how you want to add your photo".tr,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 32),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSourceOption(
-                        context,
-                        controller,
-                        type,
-                        "Camera".tr,
-                        Icons.camera_alt,
-                        ImageSource.camera,
-                        AppColors.primary,
-                      ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSourceOption(
-                        context,
-                        controller,
-                        type,
-                        "Gallery".tr,
-                        Icons.photo_library,
-                        ImageSource.gallery,
-                        Colors.purple,
-                      ),
+                  ),
+                  Text(
+                    "Choose Photo Source".tr,
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-              ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Select how you want to add your photo".tr,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSourceOption(
+                          context,
+                          controller,
+                          type,
+                          "Camera".tr,
+                          Icons.camera_alt,
+                          ImageSource.camera,
+                          AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildSourceOption(
+                          context,
+                          controller,
+                          type,
+                          "Gallery".tr,
+                          Icons.photo_library,
+                          ImageSource.gallery,
+                          Colors.blue,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         );
@@ -644,35 +852,118 @@ class DetailsUploadScreen extends StatelessWidget {
     Color color,
   ) {
     return InkWell(
-      onTap: () => controller.pickFile(source: source, type: type),
+      onTap: () {
+        controller.pickFile(source: source, type: type);
+        Get.back();
+      },
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(12),
+                shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: Colors.white, size: 32),
+              child: Icon(icon, color: Colors.white, size: 28),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               title,
               style: GoogleFonts.poppins(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: color,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildModernTextField(
+    BuildContext context, {
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    required IconData icon,
+    bool enabled = true,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.darkBackground.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 1.5,
+              ),
+              color: enabled ? Colors.grey.shade50 : Colors.grey.shade100,
+            ),
+            child: TextField(
+              controller: controller,
+              enabled: enabled,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.darkBackground,
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: GoogleFonts.poppins(
+                  color: Colors.grey.shade500,
+                  fontSize: 14,
+                ),
+                prefixIcon: Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 20,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

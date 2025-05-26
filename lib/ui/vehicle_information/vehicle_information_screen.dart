@@ -32,315 +32,234 @@ class VehicleInformationScreen extends StatelessWidget {
       init: VehicleInformationController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: themeChange.getThem() ? AppColors.darkBackground : AppColors.background,
-          body: Column(
-            children: [
-              // Header with gradient and curved bottom
-             
-              // Main content with curved overlap
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: themeChange.getThem() ? AppColors.darkTextFieldBorder : Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
-                   
-                  ),
-                  child: controller.isLoading.value
-                      ? Constant.loader(context)
-                      : SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Service Selection
-                              _buildSectionHeader(context, 'Select Service'.tr, Icons.design_services),
-                              const SizedBox(height: 16),
-                              _buildServiceSelectionGrid(context, controller, themeChange),
-                              
-                              const SizedBox(height: 24),
-                              
-                              // Vehicle Details
-                              _buildSectionHeader(context, 'Vehicle Details'.tr, Icons.directions_car),
-                              const SizedBox(height: 16),
-                              _buildVehicleDetailsCard(context, controller, themeChange),
-                              
-                              const SizedBox(height: 24),
-                              
-                              // Driver Rules
-                              _buildSectionHeader(context, 'Driver Rules'.tr, Icons.rule),
-                              const SizedBox(height: 16),
-                              _buildDriverRulesCard(context, controller, themeChange),
-                              
-                              const SizedBox(height: 24),
-                              
-                              // Save Button
-                              _buildSaveButton(context, controller),
-                              
-                              const SizedBox(height: 16),
-                              
-                              // Info Message
-                              _buildInfoMessage(context),
-                              
-                              const SizedBox(height: 32),
-                            ],
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
+          backgroundColor: themeChange.getThem()
+              ? const Color(0xFF1A1A1A)
+              : const Color(0xFFF8F9FA),
+          body: controller.isLoading.value
+              ? _buildLoader(context)
+              : _buildBody(context, controller, themeChange),
         );
       },
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
-    return Row(
+  Widget _buildLoader(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Service Selection
+          _buildServiceSection(context, controller, themeChange),
+          const SizedBox(height: 32),
+
+          // Vehicle Details
+          _buildVehicleDetailsSection(context, controller, themeChange),
+          const SizedBox(height: 32),
+
+          // Driver Rules
+          _buildDriverRulesSection(context, controller, themeChange),
+          const SizedBox(height: 32),
+
+          // Info Message
+          _buildInfoCard(context, themeChange),
+          const SizedBox(height: 32),
+
+          // Save Button
+          _buildSaveButton(context, controller),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceSection(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            color: AppColors.primary,
-            size: 24,
+        Text(
+          'Select Service'.tr,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: themeChange.getThem() ? Colors.white : Colors.black87,
           ),
         ),
-        const SizedBox(width: 12),
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).textTheme.titleLarge?.color,
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 100,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: controller.serviceList.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              ServiceModel serviceModel = controller.serviceList[index];
+              return Obx(() {
+                bool isSelected =
+                    controller.selectedServiceId.value == serviceModel.id;
+                return _buildServiceCard(
+                    serviceModel, isSelected, controller, themeChange);
+              });
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildServiceSelectionGrid(
-      BuildContext context, VehicleInformationController controller, DarkThemeProvider themeChange) {
-    return SizedBox(
-      height: 130,
-      child: ListView.builder(
-        itemCount: controller.serviceList.length,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemBuilder: (context, index) {
-          ServiceModel serviceModel = controller.serviceList[index];
-          
-          return Obx(() {
-            bool isSelected = controller.selectedServiceId.value == serviceModel.id;
-            return GestureDetector(
-              onTap: () async {
-                if (controller.driverModel.value.serviceId == null) {
-                  controller.selectedServiceId.value = serviceModel.id;
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                margin: const EdgeInsets.only(right: 16),
-                width: 110,
-                decoration: BoxDecoration(
-                  gradient: isSelected
-                      ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.primary,
-                            AppColors.primary.withOpacity(0.85),
-                          ],
-                        )
-                      : null,
-                  color: !isSelected
-                      ? (themeChange.getThem() ? AppColors.darkTextFieldBorder : Colors.white)
-                      : null,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isSelected
-                          ? AppColors.primary.withOpacity(0.4)
-                          : Colors.black.withOpacity(0.1),
-                      blurRadius: isSelected ? 15 : 8,
-                      offset: Offset(0, isSelected ? 8 : 4),
-                    ),
-                  ],
-                  border: !isSelected
-                      ? Border.all(
-                          color: themeChange.getThem()
-                              ? Colors.grey.withOpacity(0.3)
-                              : Colors.grey.withOpacity(0.2),
-                        )
-                      : null,
+  Widget _buildServiceCard(ServiceModel serviceModel, bool isSelected,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return GestureDetector(
+      onTap: () {
+        if (controller.driverModel.value.serviceId == null) {
+          controller.selectedServiceId.value = serviceModel.id;
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 90,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary
+              : (themeChange.getThem()
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.white),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary
+                : (themeChange.getThem()
+                    ? Colors.grey.withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.1)),
+            width: isSelected ? 0 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                  color: Colors.white, borderRadius: BorderRadius.circular(50)),
+              child: CachedNetworkImage(
+                imageUrl: serviceModel.image.toString(),
+                height: 32,
+                width: 32,
+                fit: BoxFit.contain,
+                placeholder: (context, url) => const SizedBox(
+                  height: 32,
+                  width: 32,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.white : AppColors.background,
-                        shape: BoxShape.circle,
-                      ),
-                      child: CachedNetworkImage(
-                        imageUrl: serviceModel.image.toString(),
-                        fit: BoxFit.contain,
-                        height: 50,
-                        width: 50,
-                        placeholder: (context, url) => const CircularProgressIndicator(),
-                        errorWidget: (context, url, error) => const Icon(Icons.error),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        Constant.localizationTitle(serviceModel.title),
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          color: isSelected
-                              ? Colors.white
-                              : (themeChange.getThem() ? Colors.white : Colors.black87),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
+                errorWidget: (context, url, error) => Icon(
+                  Icons.error_outline,
+                  color: Colors.grey,
+                  size: 32,
                 ),
               ),
-            );
-          });
-        },
-      ),
-    );
-  }
-
-  Widget _buildVehicleDetailsCard(
-      BuildContext context, VehicleInformationController controller, DarkThemeProvider themeChange) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: themeChange.getThem() ? AppColors.darkTextFieldBorder : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Vehicle Number
-            _buildModernTextField(
-              context: context,
-              controller: controller.vehicleNumberController.value,
-              hintText: 'Vehicle Number'.tr,
-              icon: Icons.confirmation_number,
-              themeChange: themeChange,
             ),
-            const SizedBox(height: 16),
-            
-            // Registration Date
-            _buildDatePickerField(context, controller, themeChange),
-            const SizedBox(height: 16),
-            
-            // Vehicle Type Dropdown
-            _buildModernDropdown<VehicleTypeModel>(
-              context: context,
-              value: controller.selectedVehicle.value.id == null ? null : controller.selectedVehicle.value,
-              hint: 'Select vehicle type'.tr,
-              icon: Icons.category,
-              items: controller.vehicleList.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(
-                    Constant.localizationName(item.name),
-                    style: GoogleFonts.poppins(fontSize: 14),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                controller.selectedVehicle.value = value!;
-              },
-              themeChange: themeChange,
+            const SizedBox(height: 8),
+            Text(
+              Constant.localizationTitle(serviceModel.title),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isSelected
+                    ? Colors.white
+                    : (themeChange.getThem() ? Colors.white70 : Colors.black87),
+              ),
             ),
-            const SizedBox(height: 16),
-            
-            // Vehicle Color
-            _buildModernDropdown<String>(
-              context: context,
-              value: controller.selectedColor.value.isEmpty ? null : controller.selectedColor.value,
-              hint: 'Select vehicle color'.tr,
-              icon: Icons.palette,
-              items: controller.carColorList.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: _getColorFromString(item),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        item,
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                controller.selectedColor.value = value!;
-              },
-              themeChange: themeChange,
-            ),
-            const SizedBox(height: 16),
-            
-            // Seats
-            _buildModernDropdown<String>(
-              context: context,
-              value: controller.seatsController.value.text.isEmpty ? null : controller.seatsController.value.text,
-              hint: 'How Many Seats'.tr,
-              icon: Icons.event_seat,
-              items: controller.sheetList.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(
-                    '$item Seats',
-                    style: GoogleFonts.poppins(fontSize: 14),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                controller.seatsController.value.text = value!;
-              },
-              themeChange: themeChange,
-            ),
-            const SizedBox(height: 16),
-            
-            // Zone Selection
-            _buildZoneSelector(context, controller, themeChange),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildModernTextField({
-    required BuildContext context,
+  Widget _buildVehicleDetailsSection(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Vehicle Details'.tr,
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: themeChange.getThem() ? Colors.white : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color:
+                themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              _buildTextField(
+                controller: controller.vehicleNumberController.value,
+                label: 'Vehicle Number'.tr,
+                icon: Icons.confirmation_number_outlined,
+                themeChange: themeChange,
+              ),
+              const SizedBox(height: 16),
+              _buildDateField(context, controller, themeChange),
+              const SizedBox(height: 16),
+              _buildVehicleTypeField(context, controller, themeChange),
+              const SizedBox(height: 16),
+              _buildColorField(context, controller, themeChange),
+              const SizedBox(height: 16),
+              _buildSeatsField(context, controller, themeChange),
+              const SizedBox(height: 16),
+              _buildZoneField(context, controller, themeChange),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
     required TextEditingController controller,
-    required String hintText,
+    required String label,
     required IconData icon,
     required DarkThemeProvider themeChange,
     bool enabled = true,
@@ -348,267 +267,249 @@ class VehicleInformationScreen extends StatelessWidget {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          color: themeChange.getThem() ? AppColors.darkTextField : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: themeChange.getThem()
-                ? AppColors.darkTextFieldBorder.withOpacity(0.3)
-                : Colors.grey.withOpacity(0.2),
-          ),
-        ),
-        child: TextFormField(
-          controller: controller,
-          enabled: enabled,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: themeChange.getThem() ? Colors.white : Colors.black87,
-          ),
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: GoogleFonts.poppins(
-              color: Colors.grey.shade500,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
               fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: themeChange.getThem() ? Colors.white70 : Colors.black54,
             ),
-            prefixIcon: Icon(
-              icon,
-              color: AppColors.primary,
-              size: 22,
-            ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
           ),
-        ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: themeChange.getThem()
+                  ? const Color(0xFF1A1A1A)
+                  : const Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: themeChange.getThem()
+                    ? Colors.grey.withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.1),
+              ),
+            ),
+            child: TextFormField(
+              controller: controller,
+              enabled: enabled,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                color: themeChange.getThem() ? Colors.white : Colors.black87,
+              ),
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  icon,
+                  color:
+                      themeChange.getThem() ? Colors.white54 : Colors.black54,
+                  size: 20,
+                ),
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildDatePickerField(
-      BuildContext context, VehicleInformationController controller, DarkThemeProvider themeChange) {
-    return _buildModernTextField(
-      context: context,
+  Widget _buildDateField(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return _buildTextField(
       controller: controller.registrationDateController.value,
-      hintText: 'Registration Date'.tr,
-      icon: Icons.calendar_today,
+      label: 'Registration Date'.tr,
+      icon: Icons.calendar_today_outlined,
       themeChange: themeChange,
       enabled: false,
       onTap: () async {
         await Constant.selectDate(context).then((value) {
           if (value != null) {
             controller.selectedDate.value = value;
-            controller.registrationDateController.value.text = DateFormat("dd-MM-yyyy").format(value);
+            controller.registrationDateController.value.text =
+                DateFormat("dd-MM-yyyy").format(value);
           }
         });
       },
     );
   }
 
-  Widget _buildModernDropdown<T>({
-    required BuildContext context,
-    required T? value,
-    required String hint,
-    required IconData icon,
-    required List<DropdownMenuItem<T>> items,
-    required void Function(T?) onChanged,
-    required DarkThemeProvider themeChange,
-  }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      decoration: BoxDecoration(
-        color: themeChange.getThem() ? AppColors.darkTextField : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: themeChange.getThem()
-              ? AppColors.darkTextFieldBorder.withOpacity(0.3)
-              : Colors.grey.withOpacity(0.2),
-        ),
-      ),
-      child: DropdownButtonFormField<T>(
-        value: value,
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.poppins(
-            color: Colors.grey.shade500,
-            fontSize: 14,
-          ),
-          prefixIcon: Icon(
-            icon,
-            color: AppColors.primary,
-            size: 22,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        ),
-        items: items,
-        style: GoogleFonts.poppins(
-          fontSize: 14,
-          color: themeChange.getThem() ? Colors.white : Colors.black87,
-        ),
-        dropdownColor: themeChange.getThem() ? AppColors.darkTextField : Colors.white,
-        icon: Icon(
-          Icons.keyboard_arrow_down,
-          color: AppColors.primary,
-          size: 24,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildZoneSelector(
-      BuildContext context, VehicleInformationController controller, DarkThemeProvider themeChange) {
-    return _buildModernTextField(
-      context: context,
-      controller: controller.zoneNameController.value,
-      hintText: 'Select Zone'.tr,
-      icon: Icons.location_on,
+  Widget _buildVehicleTypeField(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return _buildTextField(
+      controller: TextEditingController(
+          text: controller.selectedVehicle.value.id == null
+              ? ''
+              : Constant.localizationName(
+                  controller.selectedVehicle.value.name)),
+      label: 'Vehicle Type'.tr,
+      icon: Icons.directions_car_outlined,
       themeChange: themeChange,
       enabled: false,
-      onTap: () {
-        zoneDialog(context, controller);
-      },
+      onTap: () => _showVehicleTypeSelector(context, controller, themeChange),
     );
   }
 
-  Widget _buildDriverRulesCard(
-      BuildContext context, VehicleInformationController controller, DarkThemeProvider themeChange) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: themeChange.getThem() ? AppColors.darkTextFieldBorder : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: controller.driverRulesList.map((item) {
-            bool isSelected = controller.selectedDriverRulesList.indexWhere((element) => element.id == item.id) != -1;
-            
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withOpacity(0.15)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
+  Widget _buildColorField(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return _buildTextField(
+      controller: TextEditingController(text: controller.selectedColor.value),
+      label: 'Vehicle Color'.tr,
+      icon: Icons.palette_outlined,
+      themeChange: themeChange,
+      enabled: false,
+      onTap: () => _showColorSelector(context, controller, themeChange),
+    );
+  }
+
+  Widget _buildSeatsField(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return _buildTextField(
+      controller: controller.seatsController.value,
+      label: 'Number of Seats'.tr,
+      icon: Icons.event_seat_outlined,
+      themeChange: themeChange,
+      enabled: false,
+      onTap: () => _showSeatsSelector(context, controller, themeChange),
+    );
+  }
+
+  Widget _buildZoneField(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return _buildTextField(
+      controller: controller.zoneNameController.value,
+      label: 'Service Zone'.tr,
+      icon: Icons.location_on_outlined,
+      themeChange: themeChange,
+      enabled: false,
+      onTap: () => _showZoneSelector(context, controller, themeChange),
+    );
+  }
+
+  Widget _buildDriverRulesSection(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Driver Rules'.tr,
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: themeChange.getThem() ? Colors.white : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color:
+                themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              child: CheckboxListTile(
-                value: isSelected,
-                onChanged: (value) {
-                  if (value == true) {
-                    controller.selectedDriverRulesList.add(item);
-                  } else {
-                    controller.selectedDriverRulesList.removeWhere((element) => element.id == item.id);
-                  }
-                },
-                activeColor: AppColors.primary,
-                title: Text(
-                  Constant.localizationName(item.name),
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w400,
-                    fontSize: 14,
+            ],
+          ),
+          child: Column(
+            children: controller.driverRulesList.map((item) {
+              bool isSelected = controller.selectedDriverRulesList
+                      .indexWhere((element) => element.id == item.id) !=
+                  -1;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withOpacity(0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: CheckboxListTile(
+                  value: isSelected,
+                  onChanged: (value) {
+                    if (value == true) {
+                      controller.selectedDriverRulesList.add(item);
+                    } else {
+                      controller.selectedDriverRulesList
+                          .removeWhere((element) => element.id == item.id);
+                    }
+                  },
+                  activeColor: AppColors.primary,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  title: Text(
+                    Constant.localizationName(item.name),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color:
+                          themeChange.getThem() ? Colors.white : Colors.black87,
+                    ),
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildSaveButton(BuildContext context, VehicleInformationController controller) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: double.infinity,
-      height: 56,
+  Widget _buildInfoCard(BuildContext context, DarkThemeProvider themeChange) {
+    return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.85),
-          ],
-        ),
+        color: Colors.amber.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+        border: Border.all(
+          color: Colors.amber.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: Colors.amber.shade700,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "You cannot change service type once selected. Contact administrator to change."
+                  .tr,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.amber.shade700,
+                height: 1.4,
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSaveButton(
+      BuildContext context, VehicleInformationController controller) {
+    return SizedBox(
+      width: double.infinity,
       child: ElevatedButton(
-        onPressed: () async {
-          ShowToastDialog.showLoader("Please wait".tr);
-
-          if (controller.selectedServiceId.value!.isEmpty) {
-            ShowToastDialog.showToast("Please select service".tr);
-          } else if (controller.vehicleNumberController.value.text.isEmpty) {
-            ShowToastDialog.showToast("Please enter Vehicle number".tr);
-          } else if (controller.registrationDateController.value.text.isEmpty) {
-            ShowToastDialog.showToast("Please select registration date".tr);
-          } else if (controller.selectedVehicle.value.id == null || controller.selectedVehicle.value.id!.isEmpty) {
-            ShowToastDialog.showToast("Please enter Vehicle type".tr);
-          } else if (controller.selectedColor.value.isEmpty) {
-            ShowToastDialog.showToast("Please enter Vehicle color".tr);
-          } else if (controller.seatsController.value.text.isEmpty) {
-            ShowToastDialog.showToast("Please enter seats".tr);
-          } else if (controller.selectedZone.isEmpty) {
-            ShowToastDialog.showToast("Please select Zone".tr);
-          } else {
-            if (controller.driverModel.value.serviceId == null) {
-              controller.driverModel.value.serviceId = controller.selectedServiceId.value;
-              await FireStoreUtils.updateDriverUser(controller.driverModel.value);
-            }
-            controller.driverModel.value.zoneIds = controller.selectedZone;
-
-            controller.driverModel.value.vehicleInformation = VehicleInformation(
-              registrationDate: Timestamp.fromDate(controller.selectedDate.value!),
-              vehicleColor: controller.selectedColor.value,
-              vehicleNumber: controller.vehicleNumberController.value.text,
-              vehicleType: controller.selectedVehicle.value.name,
-              vehicleTypeId: controller.selectedVehicle.value.id,
-              seats: controller.seatsController.value.text,
-              driverRules: controller.selectedDriverRulesList,
-            );
-
-            await FireStoreUtils.updateDriverUser(controller.driverModel.value).then((value) {
-              ShowToastDialog.closeLoader();
-              if (value == true) {
-                ShowToastDialog.showToast("Information updated successfully".tr);
-              }
-            });
-          }
-        },
+        onPressed: () => _handleSave(controller),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
+          backgroundColor: AppColors.primary,
+          padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+          elevation: 0,
         ),
         child: Text(
-          "Save".tr,
-          style: GoogleFonts.poppins(
+          "Save Information".tr,
+          style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -618,41 +519,50 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoMessage(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.orange.withOpacity(0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.info_outline,
-              color: Colors.orange,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                "You cannot change service type once selected. Contact administrator to change.".tr,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: Colors.orange.shade700,
-                  height: 1.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _handleSave(VehicleInformationController controller) async {
+    ShowToastDialog.showLoader("Please wait".tr);
+
+    if (controller.selectedServiceId.value!.isEmpty) {
+      ShowToastDialog.showToast("Please select service".tr);
+    } else if (controller.vehicleNumberController.value.text.isEmpty) {
+      ShowToastDialog.showToast("Please enter Vehicle number".tr);
+    } else if (controller.registrationDateController.value.text.isEmpty) {
+      ShowToastDialog.showToast("Please select registration date".tr);
+    } else if (controller.selectedVehicle.value.id == null ||
+        controller.selectedVehicle.value.id!.isEmpty) {
+      ShowToastDialog.showToast("Please enter Vehicle type".tr);
+    } else if (controller.selectedColor.value.isEmpty) {
+      ShowToastDialog.showToast("Please enter Vehicle color".tr);
+    } else if (controller.seatsController.value.text.isEmpty) {
+      ShowToastDialog.showToast("Please enter seats".tr);
+    } else if (controller.selectedZone.isEmpty) {
+      ShowToastDialog.showToast("Please select Zone".tr);
+    } else {
+      if (controller.driverModel.value.serviceId == null) {
+        controller.driverModel.value.serviceId =
+            controller.selectedServiceId.value;
+        await FireStoreUtils.updateDriverUser(controller.driverModel.value);
+      }
+      controller.driverModel.value.zoneIds = controller.selectedZone;
+
+      controller.driverModel.value.vehicleInformation = VehicleInformation(
+        registrationDate: Timestamp.fromDate(controller.selectedDate.value!),
+        vehicleColor: controller.selectedColor.value,
+        vehicleNumber: controller.vehicleNumberController.value.text,
+        vehicleType: controller.selectedVehicle.value.name,
+        vehicleTypeId: controller.selectedVehicle.value.id,
+        seats: controller.seatsController.value.text,
+        driverRules: controller.selectedDriverRulesList,
+      );
+
+      await FireStoreUtils.updateDriverUser(controller.driverModel.value)
+          .then((value) {
+        ShowToastDialog.closeLoader();
+        if (value == true) {
+          ShowToastDialog.showToast("Information updated successfully".tr);
+        }
+      });
+    }
   }
 
   Color _getColorFromString(String colorName) {
@@ -683,175 +593,734 @@ class VehicleInformationScreen extends StatelessWidget {
     }
   }
 
-  zoneDialog(BuildContext context, VehicleInformationController controller) {
-    return showDialog(
+  void _showVehicleTypeSelector(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.background,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary,
-                        AppColors.primary.withOpacity(0.85),
-                      ],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Text(
+                    'Select Vehicle Type'.tr,
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          themeChange.getThem() ? Colors.white : Colors.black87,
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.location_on, color: Colors.white, size: 28),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Select Zones'.tr,
-                        style: GoogleFonts.poppins(
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: themeChange.getThem()
+                            ? Colors.white
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Vehicle Type List
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: controller.vehicleList.length,
+                itemBuilder: (context, index) {
+                  VehicleTypeModel vehicleType = controller.vehicleList[index];
+                  return Obx(() {
+                    bool isSelected =
+                        controller.selectedVehicle.value.id == vehicleType.id;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary.withOpacity(0.1)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary.withOpacity(0.3)
+                              : Colors.grey.withOpacity(0.1),
+                        ),
+                      ),
+                      child: RadioListTile<VehicleTypeModel>(
+                        value: vehicleType,
+                        groupValue: controller.selectedVehicle.value,
+                        onChanged: (value) {
+                          controller.selectedVehicle.value = value!;
+                          Navigator.pop(context);
+                        },
+                        activeColor: AppColors.primary,
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 16),
+                        title: Text(
+                          Constant.localizationName(vehicleType.name),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: themeChange.getThem()
+                                ? Colors.white
+                                : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    );
+                  });
+                },
+              ),
+            ),
+
+            // Action Buttons
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        "Cancel".tr,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (controller.selectedVehicle.value.id == null) {
+                          ShowToastDialog.showToast(
+                              "Please select a vehicle type".tr);
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        "Apply".tr,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                           color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-                
-                // Zone List
-                Flexible(
-                  child: controller.zoneList.isEmpty
-                      ? const Center(child: CircularProgressIndicator())
-                      : Obx(() => ListView.builder(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.all(16),
-                            itemCount: controller.zoneList.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              return Obx(() {
-                                bool isSelected = controller.selectedZone.contains(controller.zoneList[index].id);
-                                
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? AppColors.primary.withOpacity(0.15)
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? AppColors.primary.withOpacity(0.3)
-                                          : Colors.grey.withOpacity(0.2),
-                                    ),
-                                  ),
-                                  child: CheckboxListTile(
-                                    value: isSelected,
-                                    onChanged: (value) {
-                                      if (controller.selectedZone.contains(controller.zoneList[index].id)) {
-                                        controller.selectedZone.remove(controller.zoneList[index].id);
-                                      } else {
-                                        controller.selectedZone.add(controller.zoneList[index].id);
-                                      }
-                                    },
-                                    activeColor: AppColors.primary,
-                                    title: Text(
-                                      Constant.localizationName(controller.zoneList[index].name),
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                                  ),
-                                );
-                              });
-                            },
-                          )),
-                ),
-                
-                // Buttons
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () => Get.back(),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(color: Colors.grey.shade300),
-                            ),
-                          ),
-                          child: Text(
-                            "Cancel".tr,
-                            style: GoogleFonts.poppins(
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (controller.selectedZone.isEmpty) {
-                              ShowToastDialog.showToast("Please select zone".tr);
-                            } else {
-                              String nameValue = "";
-                              for (var element in controller.selectedZone) {
-                                List<ZoneModel> list = controller.zoneList.where((p0) => p0.id == element).toList();
-                                if (list.isNotEmpty) {
-                                  nameValue = "$nameValue${nameValue.isEmpty ? "" : ", "} ${Constant.localizationName(list.first.name)}";
-                                }
-                              }
-                              controller.zoneNameController.value.text = nameValue;
-                              Get.back();
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            "Continue".tr,
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showColorSelector(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
-        );
-      },
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Text(
+                    'Select Vehicle Color'.tr,
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          themeChange.getThem() ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: themeChange.getThem()
+                            ? Colors.white
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Color List
+            Expanded(
+              child: Obx(() => ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: controller.carColorList.length,
+                    itemBuilder: (context, index) {
+                      String color = controller.carColorList[index];
+                      bool isSelected = controller.selectedColor.value == color;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withOpacity(0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.1),
+                          ),
+                        ),
+                        child: RadioListTile<String>(
+                          value: color,
+                          groupValue: controller.selectedColor.value,
+                          onChanged: (value) {
+                            controller.selectedColor.value = value!;
+                            Navigator.pop(context);
+                          },
+                          activeColor: AppColors.primary,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          title: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: _getColorFromString(color),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.grey.withOpacity(0.3)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                color,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: themeChange.getThem()
+                                      ? Colors.white
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  )),
+            ),
+
+            // Action Buttons
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        "Cancel".tr,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (controller.selectedColor.value.isEmpty) {
+                          ShowToastDialog.showToast(
+                              "Please select a vehicle color".tr);
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        "Apply".tr,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSeatsSelector(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Text(
+                    'Select Number of Seats'.tr,
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          themeChange.getThem() ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: themeChange.getThem()
+                            ? Colors.white
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Seats List
+            Expanded(
+              child: Obx(() => ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: controller.sheetList.length,
+                    itemBuilder: (context, index) {
+                      String seats = controller.sheetList[index];
+                      bool isSelected =
+                          controller.seatsController.value.text == seats;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withOpacity(0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.1),
+                          ),
+                        ),
+                        child: RadioListTile<String>(
+                          value: seats,
+                          groupValue: controller.seatsController.value.text,
+                          onChanged: (value) {
+                            controller.seatsController.value.text = value!;
+                            Navigator.pop(context);
+                          },
+                          activeColor: AppColors.primary,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          title: Text(
+                            '$seats Seats',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: themeChange.getThem()
+                                  ? Colors.white
+                                  : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  )),
+            ),
+
+            // Action Buttons
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        "Cancel".tr,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (controller.seatsController.value.text.isEmpty) {
+                          ShowToastDialog.showToast("Please select seats".tr);
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        "Apply".tr,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showZoneSelector(BuildContext context,
+      VehicleInformationController controller, DarkThemeProvider themeChange) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Text(
+                    'Select Zones'.tr,
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          themeChange.getThem() ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: themeChange.getThem()
+                            ? Colors.white
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Zone List
+            Expanded(
+              child: controller.zoneList.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : Obx(() => ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: controller.zoneList.length,
+                        itemBuilder: (context, index) {
+                          bool isSelected = controller.selectedZone
+                              .contains(controller.zoneList[index].id);
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary.withOpacity(0.1)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primary.withOpacity(0.3)
+                                    : Colors.grey.withOpacity(0.1),
+                              ),
+                            ),
+                            child: CheckboxListTile(
+                              value: isSelected,
+                              onChanged: (value) {
+                                if (controller.selectedZone
+                                    .contains(controller.zoneList[index].id)) {
+                                  controller.selectedZone
+                                      .remove(controller.zoneList[index].id);
+                                } else {
+                                  controller.selectedZone
+                                      .add(controller.zoneList[index].id);
+                                }
+                              },
+                              activeColor: AppColors.primary,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              title: Text(
+                                Constant.localizationName(
+                                    controller.zoneList[index].name),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: themeChange.getThem()
+                                      ? Colors.white
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      )),
+            ),
+
+            // Action Buttons
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        "Cancel".tr,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (controller.selectedZone.isEmpty) {
+                          ShowToastDialog.showToast("Please select zone".tr);
+                        } else {
+                          String nameValue = "";
+                          for (var element in controller.selectedZone) {
+                            List<ZoneModel> list = controller.zoneList
+                                .where((p0) => p0.id == element)
+                                .toList();
+                            if (list.isNotEmpty) {
+                              nameValue =
+                                  "$nameValue${nameValue.isEmpty ? "" : ", "} ${Constant.localizationName(list.first.name)}";
+                            }
+                          }
+                          controller.zoneNameController.value.text = nameValue;
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        "Apply".tr,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

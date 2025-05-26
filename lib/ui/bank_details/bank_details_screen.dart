@@ -20,35 +20,39 @@ class BankDetailsScreen extends StatelessWidget {
         init: BankDetailsController(),
         builder: (controller) {
           return Scaffold(
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.background,
             body: Column(
               children: [
                 // Header section with icon
                 Container(
-                  padding: const EdgeInsets.only(bottom: 30),
+                  padding: const EdgeInsets.only(bottom: 30, top: 20),
                   child: Column(
                     children: [
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 70,
+                        height: 70,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: AppColors.darkBackground.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Icon(
                           Icons.account_balance,
-                          color: Colors.white,
+                          color: AppColors.darkBackground,
                           size: 40,
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text(
-                        "Manage your banking information".tr,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 14,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 36),
+                        child: Text(
+                          "Manage your banking information".tr,
+                          style: GoogleFonts.poppins(
+                            color: AppColors.darkBackground.withOpacity(0.8),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -59,10 +63,6 @@ class BankDetailsScreen extends StatelessWidget {
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.background,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
                     ),
                     child: controller.isLoading.value
                         ? Constant.loader(context)
@@ -74,66 +74,60 @@ class BankDetailsScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // Progress indicator
-                                  Container(
-                                    width: 40,
-                                    height: 4,
-                                    margin: const EdgeInsets.only(bottom: 32),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade300,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                    alignment: Alignment.center,
-                                  ),
-                                  
+
                                   // Form fields
                                   _buildModernTextField(
                                     context,
                                     label: "Bank Name".tr,
                                     hint: "Enter your bank name".tr,
-                                    controller: controller.bankNameController.value,
+                                    controller:
+                                        controller.bankNameController.value,
                                     icon: Icons.account_balance,
                                   ),
-                                  
+
                                   _buildModernTextField(
                                     context,
                                     label: "Branch Name".tr,
                                     hint: "Enter branch name".tr,
-                                    controller: controller.branchNameController.value,
+                                    controller:
+                                        controller.branchNameController.value,
                                     icon: Icons.business,
                                   ),
-                                  
+
                                   _buildModernTextField(
                                     context,
                                     label: "Account Holder Name".tr,
                                     hint: "Enter account holder name".tr,
-                                    controller: controller.holderNameController.value,
+                                    controller:
+                                        controller.holderNameController.value,
                                     icon: Icons.person,
                                   ),
-                                  
+
                                   _buildModernTextField(
                                     context,
                                     label: "Account Number".tr,
                                     hint: "Enter account number".tr,
-                                    controller: controller.accountNumberController.value,
+                                    controller: controller
+                                        .accountNumberController.value,
                                     icon: Icons.numbers,
                                     keyboardType: TextInputType.number,
                                   ),
-                                  
+
                                   _buildModernTextField(
                                     context,
                                     label: "Additional Information".tr,
-                                    hint: "Enter any additional details (optional)".tr,
-                                    controller: controller.otherInformationController.value,
+                                    hint: "Enter any additional details".tr,
+                                    controller: controller
+                                        .otherInformationController.value,
                                     icon: Icons.info_outline,
-                                    maxLines: 3,
                                     isOptional: true,
                                   ),
-                                  
+
                                   const SizedBox(height: 40),
-                                  
+
                                   // Modern save button
                                   _buildModernSaveButton(context, controller),
-                                  
+
                                   const SizedBox(height: 20),
                                 ],
                               ),
@@ -167,15 +161,16 @@ class BankDetailsScreen extends StatelessWidget {
               Text(
                 label,
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).textTheme.titleLarge?.color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.darkBackground.withOpacity(0.8),
                 ),
               ),
               if (isOptional)
                 Container(
                   margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(12),
@@ -194,7 +189,7 @@ class BankDetailsScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: Colors.grey.shade200,
                 width: 1.5,
@@ -231,7 +226,7 @@ class BankDetailsScreen extends StatelessWidget {
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 16,
+                  vertical: 20,
                 ),
               ),
             ),
@@ -241,7 +236,8 @@ class BankDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildModernSaveButton(BuildContext context, BankDetailsController controller) {
+  Widget _buildModernSaveButton(
+      BuildContext context, BankDetailsController controller) {
     return Container(
       width: double.infinity,
       height: 56,
@@ -316,17 +312,22 @@ class BankDetailsScreen extends StatelessWidget {
 
     try {
       ShowToastDialog.showLoader("Saving details...".tr);
-      
+
       BankDetailsModel bankDetailsModel = controller.bankDetailsModel.value;
       bankDetailsModel.userId = FireStoreUtils.getCurrentUid();
-      bankDetailsModel.bankName = controller.bankNameController.value.text.trim();
-      bankDetailsModel.branchName = controller.branchNameController.value.text.trim();
-      bankDetailsModel.holderName = controller.holderNameController.value.text.trim();
-      bankDetailsModel.accountNumber = controller.accountNumberController.value.text.trim();
-      bankDetailsModel.otherInformation = controller.otherInformationController.value.text.trim();
+      bankDetailsModel.bankName =
+          controller.bankNameController.value.text.trim();
+      bankDetailsModel.branchName =
+          controller.branchNameController.value.text.trim();
+      bankDetailsModel.holderName =
+          controller.holderNameController.value.text.trim();
+      bankDetailsModel.accountNumber =
+          controller.accountNumberController.value.text.trim();
+      bankDetailsModel.otherInformation =
+          controller.otherInformationController.value.text.trim();
 
       await FireStoreUtils.updateBankDetails(bankDetailsModel);
-      
+
       ShowToastDialog.closeLoader();
       ShowToastDialog.showToast("Bank details saved successfully".tr);
     } catch (e) {

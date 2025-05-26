@@ -23,7 +23,7 @@ class AcceptedIntercityOrders extends StatelessWidget {
     final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: AppColors.background,
       body: Column(
         children: [
           SizedBox(
@@ -35,15 +35,24 @@ class AcceptedIntercityOrders extends StatelessWidget {
               height: Responsive.height(100, context),
               width: Responsive.width(100, context),
               decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.background, borderRadius: const BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(25))),
+                  color: Theme.of(context).colorScheme.background,
+                  borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(25),
+                      topRight: Radius.circular(25))),
               child: Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
                       .collection(CollectionName.ordersIntercity)
-                      .where('acceptedDriverId', arrayContains: FireStoreUtils.getCurrentUid())
-                      .where('intercityServiceId', whereIn: ["647f340e35553", '647f350983ba2', 'UmQ2bjWTnlwoKqdCIlTr']).snapshots(),
-                  builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                      .where('acceptedDriverId',
+                          arrayContains: FireStoreUtils.getCurrentUid())
+                      .where('intercityServiceId', whereIn: [
+                    "647f340e35553",
+                    '647f350983ba2',
+                    'UmQ2bjWTnlwoKqdCIlTr'
+                  ]).snapshots(),
+                  builder: (BuildContext context,
+                      AsyncSnapshot<QuerySnapshot> snapshot) {
                     if (snapshot.hasError) {
                       return Text('Something went wrong'.tr);
                     }
@@ -59,26 +68,39 @@ class AcceptedIntercityOrders extends StatelessWidget {
                             scrollDirection: Axis.vertical,
                             shrinkWrap: true,
                             itemBuilder: (context, index) {
-                              InterCityOrderModel orderModel = InterCityOrderModel.fromJson(snapshot.data!.docs[index].data() as Map<String, dynamic>);
+                              InterCityOrderModel orderModel =
+                                  InterCityOrderModel.fromJson(
+                                      snapshot.data!.docs[index].data()
+                                          as Map<String, dynamic>);
                               return Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
-                                    borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                    border: Border.all(color: themeChange.getThem() ? AppColors.darkContainerBorder : AppColors.containerBorder, width: 0.5),
+                                    color: themeChange.getThem()
+                                        ? AppColors.darkContainerBackground
+                                        : AppColors.containerBackground,
+                                    borderRadius: const BorderRadius.all(
+                                        Radius.circular(10)),
+                                    border: Border.all(
+                                        color: themeChange.getThem()
+                                            ? AppColors.darkContainerBorder
+                                            : AppColors.containerBorder,
+                                        width: 0.5),
                                     boxShadow: themeChange.getThem()
                                         ? null
                                         : [
                                             BoxShadow(
-                                              color: Colors.grey.withOpacity(0.5),
+                                              color:
+                                                  Colors.grey.withOpacity(0.5),
                                               blurRadius: 8,
-                                              offset: const Offset(0, 2), // changes position of shadow
+                                              offset: const Offset(0,
+                                                  2), // changes position of shadow
                                             ),
                                           ],
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 10, horizontal: 10),
                                     child: Column(
                                       children: [
                                         UserView(
@@ -91,29 +113,60 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                           height: 10,
                                         ),
                                         Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            FutureBuilder<DriverIdAcceptReject?>(
-                                                future: FireStoreUtils.getInterCItyAcceptedOrders(orderModel.id.toString(), FireStoreUtils.getCurrentUid()),
+                                            FutureBuilder<
+                                                    DriverIdAcceptReject?>(
+                                                future: FireStoreUtils
+                                                    .getInterCItyAcceptedOrders(
+                                                        orderModel.id
+                                                            .toString(),
+                                                        FireStoreUtils
+                                                            .getCurrentUid()),
                                                 builder: (context, snapshot) {
-                                                  switch (snapshot.connectionState) {
-                                                    case ConnectionState.waiting:
-                                                      return Constant.loader(context);
+                                                  switch (snapshot
+                                                      .connectionState) {
+                                                    case ConnectionState
+                                                        .waiting:
+                                                      return Constant.loader(
+                                                          context);
                                                     case ConnectionState.done:
                                                       if (snapshot.hasError) {
-                                                        return Text(snapshot.error.toString());
+                                                        return Text(snapshot
+                                                            .error
+                                                            .toString());
                                                       } else {
-                                                        DriverIdAcceptReject driverIdAcceptReject = snapshot.data!;
-                                                        return Text(Constant.amountShow(amount: driverIdAcceptReject.offerAmount.toString()),
-                                                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18));
+                                                        DriverIdAcceptReject
+                                                            driverIdAcceptReject =
+                                                            snapshot.data!;
+                                                        return Text(
+                                                            Constant.amountShow(
+                                                                amount: driverIdAcceptReject
+                                                                    .offerAmount
+                                                                    .toString()),
+                                                            style: GoogleFonts
+                                                                .poppins(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    fontSize:
+                                                                        18));
                                                       }
                                                     default:
                                                       return Text('Error'.tr);
                                                   }
                                                 }),
-                                            orderModel.intercityServiceId == "647f350983ba2"
+                                            orderModel.intercityServiceId ==
+                                                    "647f350983ba2"
                                                 ? const SizedBox()
-                                                : Text(" For ${orderModel.numberOfPassenger} Person".tr, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18)),
+                                                : Text(
+                                                    " For ${orderModel.numberOfPassenger} Person"
+                                                        .tr,
+                                                    style: GoogleFonts.poppins(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 18)),
                                           ],
                                         ),
                                         const SizedBox(
@@ -125,36 +178,68 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                               child: Row(
                                                 children: [
                                                   Container(
-                                                    decoration: BoxDecoration(color: Colors.grey.withOpacity(0.30), borderRadius: const BorderRadius.all(Radius.circular(5))),
+                                                    decoration: BoxDecoration(
+                                                        color: Colors.grey
+                                                            .withOpacity(0.30),
+                                                        borderRadius:
+                                                            const BorderRadius
+                                                                .all(
+                                                                Radius.circular(
+                                                                    5))),
                                                     child: Padding(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                      child: Text(orderModel.paymentType.toString()),
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 10,
+                                                          vertical: 4),
+                                                      child: Text(orderModel
+                                                          .paymentType
+                                                          .toString()),
                                                     ),
                                                   ),
                                                   const SizedBox(
                                                     width: 10,
                                                   ),
                                                   Container(
-                                                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.30), borderRadius: const BorderRadius.all(Radius.circular(5))),
+                                                    decoration: BoxDecoration(
+                                                        color: AppColors.primary
+                                                            .withOpacity(0.30),
+                                                        borderRadius:
+                                                            const BorderRadius
+                                                                .all(
+                                                                Radius.circular(
+                                                                    5))),
                                                     child: Padding(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                      child: Text(Constant.localizationName(orderModel.intercityService!.name)),
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 10,
+                                                          vertical: 4),
+                                                      child: Text(Constant
+                                                          .localizationName(
+                                                              orderModel
+                                                                  .intercityService!
+                                                                  .name)),
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                             ),
                                             Visibility(
-                                              visible: orderModel.intercityServiceId == "647f350983ba2",
+                                              visible: orderModel
+                                                      .intercityServiceId ==
+                                                  "647f350983ba2",
                                               child: InkWell(
                                                   onTap: () {
-                                                    Get.to(const ParcelDetailsScreen(), arguments: {
-                                                      "orderModel": orderModel,
-                                                    });
+                                                    Get.to(
+                                                        const ParcelDetailsScreen(),
+                                                        arguments: {
+                                                          "orderModel":
+                                                              orderModel,
+                                                        });
                                                   },
                                                   child: Text(
                                                     "View details".tr,
-                                                    style: GoogleFonts.poppins(),
+                                                    style:
+                                                        GoogleFonts.poppins(),
                                                   )),
                                             )
                                           ],
@@ -163,8 +248,12 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                           height: 10,
                                         ),
                                         LocationView(
-                                          sourceLocation: orderModel.sourceLocationName.toString(),
-                                          destinationLocation: orderModel.destinationLocationName.toString(),
+                                          sourceLocation: orderModel
+                                              .sourceLocationName
+                                              .toString(),
+                                          destinationLocation: orderModel
+                                              .destinationLocationName
+                                              .toString(),
                                         ),
                                         const SizedBox(
                                           height: 10,

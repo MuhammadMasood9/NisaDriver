@@ -11,6 +11,7 @@ import 'package:driver/themes/responsive.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -22,7 +23,7 @@ class ProfileScreen extends StatelessWidget {
       init: ProfileController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.background,
           body: Column(
             children: [
               _buildProfileHeader(context, controller),
@@ -38,20 +39,13 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, ProfileController controller) {
+  Widget _buildProfileHeader(
+      BuildContext context, ProfileController controller) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 30),
+      padding: const EdgeInsets.only(bottom: 30, top: 20),
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-      ),
       child: Column(
         children: [
-          const SizedBox(height: 10),
           Stack(
             alignment: Alignment.bottomRight,
             children: [
@@ -61,7 +55,7 @@ class ProfileScreen extends StatelessWidget {
                   border: Border.all(color: Colors.white, width: 4),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: AppColors.darkBackground.withOpacity(0.1),
                       blurRadius: 10,
                       spreadRadius: 1,
                     ),
@@ -77,7 +71,7 @@ class ProfileScreen extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.darkBackground,
+                    color: AppColors.primary,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
@@ -90,12 +84,23 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          Text(
+            "Manage your profile".tr,
+            style: GoogleFonts.poppins(
+              color: AppColors.darkBackground.withOpacity(0.8),
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildProfileImage(BuildContext context, ProfileController controller) {
+  Widget _buildProfileImage(
+      BuildContext context, ProfileController controller) {
     final size = Responsive.width(30, context);
 
     if (controller.profileImage.isEmpty) {
@@ -130,240 +135,281 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildProfileForm(BuildContext context, ProfileController controller) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.background,
+      ),
       child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle("Personal Information".tr),
-            const SizedBox(height: 20),
-            _buildInputField(
-              context,
-              label: "Full Name".tr,
-              icon: Icons.person_outline,
-              controller: controller.fullNameController.value,
-            ),
-            const SizedBox(height: 20),
-            _buildPhoneField(context, controller),
-            const SizedBox(height: 20),
-            _buildInputField(
-              context,
-              label: "Email".tr,
-              icon: Icons.email_outlined,
-              controller: controller.emailController.value,
-              enabled: false,
-            ),
-            const SizedBox(height: 40),
-            _buildUpdateButton(context, controller),
-            const SizedBox(height: 20),
-          ],
+        physics: const BouncingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Personal Information".tr,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.darkBackground.withOpacity(0.8),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildModernTextField(
+                context,
+                label: "Full Name".tr,
+                hint: "Enter your full name".tr,
+                controller: controller.fullNameController.value,
+                icon: Icons.person,
+              ),
+              _buildModernTextField(
+                context,
+                label: "Email".tr,
+                hint: "Enter your email".tr,
+                controller: controller.emailController.value,
+                icon: Icons.email,
+                enabled: false,
+              ),
+              _buildModernPhoneField(context, controller),
+              const SizedBox(height: 40),
+              _buildModernUpdateButton(context, controller),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: Colors.black87,
-      ),
-    );
-  }
-
-  Widget _buildInputField(
+  Widget _buildModernTextField(
     BuildContext context, {
     required String label,
-    required IconData icon,
+    required String hint,
     required TextEditingController controller,
+    required IconData icon,
     bool enabled = true,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                spreadRadius: 0,
-              ),
-            ],
-          ),
-          child: TextFormField(
-            controller: controller,
-            enabled: enabled,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
-            ),
-            decoration: InputDecoration(
-              hintText: label,
-              hintStyle: TextStyle(color: Colors.black38),
-              prefixIcon: Icon(icon, color: AppColors.darkBackground),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    BorderSide(color: AppColors.darkBackground, width: 1),
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: enabled ? Colors.white : Colors.grey[100],
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.darkBackground.withOpacity(0.8),
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPhoneField(BuildContext context, ProfileController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Phone Number".tr,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.grey[100],
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                spreadRadius: 0,
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 1.5,
               ),
-            ],
-          ),
-          child: TextFormField(
-            controller: controller.phoneNumberController.value,
-            enabled: false,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
+              color: enabled ? Colors.grey.shade50 : Colors.grey.shade100,
             ),
-            decoration: InputDecoration(
-              hintText: "Phone number".tr,
-              hintStyle: TextStyle(color: Colors.black38),
-              prefixIcon: CountryCodePicker(
-                onChanged: (value) {
-                  controller.countryCode.value = value.dialCode.toString();
-                },
-                dialogBackgroundColor: Colors.white,
-                initialSelection: controller.countryCode.value,
-                comparator: (a, b) => b.name!.compareTo(a.name.toString()),
-                flagDecoration: const BoxDecoration(
-                  borderRadius: BorderRadius.all(Radius.circular(2)),
+            child: TextField(
+              controller: controller,
+              enabled: enabled,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.darkBackground,
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: GoogleFonts.poppins(
+                  color: Colors.grey.shade500,
+                  fontSize: 14,
                 ),
-                textStyle: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                ),
-                searchDecoration: InputDecoration(
-                  hintText: "Search country".tr,
-                  hintStyle: TextStyle(color: Colors.black38),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                prefixIcon: Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: AppColors.primary,
+                    size: 20,
                   ),
                 ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 20,
+                ),
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.grey[100],
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildUpdateButton(BuildContext context, ProfileController controller) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () async {
-          if (controller.fullNameController.value.text.isEmpty) {
-            ShowToastDialog.showToast("Please enter full name".tr);
-          } else {
-            ShowToastDialog.showLoader("Please wait".tr);
-
-            if (controller.profileImage.value.isNotEmpty &&
-                Constant().hasValidUrl(controller.profileImage.value) == false) {
-              controller.profileImage.value =
-                  await Constant.uploadUserImageToFireStorage(
-                File(controller.profileImage.value),
-                "profileImage/${FireStoreUtils.getCurrentUid()}",
-                File(controller.profileImage.value).path.split('/').last,
-              );
-            }
-
-            DriverUserModel driverUserModel = controller.driverModel.value;
-            driverUserModel.fullName = controller.fullNameController.value.text;
-            driverUserModel.profilePic = controller.profileImage.value;
-
-            await FireStoreUtils.updateDriverUser(driverUserModel).then((value) {
-              ShowToastDialog.closeLoader();
-              controller.getData();
-              ShowToastDialog.showToast("Profile update successfully".tr);
-            });
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.darkBackground,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildModernPhoneField(
+      BuildContext context, ProfileController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Phone Number".tr,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.darkBackground.withOpacity(0.8),
+            ),
           ),
-          elevation: 0,
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 1.5,
+              ),
+              color: Colors.grey.shade100,
+            ),
+            child: TextField(
+              controller: controller.phoneNumberController.value,
+              enabled: false,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.darkBackground,
+              ),
+              decoration: InputDecoration(
+                hintText: "Enter phone number".tr,
+                hintStyle: GoogleFonts.poppins(
+                  color: Colors.grey.shade500,
+                  fontSize: 14,
+                ),
+                prefixIcon: CountryCodePicker(
+                  onChanged: (value) {
+                    controller.countryCode.value = value.dialCode.toString();
+                  },
+                  dialogBackgroundColor:
+                      Theme.of(context).colorScheme.background,
+                  initialSelection: controller.countryCode.value,
+                  comparator: (a, b) => b.name!.compareTo(a.name.toString()),
+                  flagDecoration: const BoxDecoration(
+                    borderRadius: BorderRadius.all(Radius.circular(2)),
+                  ),
+                  textStyle: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkBackground,
+                  ),
+                  searchDecoration: InputDecoration(
+                    hintText: "Search country".tr,
+                    hintStyle: GoogleFonts.poppins(
+                      color: Colors.grey.shade500,
+                      fontSize: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 20,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernUpdateButton(
+      BuildContext context, ProfileController controller) {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.8),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
-        child: Text(
-          "Update Profile".tr,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () async {
+            if (controller.fullNameController.value.text.isEmpty) {
+              ShowToastDialog.showToast("Please enter full name".tr);
+            } else {
+              ShowToastDialog.showLoader("Please wait".tr);
+
+              if (controller.profileImage.value.isNotEmpty &&
+                  Constant().hasValidUrl(controller.profileImage.value) ==
+                      false) {
+                controller.profileImage.value =
+                    await Constant.uploadUserImageToFireStorage(
+                  File(controller.profileImage.value),
+                  "profileImage/${FireStoreUtils.getCurrentUid()}",
+                  File(controller.profileImage.value).path.split('/').last,
+                );
+              }
+
+              DriverUserModel driverUserModel = controller.driverModel.value;
+              driverUserModel.fullName =
+                  controller.fullNameController.value.text;
+              driverUserModel.profilePic = controller.profileImage.value;
+
+              await FireStoreUtils.updateDriverUser(driverUserModel)
+                  .then((value) {
+                ShowToastDialog.closeLoader();
+                controller.getData();
+                ShowToastDialog.showToast("Profile updated successfully".tr);
+              });
+            }
+          },
+          child: Container(
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.save_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "Update Profile".tr,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -378,11 +424,11 @@ class ProfileScreen extends StatelessWidget {
       isScrollControlled: true,
       builder: (context) => Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.background,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: AppColors.darkBackground.withOpacity(0.1),
               blurRadius: 10,
               spreadRadius: 0,
             ),
@@ -407,10 +453,10 @@ class ProfileScreen extends StatelessWidget {
                   children: [
                     Text(
                       "Select Media".tr,
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: AppColors.darkBackground.withOpacity(0.8),
                       ),
                     ),
                     const Spacer(),
@@ -419,20 +465,20 @@ class ProfileScreen extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.grey[200],
+                          color: Colors.grey.shade200,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.close,
                           size: 20,
-                          color: Colors.black54,
+                          color: Colors.grey,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              const Divider(height: 1, color: Colors.grey),
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Row(
@@ -442,7 +488,6 @@ class ProfileScreen extends StatelessWidget {
                         context,
                         icon: Icons.camera_alt_rounded,
                         label: "Camera".tr,
-                        color: AppColors.darkBackground,
                         onTap: () {
                           Navigator.pop(context);
                           controller.pickFile(source: ImageSource.camera);
@@ -455,7 +500,6 @@ class ProfileScreen extends StatelessWidget {
                         context,
                         icon: Icons.photo_library_rounded,
                         label: "Gallery".tr,
-                        color: AppColors.darkBackground,
                         onTap: () {
                           Navigator.pop(context);
                           controller.pickFile(source: ImageSource.gallery);
@@ -477,7 +521,6 @@ class ProfileScreen extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required String label,
-    required Color color,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -485,9 +528,9 @@ class ProfileScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: Colors.grey[50],
+          color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
+          border: Border.all(color: Colors.grey.shade200),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -495,14 +538,15 @@ class ProfileScreen extends StatelessWidget {
             Icon(
               icon,
               size: 32,
-              color: color,
+              color: AppColors.primary,
             ),
             const SizedBox(height: 12),
             Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+                color: AppColors.darkBackground,
               ),
             ),
           ],
