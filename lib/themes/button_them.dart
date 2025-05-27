@@ -12,9 +12,9 @@ class ButtonThem {
     BuildContext context, {
     required String title,
     double btnHeight = 48,
-    double txtSize = 14,
+    double txtSize = 12,
     double btnWidthRatio = 0.9,
-    double btnRadius = 10,
+    double btnRadius = 8,
     final Color? textColor,
     final Color? bgColors,
     required Function() onPress,
@@ -33,13 +33,17 @@ class ButtonThem {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(btnRadius),
           ),
-          color: bgColors ?? (themeChange.getThem()
-                  ? AppColors.darkModePrimary
-                  : AppColors.primary),
+          color: bgColors ??
+              (themeChange.getThem()
+                  ? AppColors.darkBackground
+                  : AppColors.darkBackground),
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(fontSize: txtSize, fontWeight: FontWeight.w600, color: textColor),
+            style: GoogleFonts.poppins(
+                fontSize: txtSize,
+                fontWeight: FontWeight.w600,
+                color: textColor),
           ),
         ),
       ),
@@ -50,9 +54,9 @@ class ButtonThem {
     BuildContext context, {
     required String title,
     double btnHeight = 50,
-    double txtSize = 14,
+    double txtSize = 12,
     double btnWidthRatio = 0.9,
-    double borderRadius = 10,
+    double borderRadius = 8,
     required Function() onPress,
     bool isVisible = true,
     bool iconVisibility = false,
@@ -68,13 +72,19 @@ class ButtonThem {
         height: btnHeight,
         child: ElevatedButton(
           style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.all<Color>(themeChange.getThem() ? Colors.transparent : Colors.white),
-            foregroundColor: MaterialStateProperty.all<Color>(themeChange.getThem() ? AppColors.darkModePrimary : Colors.white),
+            backgroundColor: MaterialStateProperty.all<Color>(
+                themeChange.getThem() ? Colors.transparent : Colors.white),
+            foregroundColor: MaterialStateProperty.all<Color>(
+                themeChange.getThem()
+                    ? AppColors.darkBackground
+                    : Colors.white),
             shape: MaterialStateProperty.all<RoundedRectangleBorder>(
               RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
                 side: BorderSide(
-                  color: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
+                  color: themeChange.getThem()
+                      ? AppColors.darkBackground
+                      : AppColors.darkBackground,
                 ),
               ),
             ),
@@ -88,13 +98,19 @@ class ButtonThem {
                 visible: iconVisibility,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Image.asset(iconAssetImage, fit: BoxFit.cover, width: 32, color: iconColor),
+                  child: Image.asset(iconAssetImage,
+                      fit: BoxFit.cover, width: 32, color: iconColor),
                 ),
               ),
               Text(
                 title.toUpperCase(),
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary, fontSize: txtSize, fontWeight: FontWeight.w600),
+                style: GoogleFonts.poppins(
+                    color: themeChange.getThem()
+                        ? AppColors.darkBackground
+                        : AppColors.darkBackground,
+                    fontSize: txtSize,
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -125,11 +141,14 @@ class ButtonThem {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
-          color: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
+          color: themeChange.getThem()
+              ? AppColors.darkModePrimary
+              : AppColors.primary,
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(fontSize: txtSize, fontWeight: FontWeight.w600),
+            style: GoogleFonts.poppins(
+                fontSize: txtSize, fontWeight: FontWeight.w600),
           ),
         ),
       ),

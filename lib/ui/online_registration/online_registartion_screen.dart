@@ -36,13 +36,12 @@ class OnlineRegistrationScreen extends StatelessWidget {
                               width: 70,
                               height: 70,
                               decoration: BoxDecoration(
-                                color:
-                                    AppColors.darkBackground.withOpacity(0.05),
+                                color: AppColors.primary.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: const Icon(
                                 Icons.document_scanner,
-                                color: AppColors.darkBackground,
+                                color: AppColors.primary,
                                 size: 40,
                               ),
                             ),
@@ -56,7 +55,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                 style: GoogleFonts.poppins(
                                   color:
                                       AppColors.darkBackground.withOpacity(0.8),
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
                                 textAlign: TextAlign.center,
@@ -70,10 +69,10 @@ class OnlineRegistrationScreen extends StatelessWidget {
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.background,
+                            color: AppColors.darkBackground.withOpacity(0.03),
                             borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(20),
-                              topRight: Radius.circular(20),
+                              topLeft: Radius.circular(30),
+                              topRight: Radius.circular(30),
                             ),
                           ),
                           child: controller.isLoading.value
@@ -115,7 +114,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
 
                                             return Container(
                                               margin: const EdgeInsets.only(
-                                                  bottom: 20),
+                                                  bottom: 15),
                                               child: Material(
                                                 color: Colors.transparent,
                                                 child: InkWell(
@@ -134,11 +133,8 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                         const EdgeInsets.all(
                                                             20),
                                                     decoration: BoxDecoration(
-                                                      color: themeChange
-                                                              .getThem()
-                                                          ? AppColors
-                                                              .darkContainerBackground
-                                                          : Colors.grey.shade50,
+                                                      color:
+                                                          AppColors.background,
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               12),
@@ -147,17 +143,6 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                             .grey.shade200,
                                                         width: 1.5,
                                                       ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: AppColors
-                                                              .darkBackground
-                                                              .withOpacity(
-                                                                  0.08),
-                                                          blurRadius: 8,
-                                                          offset: const Offset(
-                                                              0, 2),
-                                                        ),
-                                                      ],
                                                     ),
                                                     child: Column(
                                                       crossAxisAlignment:

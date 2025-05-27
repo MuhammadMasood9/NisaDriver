@@ -32,23 +32,23 @@ class BankDetailsScreen extends StatelessWidget {
                         width: 70,
                         height: 70,
                         decoration: BoxDecoration(
-                          color: AppColors.darkBackground.withOpacity(0.05),
+                          color: AppColors.primary.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Icon(
                           Icons.account_balance,
-                          color: AppColors.darkBackground,
+                          color: AppColors.primary,
                           size: 40,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
                         child: Text(
                           "Manage your banking information".tr,
                           style: GoogleFonts.poppins(
                             color: AppColors.darkBackground.withOpacity(0.8),
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.w500,
                           ),
                           textAlign: TextAlign.center,
@@ -62,7 +62,11 @@ class BankDetailsScreen extends StatelessWidget {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.background,
+                      color: AppColors.darkBackground.withOpacity(0.03),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
+                      ),
                     ),
                     child: controller.isLoading.value
                         ? Constant.loader(context)
@@ -123,7 +127,7 @@ class BankDetailsScreen extends StatelessWidget {
                                     isOptional: true,
                                   ),
 
-                                  const SizedBox(height: 40),
+                                  const SizedBox(height: 20),
 
                                   // Modern save button
                                   _buildModernSaveButton(context, controller),
@@ -194,7 +198,7 @@ class BankDetailsScreen extends StatelessWidget {
                 color: Colors.grey.shade200,
                 width: 1.5,
               ),
-              color: Colors.grey.shade50,
+              color: AppColors.background,
             ),
             child: TextField(
               controller: controller,
@@ -214,12 +218,12 @@ class BankDetailsScreen extends StatelessWidget {
                   margin: const EdgeInsets.all(12),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.darkBackground.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     icon,
-                    color: AppColors.primary,
+                    color: AppColors.darkBackground,
                     size: 20,
                   ),
                 ),
@@ -244,16 +248,16 @@ class BankDetailsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.8),
+            AppColors.darkBackground,
+            AppColors.darkBackground.withOpacity(0.8),
           ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.darkBackground.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),

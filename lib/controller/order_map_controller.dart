@@ -98,7 +98,8 @@ class OrderMapController extends GetxController {
 
   RxString newAmount = "0.0".obs;
 
-  getArgument() async {
+  Future<void> getArgument() async {
+    isLoading.value = true; // Keep loading true until all data is ready
     dynamic argumentData = Get.arguments;
     if (argumentData != null) {
       String orderId = argumentData['orderModel'];
@@ -106,7 +107,8 @@ class OrderMapController extends GetxController {
       newAmount.value = orderModel.value.offerRate.toString();
       enterOfferRateController.value.text =
           orderModel.value.offerRate.toString();
-      getPolyline();
+      await addMarkerSetup(); // Ensure markers are set up first
+      await getPolyline(); // Then call getPolyline
     }
 
     FireStoreUtils.fireStore
@@ -119,36 +121,13 @@ class OrderMapController extends GetxController {
       }
     });
     isLoading.value = false;
+    update(); // Force GetX to rebuild the UI
   }
 
-  getData(String id) async {
-    await FireStoreUtils.getOrder(id).then((value) {
-      if (value != null) {
-        orderModel.value = value;
-      }
-    });
-  }
-
-  BitmapDescriptor? departureIcon;
-  BitmapDescriptor? destinationIcon;
-
-  addMarkerSetup() async {
-    final Uint8List departure =
-        await Constant().getBytesFromAsset('assets/images/pickup.png', 100);
-    final Uint8List destination =
-        await Constant().getBytesFromAsset('assets/images/dropoff.png', 100);
-    departureIcon = BitmapDescriptor.fromBytes(departure);
-    destinationIcon = BitmapDescriptor.fromBytes(destination);
-  }
-
-  RxMap<MarkerId, Marker> markers = <MarkerId, Marker>{}.obs;
-  RxMap<PolylineId, Polyline> polyLines = <PolylineId, Polyline>{}.obs;
-  PolylinePoints polylinePoints = PolylinePoints();
-
-  void getPolyline() async {
+  Future<void> getPolyline() async {
     if (orderModel.value.sourceLocationLAtLng != null &&
         orderModel.value.destinationLocationLAtLng != null) {
-      movePosition();
+      await movePosition(); // Ensure movePosition is awaited
       List<LatLng> polylineCoordinates = [];
       PolylineRequest polylineRequest = PolylineRequest(
         origin: PointLatLng(
@@ -163,16 +142,13 @@ class OrderMapController extends GetxController {
       );
 
       try {
-        // Change variable to List<PolylineResult> to match the method's return type
         List<PolylineResult> results =
             await polylinePoints.getRouteBetweenCoordinates(
           googleApiKey: Constant.mapAPIKey,
           request: polylineRequest,
         );
 
-        // Check if the list has at least one result
         if (results.isNotEmpty) {
-          // Use the first route from the list
           PolylineResult result = results.first;
           if (result.points.isNotEmpty) {
             for (var point in result.points) {
@@ -207,12 +183,39 @@ class OrderMapController extends GetxController {
         "Destination",
         destinationIcon,
       );
+      markers.refresh(); // Force reactive update for markers
+      polyLines.refresh(); // Force reactive update for polylines
+      update(); // Trigger GetX UI rebuild
     }
   }
 
+  getData(String id) async {
+    await FireStoreUtils.getOrder(id).then((value) {
+      if (value != null) {
+        orderModel.value = value;
+      }
+    });
+  }
+
+  BitmapDescriptor? departureIcon;
+  BitmapDescriptor? destinationIcon;
+
+  Future<void> addMarkerSetup() async {
+    final Uint8List departure =
+        await Constant().getBytesFromAsset('assets/images/pickup.png', 100);
+    final Uint8List destination =
+        await Constant().getBytesFromAsset('assets/images/dropoff.png', 100);
+    departureIcon = BitmapDescriptor.fromBytes(departure);
+    destinationIcon = BitmapDescriptor.fromBytes(destination);
+  }
+
+  RxMap<MarkerId, Marker> markers = <MarkerId, Marker>{}.obs;
+  RxMap<PolylineId, Polyline> polyLines = <PolylineId, Polyline>{}.obs;
+  PolylinePoints polylinePoints = PolylinePoints();
+
   double zoomLevel = 0;
 
-  movePosition() async {
+  Future<void> movePosition() async {
     if (orderModel.value.sourceLocationLAtLng == null ||
         orderModel.value.destinationLocationLAtLng == null) return;
 

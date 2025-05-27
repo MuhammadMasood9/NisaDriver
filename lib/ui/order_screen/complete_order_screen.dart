@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:clipboard/clipboard.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:driver/constant/constant.dart';
@@ -29,10 +30,13 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
   final CompleteOrderController controller = Get.put(CompleteOrderController());
   final PolylinePoints polylinePoints = PolylinePoints();
   Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
   List<LatLng> _polylineCoordinates = [];
   LatLngBounds? _bounds;
   AnimationController? _animationController;
   Animation<double>? _fadeAnimation;
+  GoogleMapController? _mapController;
+  bool _isMapReady = false;
 
   @override
   void initState() {
@@ -44,107 +48,242 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
     _fadeAnimation =
         CurvedAnimation(parent: _animationController!, curve: Curves.easeInOut);
     _animationController!.forward();
-    initializeMapData();
+
+    // Wait a bit for the controller to be ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      initializeMapData();
+    });
   }
 
   Future<void> initializeMapData() async {
-    await addMarkersAndPolylines();
-    setState(() {}); // Ensure UI rebuilds with updated markers
+    try {
+      await addMarkersAndPolylines();
+      if (mounted) {
+        setState(() {
+          _isMapReady = true;
+        });
+      }
+    } catch (e) {
+      print('Error initializing map data: $e');
+    }
   }
 
   Future<void> addMarkersAndPolylines() async {
     final orderModel = controller.orderModel.value;
-    final LatLng sourceLatLng = LatLng(
-      orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
-      orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
-    );
-    final LatLng destinationLatLng = LatLng(
-      orderModel.destinationLocationLAtLng?.latitude ?? 24.94478876378326,
-      orderModel.destinationLocationLAtLng?.longitude ?? 67.06306681036949,
-    );
 
-    print(
-        'Source: $sourceLatLng, Destination: $destinationLatLng'); // Debug coordinates
-
-    _bounds = LatLngBounds(
-      southwest: LatLng(
-        min(sourceLatLng.latitude, destinationLatLng.latitude),
-        min(sourceLatLng.longitude, destinationLatLng.longitude),
-      ),
-      northeast: LatLng(
-        max(sourceLatLng.latitude, destinationLatLng.latitude),
-        max(sourceLatLng.longitude, destinationLatLng.longitude),
-      ),
-    );
-
-    // Use default marker icons if asset loading fails
-    BitmapDescriptor iconStart =
-        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-    BitmapDescriptor iconEnd =
-        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-
-    try {
-      iconStart = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(32, 32)),
-        'assets/images/green_mark.png',
-      );
-      iconEnd = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(32, 32)),
-        'assets/images/red_mark.png',
-      );
-    } catch (e) {
-      print('Error loading marker icons: $e');
+    // Validate order model and coordinates
+    if (orderModel == null) {
+      print('Order model is null');
+      return;
     }
 
-    setState(() {
-      _markers = {
-        Marker(
-          markerId: const MarkerId('source'),
-          position: sourceLatLng,
-          icon: iconStart,
-          infoWindow: InfoWindow(
-              title: 'Pickup: ${orderModel.sourceLocationName ?? "Unknown"}'),
-        ),
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: destinationLatLng,
-          icon: iconEnd,
-          infoWindow: InfoWindow(
-              title:
-                  'Drop-off: ${orderModel.destinationLocationName ?? "Unknown"}'),
-        ),
-      };
-    });
+    // Get coordinates with better null safety and validation
+    double sourceLat =
+        orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074;
+    double sourceLng =
+        orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064;
+    double destLat =
+        orderModel.destinationLocationLAtLng?.latitude ?? 24.94478876378326;
+    double destLng =
+        orderModel.destinationLocationLAtLng?.longitude ?? 67.06306681036949;
 
-    _polylineCoordinates =
-        await _getPolylinePoints(sourceLatLng, destinationLatLng);
+    // Validate coordinates
+    if (sourceLat.isNaN || sourceLng.isNaN || destLat.isNaN || destLng.isNaN) {
+      print('Invalid coordinates detected');
+      sourceLat = 24.905702181412074;
+      sourceLng = 67.07225639373064;
+      destLat = 24.94478876378326;
+      destLng = 67.06306681036949;
+    }
+
+    final LatLng sourceLatLng = LatLng(sourceLat, sourceLng);
+    final LatLng destinationLatLng = LatLng(destLat, destLng);
+
+    print('Source: $sourceLatLng, Destination: $destinationLatLng');
+
+    // Calculate bounds for both markers
+    _bounds = LatLngBounds(
+      southwest: LatLng(
+        min(sourceLatLng.latitude, destinationLatLng.latitude) - 0.01,
+        min(sourceLatLng.longitude, destinationLatLng.longitude) - 0.01,
+      ),
+      northeast: LatLng(
+        max(sourceLatLng.latitude, destinationLatLng.latitude) + 0.01,
+        max(sourceLatLng.longitude, destinationLatLng.longitude) + 0.01,
+      ),
+    );
+
+    // Create markers with default icons first (always works)
+    BitmapDescriptor pickupIcon =
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+    BitmapDescriptor dropoffIcon =
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+
+    // Try to load custom icons but don't let it fail silently
+    try {
+      final customPickupIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/images/green_mark.png',
+      );
+      final customDropoffIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/images/red_mark.png',
+      );
+      pickupIcon = customPickupIcon;
+      dropoffIcon = customDropoffIcon;
+      print('Custom marker icons loaded successfully');
+    } catch (e) {
+      print('Using default marker icons due to error: $e');
+      // Keep default icons
+    }
+
+    // Create markers
+    final Set<Marker> newMarkers = {
+      Marker(
+        markerId: const MarkerId('pickup_location'),
+        position: sourceLatLng,
+        icon: pickupIcon,
+        infoWindow: InfoWindow(
+          title: 'Pickup Location',
+          snippet: orderModel.sourceLocationName ?? 'Source location',
+        ),
+        consumeTapEvents: true,
+        onTap: () {
+          print('Pickup marker tapped');
+        },
+      ),
+      Marker(
+        markerId: const MarkerId('dropoff_location'),
+        position: destinationLatLng,
+        icon: dropoffIcon,
+        infoWindow: InfoWindow(
+          title: 'Drop-off Location',
+          snippet: orderModel.destinationLocationName ?? 'Destination location',
+        ),
+        consumeTapEvents: true,
+        onTap: () {
+          print('Dropoff marker tapped');
+        },
+      ),
+    };
+
+    print('Created ${newMarkers.length} markers');
+
+    // Update markers in state
+    if (mounted) {
+      setState(() {
+        _markers = newMarkers;
+      });
+    }
+
+    // Get polyline points for route
+    try {
+      _polylineCoordinates =
+          await _getPolylinePoints(sourceLatLng, destinationLatLng);
+
+      if (_polylineCoordinates.isNotEmpty) {
+        final Set<Polyline> newPolylines = {
+          Polyline(
+            polylineId: const PolylineId('ride_route'),
+            points: _polylineCoordinates,
+            color: AppColors.primary,
+            width: 4,
+            patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+          ),
+        };
+
+        if (mounted) {
+          setState(() {
+            _polylines = newPolylines;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error getting polyline: $e');
+    }
   }
 
   Future<List<LatLng>> _getPolylinePoints(
       LatLng source, LatLng destination) async {
     List<LatLng> polylineCoordinates = [];
+
     try {
       PolylineRequest request = PolylineRequest(
         origin: PointLatLng(source.latitude, source.longitude),
         destination: PointLatLng(destination.latitude, destination.longitude),
         mode: TravelMode.driving,
       );
+
       List<PolylineResult> results =
           await polylinePoints.getRouteBetweenCoordinates(
         request: request,
-        googleApiKey:
-            Constant.mapAPIKey, // Replace with your valid Google Maps API key
+        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
       );
+
       if (results.isNotEmpty && results[0].points.isNotEmpty) {
         polylineCoordinates = results[0]
             .points
             .map((point) => LatLng(point.latitude, point.longitude))
             .toList();
+        print('Polyline points loaded: ${polylineCoordinates.length} points');
+      } else {
+        print('No polyline results found, using straight line');
+        polylineCoordinates = [source, destination];
       }
     } catch (e) {
       print('Error fetching polyline: $e');
+      // Create a simple straight line as fallback
+      polylineCoordinates = [source, destination];
     }
+
     return polylineCoordinates;
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+
+    // Apply custom map styling
+    _mapController!.setMapStyle('''
+      [
+        {
+          "featureType": "all",
+          "elementType": "labels",
+          "stylers": [{"visibility": "on"}]
+        },
+        {
+          "featureType": "road",
+          "elementType": "geometry",
+          "stylers": [{"color": "#e0e0e0"}]
+        },
+        {
+          "featureType": "water",
+          "elementType": "geometry",
+          "stylers": [{"color": "#c4e4ff"}]
+        },
+        {
+          "featureType": "poi",
+          "elementType": "labels",
+          "stylers": [{"visibility": "simplified"}]
+        }
+      ]
+    ''');
+
+    // Fit bounds to show both markers after a delay
+    if (_bounds != null && _markers.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (_mapController != null && mounted) {
+          try {
+            _mapController!.animateCamera(
+              CameraUpdate.newLatLngBounds(_bounds!, 100),
+            );
+          } catch (e) {
+            print('Error fitting bounds: $e');
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -153,7 +292,6 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
     super.dispose();
   }
 
-  // Rest of the build method and other widgets remain unchanged
   @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
@@ -285,8 +423,8 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                     controller.orderModel.value.status
                                         .toString(),
                                     style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
                                       color: AppColors.darkBackground,
                                     ),
                                   ),
@@ -311,7 +449,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                   Text(
                                     "Booking Summary".tr,
                                     style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w500,
                                       fontSize: 16,
                                       color: AppColors.darkBackground,
                                     ),
@@ -376,10 +514,10 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                             .calculateAmount()
                                             .toString()),
                                     titleStyle: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight: FontWeight.w500,
                                         fontSize: 16),
                                     valueStyle: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight: FontWeight.w500,
                                         fontSize: 16,
                                         color: AppColors.primary),
                                   ),
@@ -447,6 +585,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
         child: SizedBox(
           height: Responsive.height(35, context),
           child: GoogleMap(
+            onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
               target: LatLng(
                 controller.orderModel.value.sourceLocationLAtLng?.latitude ??
@@ -457,30 +596,14 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
               zoom: 12,
             ),
             markers: _markers,
-            polylines: {
-              Polyline(
-                polylineId: const PolylineId('route'),
-                points: _polylineCoordinates,
-                color: AppColors.primary,
-                width: 6,
-                patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-              ),
-            },
+            polylines: _polylines,
             zoomControlsEnabled: false,
             mapType: MapType.normal,
-            onMapCreated: (GoogleMapController mapController) {
-              if (_bounds != null) {
-                mapController.animateCamera(
-                  CameraUpdate.newLatLngBounds(_bounds!, 60),
-                );
-              }
-              mapController.setMapStyle('''
-                [
-                  {"featureType": "all", "elementType": "labels", "stylers": [{"visibility": "on"}]},
-                  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#e0e0e0"}]},
-                  {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#c4e4ff"}]}
-                ]
-              ''');
+            myLocationButtonEnabled: false,
+            compassEnabled: true,
+            mapToolbarEnabled: false,
+            onTap: (LatLng location) {
+              print('Map tapped at: $location');
             },
           ),
         ),
@@ -549,7 +672,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                 GoogleFonts.poppins(
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
-                  color: AppColors.subTitleColor,
+                  color: AppColors.grey500,
                 ),
           ),
           Text(

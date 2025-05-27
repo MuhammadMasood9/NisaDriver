@@ -481,9 +481,9 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                                 color: themeChange
                                                                         .getThem()
                                                                     ? AppColors
-                                                                        .darkModePrimary
+                                                                        .darkBackground
                                                                     : AppColors
-                                                                        .primary,
+                                                                        .darkBackground,
                                                                 borderRadius:
                                                                     BorderRadius
                                                                         .circular(
@@ -520,9 +520,9 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                                 color: themeChange
                                                                         .getThem()
                                                                     ? AppColors
-                                                                        .darkModePrimary
+                                                                        .darkBackground
                                                                     : AppColors
-                                                                        .primary,
+                                                                        .darkBackground,
                                                                 borderRadius:
                                                                     BorderRadius
                                                                         .circular(
@@ -619,6 +619,12 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
             ),
             ButtonThem.buildButton(context, title: "OTP verify".tr,
                 onPress: () async {
+              String inputOtp = controller.otpController.value.text;
+
+              String modelOtp = orderModel.otp.toString();
+
+              print(
+                  "OTP Verification - Model OTP: '$modelOtp', Input OTP: '$inputOtp'");
               if (orderModel.otp.toString() ==
                   controller.otpController.value.text) {
                 Get.back();

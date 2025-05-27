@@ -90,7 +90,7 @@ class VehicleInformationScreen extends StatelessWidget {
         Text(
           'Select Service'.tr,
           style: GoogleFonts.inter(
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: FontWeight.w500,
             color: themeChange.getThem() ? Colors.white : Colors.black87,
           ),
@@ -500,10 +500,10 @@ class VehicleInformationScreen extends StatelessWidget {
       child: ElevatedButton(
         onPressed: () => _handleSave(controller),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.darkBackground,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
           ),
           elevation: 0,
         ),
@@ -511,7 +511,7 @@ class VehicleInformationScreen extends StatelessWidget {
           "Save Information".tr,
           style: GoogleFonts.inter(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             color: Colors.white,
           ),
         ),
@@ -743,7 +743,7 @@ class VehicleInformationScreen extends StatelessWidget {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: AppColors.darkBackground,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -932,7 +932,7 @@ class VehicleInformationScreen extends StatelessWidget {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: AppColors.darkBackground,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1106,7 +1106,7 @@ class VehicleInformationScreen extends StatelessWidget {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: AppColors.darkBackground,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1298,7 +1298,7 @@ class VehicleInformationScreen extends StatelessWidget {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: AppColors.darkBackground,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

@@ -71,7 +71,7 @@ class ProfileScreen extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: AppColors.darkBackground,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
@@ -89,7 +89,7 @@ class ProfileScreen extends StatelessWidget {
             "Manage your profile".tr,
             style: GoogleFonts.poppins(
               color: AppColors.darkBackground.withOpacity(0.8),
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
@@ -137,7 +137,11 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.background,
+        color: AppColors.darkBackground.withOpacity(0.03),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
       ),
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -149,7 +153,7 @@ class ProfileScreen extends StatelessWidget {
               Text(
                 "Personal Information".tr,
                 style: GoogleFonts.poppins(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: AppColors.darkBackground.withOpacity(0.8),
                 ),
@@ -171,7 +175,7 @@ class ProfileScreen extends StatelessWidget {
                 enabled: false,
               ),
               _buildModernPhoneField(context, controller),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               _buildModernUpdateButton(context, controller),
               const SizedBox(height: 20),
             ],
@@ -210,7 +214,7 @@ class ProfileScreen extends StatelessWidget {
                 color: Colors.grey.shade200,
                 width: 1.5,
               ),
-              color: enabled ? Colors.grey.shade50 : Colors.grey.shade100,
+              color: enabled ? Colors.white : Colors.grey.shade100,
             ),
             child: TextField(
               controller: controller,
@@ -230,12 +234,12 @@ class ProfileScreen extends StatelessWidget {
                   margin: const EdgeInsets.all(12),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.darkBackground.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     icon,
-                    color: AppColors.primary,
+                    color: AppColors.darkBackground,
                     size: 20,
                   ),
                 ),
@@ -340,16 +344,16 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.8),
+            AppColors.darkBackground,
+            AppColors.darkBackground.withOpacity(0.8),
           ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.darkBackground.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -538,7 +542,7 @@ class ProfileScreen extends StatelessWidget {
             Icon(
               icon,
               size: 32,
-              color: AppColors.primary,
+              color: AppColors.darkBackground,
             ),
             const SizedBox(height: 12),
             Text(

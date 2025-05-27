@@ -63,7 +63,7 @@ class LiveTrackingController extends GetxController {
   RxDouble deviceBearing = 0.0.obs;
   StreamSubscription<MagnetometerEvent>? _magnetometerSubscription;
   RxBool isLocationPermissionGranted = false.obs;
-
+  Rx<TextEditingController> otpController = TextEditingController().obs;
   RxBool isLoading = true.obs;
   RxString type = "".obs;
   RxString status = "".obs;
@@ -1664,14 +1664,14 @@ class LiveTrackingController extends GetxController {
                 : navigationZoom.value,
             tilt: is3DNavigationMode.value ? navigation3DTilt.value : 0.0,
             bearing: is3DNavigationMode.value
-                ? deviceBearing.value - 83
+                ? deviceBearing.value + 88
                 : deviceBearing.value + 83, // Use live compass bearing
           ),
         ),
       );
 
-      dev.log(
-          "Debug: Map bearing updated: ${deviceBearing.value.toStringAsFixed(1)}°");
+      // dev.log(
+      //     "Debug: Map bearing updated: ${deviceBearing.value.toStringAsFixed(1)}°");
     } catch (e) {
       dev.log("Debug: Error updating navigation view: $e");
     }

@@ -7,6 +7,7 @@ import 'package:driver/constant/send_notification.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/live_tracking_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
+import 'package:driver/model/intercity_order_model.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/model/user_model.dart';
 import 'package:driver/themes/app_colors.dart';
@@ -144,8 +145,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                       controller.navigationZoom.value = position.zoom;
                       controller.navigationTilt.value = position.tilt;
                       controller.deviceBearing.value;
-                      dev.log(
-                          'Device bearing: ${controller.deviceBearing.value} Map Bearing: ${position.bearing}');
+                      // dev.log(
+                      //     'Device bearing: ${controller.deviceBearing.value} Map Bearing: ${position.bearing}');
                     },
                     onTap: (LatLng position) {
                       controller.onMapTap(position);
@@ -796,11 +797,16 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                             borderRadius: 5,
                             iconVisibility: false,
                             onPress: () async {
+                              OrderModel orderModel =
+                                  controller.orderModel.value;
+                              InterCityOrderModel interOrderModel =
+                                  controller.intercityOrderModel.value;
+
+                              // InterCityOrderModel
                               if (isRideInProgress) {
                                 ShowToastDialog.showLoader(
                                     "Completing ride...".tr);
-                                OrderModel orderModel =
-                                    controller.orderModel.value;
+
                                 orderModel.status = Constant.rideComplete;
 
                                 await FireStoreUtils.getCustomer(
@@ -833,8 +839,11 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                               } else {
                                 showDialog(
                                   context: context,
-                                  builder: (BuildContext context) =>
-                                      _otpDialog(context, controller),
+                                  builder: (BuildContext context) => _otpDialog(
+                                      context,
+                                      controller,
+                                      orderModel,
+                                      interOrderModel),
                                 );
                               }
                             },
@@ -870,8 +879,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                               width: 44,
                               decoration: BoxDecoration(
                                 color: themeChange.getThem()
-                                    ? AppColors.darkModePrimary
-                                    : AppColors.primary,
+                                    ? AppColors.darkBackground
+                                    : AppColors.darkBackground,
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Icon(
@@ -897,8 +906,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                               width: 44,
                               decoration: BoxDecoration(
                                 color: themeChange.getThem()
-                                    ? AppColors.darkModePrimary
-                                    : AppColors.primary,
+                                    ? AppColors.darkBackground
+                                    : AppColors.darkBackground,
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Icon(
@@ -1043,10 +1052,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     );
   }
 
-  Dialog _otpDialog(BuildContext context, LiveTrackingController controller) {
+  Dialog _otpDialog(BuildContext context, LiveTrackingController controller,
+      OrderModel orderModel, InterCityOrderModel interOrderModel) {
     final themeChange = Provider.of<DarkThemeProvider>(context, listen: false);
-    final TextEditingController otpController = TextEditingController();
-    String otpValue = "";
+
+    String currentOtp = ""; // Add this variable to store the current OTP
+    bool isOtpComplete = false; // Track if OTP is complete
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.0)),
@@ -1093,15 +1104,24 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 ),
                 enableActiveFill: true,
                 cursorColor: AppColors.primary,
-                controller: otpController,
+                controller: controller.otpController.value,
                 onCompleted: (v) {
-                  otpValue = v;
-                  print("OTP Completed: $v");
+                  currentOtp = v; // Store the completed OTP
+
+                  isOtpComplete = true;
+                  print("OTP Completed: $currentOtp");
+                  // Add a small delay to ensure the value is properly set
+                  // Future.delayed(Duration(milliseconds: 100), () {
+                  //   currentOtp = v;
+                  // });
                 },
-                onChanged: (value) {
-                  otpValue = value;
-                  print("OTP Changed: $value");
-                },
+                // onChanged: (value) {
+                //   currentOtp = value; // Update currentOtp on every change
+                //   isOtpComplete = value.length == 6; // Check if OTP is complete
+                //   otpController.text = value;
+                //   print("OTP Changed: $value");
+                //   print("OTP Changed22: ${otpController.text}");
+                // },
               ),
             ),
             const SizedBox(height: 10),
@@ -1110,13 +1130,24 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
               title: "OTP verify".tr,
               onPress: () async {
                 try {
-                  String inputOtp = otpController.text.trim();
-                  if (inputOtp.isEmpty) {
-                    inputOtp = otpValue.trim();
-                  }
+                  // Add a small delay to ensure the OTP value is captured
+                  // await Future.delayed(Duration(milliseconds: 50));
+                  print("OTP in button ${currentOtp.trim()}");
+                  // Use currentOtp, but also check controller.text as fallback
+                  final inputOtp = controller.otpController.value.text;
 
-                  String modelOtp =
-                      controller.orderModel.value.otp.toString().trim();
+                  // // If both are empty or incomplete, show error
+                  // if (inputOtp.isEmpty || inputOtp.length != 5) {
+                  //   ShowToastDialog.showToast("Please enter complete OTP".tr,
+                  //       position: EasyLoadingToastPosition.center);
+                  //   return;
+                  // }
+                  print(
+                      "OTP after button ${controller.otpController.value.text}");
+
+                  String modelOtp = controller.type.value == "orderModel"
+                      ? orderModel.otp ?? ''
+                      : interOrderModel.otp ?? '';
 
                   print(
                       "OTP Verification - Model OTP: '$modelOtp', Input OTP: '$inputOtp'");

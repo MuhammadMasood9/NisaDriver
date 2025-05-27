@@ -476,7 +476,7 @@ class DetailsUploadScreen extends StatelessWidget {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
       isRequired: true,
-      primaryColor: AppColors.primary,
+      primaryColor: AppColors.darkBackground,
       showClearButton: true,
       dateFormat: "dd-MM-yyyy",
       errorText: controller.expireAtController.value.text.isEmpty
@@ -501,14 +501,12 @@ class DetailsUploadScreen extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, color: AppColors.primary, size: 22),
-            const SizedBox(width: 8),
             Text(
               "$title of ${Constant.localizationTitle(controller.documentModel.value.title)}"
                   .tr,
               style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
                 color: Colors.grey[800],
               ),
             ),
@@ -946,12 +944,12 @@ class DetailsUploadScreen extends StatelessWidget {
                   margin: const EdgeInsets.all(12),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.darkBackground.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     icon,
-                    color: AppColors.primary,
+                    color: AppColors.darkBackground,
                     size: 20,
                   ),
                 ),

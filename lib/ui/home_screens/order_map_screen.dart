@@ -59,7 +59,7 @@ class OrderMapScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 200.0),
                 onMapCreated: (GoogleMapController mapController) {
                   controller.mapController.complete(mapController);
-                  controller.getPolyline();
+                  // controller.getPolyline();
                 },
                 initialCameraPosition: CameraPosition(
                   zoom: 15,
@@ -73,6 +73,35 @@ class OrderMapScreen extends StatelessWidget {
                         Constant.currentLocation?.longitude ??
                         -122.677433,
                   ),
+                ),
+              ),
+              Positioned(
+                bottom: 350,
+                right: 10,
+                child: FloatingActionButton(
+                  backgroundColor: AppColors.primary,
+                  onPressed: () async {
+                    final GoogleMapController? mapController =
+                        await controller.mapController.future;
+                    mapController?.animateCamera(
+                      CameraUpdate.newCameraPosition(
+                        CameraPosition(
+                          zoom: 15,
+                          target: LatLng(
+                            controller.orderModel.value.sourceLocationLAtLng
+                                    ?.latitude ??
+                                Constant.currentLocation?.latitude ??
+                                45.521563,
+                            controller.orderModel.value.sourceLocationLAtLng
+                                    ?.longitude ??
+                                Constant.currentLocation?.longitude ??
+                                -122.677433,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.my_location, color: Colors.white),
                 ),
               ),
               Align(
@@ -284,7 +313,7 @@ class OrderMapScreen extends StatelessWidget {
                                       btnHeight: 50,
                                       bgColors: hasActiveRide
                                           ? Colors.grey
-                                          : AppColors.primary,
+                                          : AppColors.darkBackground,
                                       onPress: hasActiveRide
                                           ? () {
                                               ShowToastDialog.showToast(
@@ -367,31 +396,6 @@ class OrderMapScreen extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: AppColors.primary,
-            onPressed: () async {
-              final GoogleMapController? mapController =
-                  await controller.mapController.future;
-              mapController?.animateCamera(
-                CameraUpdate.newCameraPosition(
-                  CameraPosition(
-                    zoom: 15,
-                    target: LatLng(
-                      controller.orderModel.value.sourceLocationLAtLng
-                              ?.latitude ??
-                          Constant.currentLocation?.latitude ??
-                          45.521563,
-                      controller.orderModel.value.sourceLocationLAtLng
-                              ?.longitude ??
-                          Constant.currentLocation?.longitude ??
-                          -122.677433,
-                    ),
-                  ),
-                ),
-              );
-            },
-            child: const Icon(Icons.my_location, color: Colors.white),
           ),
         );
       },
