@@ -124,7 +124,7 @@ class OrderMapController extends GetxController {
     update(); // Force GetX to rebuild the UI
   }
 
-  Future<void> getPolyline() async {
+Future<void> getPolyline() async {
     if (orderModel.value.sourceLocationLAtLng != null &&
         orderModel.value.destinationLocationLAtLng != null) {
       await movePosition(); // Ensure movePosition is awaited
@@ -142,25 +142,21 @@ class OrderMapController extends GetxController {
       );
 
       try {
-        List<PolylineResult> results =
-            await polylinePoints.getRouteBetweenCoordinates(
+        // Fixed: getRouteBetweenCoordinates returns a single PolylineResult, not a List
+        PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
           googleApiKey: Constant.mapAPIKey,
           request: polylineRequest,
         );
 
-        if (results.isNotEmpty) {
-          PolylineResult result = results.first;
-          if (result.points.isNotEmpty) {
-            for (var point in result.points) {
-              polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-            }
-          } else {
-            ShowToastDialog.showToast(
-                "Failed to fetch route: ${result.errorMessage ?? 'No points found'}"
-                    .tr);
+        // Check if the result has points
+        if (result.points.isNotEmpty) {
+          for (var point in result.points) {
+            polylineCoordinates.add(LatLng(point.latitude, point.longitude));
           }
         } else {
-          ShowToastDialog.showToast("No routes found".tr);
+          ShowToastDialog.showToast(
+              "Failed to fetch route: ${result.errorMessage ?? 'No points found'}"
+                  .tr);
         }
       } catch (e) {
         ShowToastDialog.showToast("Error fetching route: $e".tr);
@@ -188,7 +184,6 @@ class OrderMapController extends GetxController {
       update(); // Trigger GetX UI rebuild
     }
   }
-
   getData(String id) async {
     await FireStoreUtils.getOrder(id).then((value) {
       if (value != null) {

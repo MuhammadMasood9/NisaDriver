@@ -62,7 +62,7 @@ class ReviewScreen extends StatelessWidget {
                                 child: Center(
                                     child: Text(
                                         "Rate Your Passenger".tr, // Updated for driver context
-                                        style: AppTypography.h2(context).copyWith(
+                                        style: AppTypography.boldHeaders(context).copyWith(
                                             color: Colors.white,
                                             letterSpacing: 0.8))),
                               ),
@@ -150,7 +150,7 @@ class ReviewScreen extends StatelessWidget {
                                                 Text(
                                                   '${controller.userModel.value.fullName}',
                                                   textAlign: TextAlign.center,
-                                                  style: AppTypography.h3(context)
+                                                  style: AppTypography.headers(context)
                                                       .copyWith(
                                                           letterSpacing: 0.8,
                                                           fontWeight:
@@ -168,7 +168,7 @@ class ReviewScreen extends StatelessWidget {
                                           children: [
                                             const Icon(
                                               Icons.star,
-                                              size: 22,
+                                              size: 20,
                                               color: AppColors.ratingColour,
                                             ),
                                             const SizedBox(
@@ -186,9 +186,7 @@ class ReviewScreen extends StatelessWidget {
                                                         .value
                                                         .reviewsSum
                                                         .toString()),
-                                                style: GoogleFonts.poppins(
-                                                    fontWeight:
-                                                        FontWeight.w500)),
+                                                style: AppTypography.boldLabel(context)),
                                           ],
                                         ),
                                       ],
@@ -203,8 +201,8 @@ class ReviewScreen extends StatelessWidget {
                                     child: Text(
                                       'How Was Your Passenger Experience'.tr, // Updated for driver context
                                       textAlign: TextAlign.center,
-                                      style: AppTypography.h2(context).copyWith(
-                                        letterSpacing: 0.9,
+                                      style: AppTypography.boldHeaders(context).copyWith(
+                                        letterSpacing: 1.9,
                                       ),
                                     ),
                                   ),
@@ -212,7 +210,7 @@ class ReviewScreen extends StatelessWidget {
                                   Text(
                                     'Your Overall Rating'.tr,
                                     textAlign: TextAlign.center,
-                                    style: AppTypography.bodyMedium(context)
+                                    style: AppTypography.headers(context)
                                         .copyWith(
                                       letterSpacing: 0.9,
                                       color:
@@ -255,9 +253,7 @@ class ReviewScreen extends StatelessWidget {
                                     context,
                                     title: "Submit".tr,
                                     onPress: () async {
-                                      if (controller.rating.value > 0 &&
-                                          controller.commentController.value.text
-                                              .isNotEmpty) {
+                                      if (controller.rating.value > 0 ) {
                                         ShowToastDialog.showLoader(
                                             "Please wait".tr);
 

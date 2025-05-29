@@ -61,7 +61,13 @@ class AppTypography {
       );
 
   static TextStyle button(BuildContext context) => GoogleFonts.poppins(
-        fontSize: _responsiveFontSize(context, 12),
+        fontSize: _responsiveFontSize(context, 10),
+        fontWeight: FontWeight.w600,
+        color: AppColors.darkTextFieldBorder,
+      );
+
+        static TextStyle buttonlight(BuildContext context) => GoogleFonts.poppins(
+        fontSize: _responsiveFontSize(context, 10),
         fontWeight: FontWeight.w600,
         color: Colors.white,
       );
@@ -90,24 +96,47 @@ class AppTypography {
       );
 
   static TextStyle label(BuildContext context) => GoogleFonts.poppins(
-        fontSize: _responsiveFontSize(context, 12),
+        fontSize: _responsiveFontSize(context, 11),
         fontWeight: FontWeight.w400,
         color: AppColors.darkTextFieldBorder,
       );
   static TextStyle boldLabel(BuildContext context) => GoogleFonts.poppins(
-        fontSize: _responsiveFontSize(context, 12),
+        fontSize: _responsiveFontSize(context, 11),
         fontWeight: FontWeight.w600,
         color: AppColors.darkTextFieldBorder,
       );
+
+       static TextStyle smBoldLabel(BuildContext context) => GoogleFonts.poppins(
+        fontSize: _responsiveFontSize(context, 9.5),
+        fontWeight: FontWeight.w600,
+        color: AppColors.darkTextFieldBorder,
+      );
+
+       static TextStyle timeLabel(BuildContext context) => GoogleFonts.poppins(
+        fontSize: _responsiveFontSize(context, 8.5),
+        fontWeight: FontWeight.w400,
+        color: const Color.fromARGB(185, 42, 42, 43),
+      );
   static TextStyle headers(BuildContext context) => GoogleFonts.poppins(
-        fontSize: _responsiveFontSize(context, 16),
+        fontSize: _responsiveFontSize(context, 14),
         fontWeight: FontWeight.w500,
         color: AppColors.darkTextFieldBorder,
       );
+        static TextStyle boldHeaders(BuildContext context) => GoogleFonts.poppins(
+        fontSize: _responsiveFontSize(context, 16),
+        fontWeight: FontWeight.w600,
+        color: AppColors.darkTextFieldBorder,
+      );
+      
 
   static TextStyle appBar(BuildContext context) => GoogleFonts.poppins(
         fontSize: _responsiveFontSize(context, 12),
         fontWeight: FontWeight.w600,
-        color: AppColors.background,
+        color: AppColors.darkTextFieldBorder,
+      );
+        static TextStyle sideBar(BuildContext context) => GoogleFonts.poppins(
+        fontSize: _responsiveFontSize(context, 11),
+        fontWeight: FontWeight.w500,
+        color: AppColors.darkTextFieldBorder,
       );
 }

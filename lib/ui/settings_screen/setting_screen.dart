@@ -97,7 +97,7 @@ class SettingScreen extends StatelessWidget {
                               ),
                               child: Text(
                                 "V ${Constant.appVersion}".tr,
-                                style: AppTypography.bodyMedium(context).copyWith(
+                                style: AppTypography.boldLabel(context).copyWith(
                                   color: AppColors.primary,
                                 ),
                               ),
@@ -117,7 +117,7 @@ class SettingScreen extends StatelessWidget {
       padding: const EdgeInsets.only(left: 8),
       child: Text(
         title,
-        style: AppTypography.bodyMedium(Get.context!).copyWith(
+        style: AppTypography.headers(Get.context!).copyWith(
           color: Colors.black87,
         ),
       ),
@@ -162,14 +162,11 @@ class SettingScreen extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
+             
               child: SvgPicture.asset(
                 icon,
-                width: 22,
-                height: 22,
+                width: 20,
+                height: 20,
                 colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
               ),
             ),
@@ -177,7 +174,7 @@ class SettingScreen extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: AppTypography.bodyMedium(context).copyWith(
+                style: AppTypography.caption(context).copyWith(
                   color: textColor,
                 ),
               ),
@@ -223,7 +220,7 @@ class SettingScreen extends StatelessWidget {
               value: item,
               child: Text(
                 item.name.toString(),
-                style: AppTypography.bodyMedium(context).copyWith(
+                style: AppTypography.boldLabel(context).copyWith(
                   fontWeight: FontWeight.w500,
                 ),
               ),

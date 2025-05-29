@@ -157,7 +157,7 @@ class ActiveOrderScreen extends StatelessWidget {
                                   : ButtonThem.buildBorderButton(
                                       context,
                                       title: "Pickup Customer".tr,
-                                      btnHeight: 44,
+                                      btnHeight: 35,
                                       iconVisibility: false,
                                       onPress: () async {
                                         showDialog(
@@ -192,12 +192,12 @@ class ActiveOrderScreen extends StatelessWidget {
                                     ));
                                   },
                                   child: Container(
-                                    height: 44,
-                                    width: 44,
+                                    height: 35,
+                                    width: 35,
                                     decoration: BoxDecoration(
                                       color: themeChange.getThem()
-                                          ? AppColors.darkModePrimary
-                                          : AppColors.primary,
+                                          ? AppColors.darkBackground
+                                          : AppColors.darkBackground,
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Icon(
@@ -218,12 +218,12 @@ class ActiveOrderScreen extends StatelessWidget {
                                         "${customer!.countryCode}${customer.phoneNumber}");
                                   },
                                   child: Container(
-                                    height: 44,
-                                    width: 44,
+                                    height: 35,
+                                    width: 35,
                                     decoration: BoxDecoration(
                                       color: themeChange.getThem()
-                                          ? AppColors.darkModePrimary
-                                          : AppColors.primary,
+                                          ? AppColors.darkBackground
+                                          : AppColors.darkBackground,
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Icon(
@@ -240,115 +240,128 @@ class ActiveOrderScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         // Cancel Ride Button
-                        ButtonThem.buildBorderButton(
-                          context,
-                          title: "Cancel Ride".tr,
-                          btnHeight: 44,
-                          // btnColor: Colors.redAccent,
-                          // btnBorderColor: Colors.redAccent,
-                          // textColor: Colors.white,
-                          iconVisibility: false,
-                          onPress: () async {
-                            bool? confirmCancel = await showDialog<bool>(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: Text("Confirm Cancel".tr),
-                                  content: Text(
-                                      "Are you sure you want to cancel this ride?"
-                                          .tr),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: Text("No".tr),
-                                    ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: Text("Yes".tr),
-                                    ),
-                                  ],
+                        Row(
+                          spacing: 10,
+                          children: [
+                          Expanded(
+                            child: ButtonThem.buildBorderButton(
+                              context,
+                              title: "Cancel Ride".tr,
+                              btnHeight: 44,
+                              // btnColor: Colors.redAccent,
+                              // btnBorderColor: Colors.redAccent,
+                              // textColor: Colors.white,
+                              iconVisibility: false,
+                              onPress: () async {
+                                bool? confirmCancel = await showDialog<bool>(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: Text("Confirm Cancel".tr),
+                                      content: Text(
+                                          "Are you sure you want to cancel this ride?"
+                                              .tr),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: Text("No".tr),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: Text("Yes".tr),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 );
-                              },
-                            );
 
-                            if (confirmCancel == true) {
-                              ShowToastDialog.showLoader(
-                                  "Cancelling ride...".tr);
-                              orderModel.status = Constant.rideCanceled;
-                              await FireStoreUtils.getCustomer(
-                                      orderModel.userId.toString())
-                                  .then((value) async {
-                                if (value != null && value.fcmToken != null) {
-                                  Map<String, dynamic> playLoad =
-                                      <String, dynamic>{
-                                    "type": "city_order_cancelled",
-                                    "orderId": orderModel.id,
-                                  };
-                                  await SendNotification.sendOneNotification(
-                                    token: value.fcmToken.toString(),
-                                    title: 'Ride Cancelled'.tr,
-                                    body:
-                                        'Your ride has been cancelled by the driver.'
-                                            .tr,
-                                    payload: playLoad,
-                                  );
+                                if (confirmCancel == true) {
+                                  ShowToastDialog.showLoader(
+                                      "Cancelling ride...".tr);
+                                  orderModel.status = Constant.rideCanceled;
+                                  await FireStoreUtils.getCustomer(
+                                          orderModel.userId.toString())
+                                      .then((value) async {
+                                    if (value != null &&
+                                        value.fcmToken != null) {
+                                      Map<String, dynamic> playLoad =
+                                          <String, dynamic>{
+                                        "type": "city_order_cancelled",
+                                        "orderId": orderModel.id,
+                                      };
+                                      await SendNotification
+                                          .sendOneNotification(
+                                        token: value.fcmToken.toString(),
+                                        title: 'Ride Cancelled'.tr,
+                                        body:
+                                            'Your ride has been cancelled by the driver.'
+                                                .tr,
+                                        payload: playLoad,
+                                      );
+                                    }
+                                  });
+                                  await FireStoreUtils.setOrder(orderModel)
+                                      .then((value) {
+                                    if (value == true) {
+                                      ShowToastDialog.closeLoader();
+                                      ShowToastDialog.showToast(
+                                          "Ride cancelled successfully".tr);
+                                      controller.homeController.selectedIndex
+                                          .value = 3;
+                                    }
+                                  });
                                 }
-                              });
-                              await FireStoreUtils.setOrder(orderModel)
-                                  .then((value) {
-                                if (value == true) {
-                                  ShowToastDialog.closeLoader();
-                                  ShowToastDialog.showToast(
-                                      "Ride cancelled successfully".tr);
-                                  controller
-                                      .homeController.selectedIndex.value = 3;
-                                }
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        // Navigate to LiveTrackingScreen
-                        ButtonThem.buildButton(
-                          context,
-                          title: "Track Ride".tr,
-                          btnHeight: 44,
-                          onPress: () {
-                            if (Constant.mapType == "inappmap") {
-                              if (orderModel.status == Constant.rideActive ||
-                                  orderModel.status ==
+                              },
+                            ),
+                          ),
+
+                          // Navigate to LiveTrackingScreen
+                          Expanded(
+                            child: ButtonThem.buildButton(
+                              context,
+                              title: "Track Ride".tr,
+                              btnHeight: 44,
+                              onPress: () {
+                                if (Constant.mapType == "inappmap") {
+                                  if (orderModel.status ==
+                                          Constant.rideActive ||
+                                      orderModel.status ==
+                                          Constant.rideInProgress) {
+                                    Get.to(const LiveTrackingScreen(),
+                                        arguments: {
+                                          "orderModel": orderModel,
+                                          "type": "orderModel",
+                                        });
+                                  }
+                                } else {
+                                  if (orderModel.status ==
                                       Constant.rideInProgress) {
-                                Get.to(const LiveTrackingScreen(), arguments: {
-                                  "orderModel": orderModel,
-                                  "type": "orderModel",
-                                });
-                              }
-                            } else {
-                              if (orderModel.status ==
-                                  Constant.rideInProgress) {
-                                Utils.redirectMap(
-                                  latitude: orderModel
-                                      .destinationLocationLAtLng!.latitude!,
-                                  longLatitude: orderModel
-                                      .destinationLocationLAtLng!.longitude!,
-                                  name: orderModel.destinationLocationName
-                                      .toString(),
-                                );
-                              } else {
-                                Utils.redirectMap(
-                                  latitude: orderModel
-                                      .sourceLocationLAtLng!.latitude!,
-                                  longLatitude: orderModel
-                                      .sourceLocationLAtLng!.longitude!,
-                                  name: orderModel.destinationLocationName
-                                      .toString(),
-                                );
-                              }
-                            }
-                          },
-                        ),
+                                    Utils.redirectMap(
+                                      latitude: orderModel
+                                          .destinationLocationLAtLng!.latitude!,
+                                      longLatitude: orderModel
+                                          .destinationLocationLAtLng!
+                                          .longitude!,
+                                      name: orderModel.destinationLocationName
+                                          .toString(),
+                                    );
+                                  } else {
+                                    Utils.redirectMap(
+                                      latitude: orderModel
+                                          .sourceLocationLAtLng!.latitude!,
+                                      longLatitude: orderModel
+                                          .sourceLocationLAtLng!.longitude!,
+                                      name: orderModel.destinationLocationName
+                                          .toString(),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          )
+                        ])
                       ],
                     ),
                   ),

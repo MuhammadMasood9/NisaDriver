@@ -1,6 +1,7 @@
 import 'package:driver/constant/constant.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/network_image_widget.dart';
 import 'package:flutter/material.dart';
@@ -29,10 +30,7 @@ class SubscriptionHistory extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.background,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
+                   
                   ),
                   child: controller.isLoading.value
                       ? Container(
@@ -118,7 +116,7 @@ class SubscriptionHistory extends StatelessWidget {
       child: ListView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(15),
         itemCount: controller.subscriptionHistoryList.length,
         itemBuilder: (context, index) {
           final subscriptionHistoryModel =
@@ -126,7 +124,7 @@ class SubscriptionHistory extends StatelessWidget {
           final bool isActive = index == 0; // Assuming the first item is active
 
           return Container(
-            margin: const EdgeInsets.only(bottom: 20),
+            margin: const EdgeInsets.only(bottom: 10),
             decoration: BoxDecoration(
               gradient: isActive
                   ? const LinearGradient(
@@ -136,13 +134,13 @@ class SubscriptionHistory extends StatelessWidget {
                     )
                   : null,
               color: isActive ? null : AppColors.background,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
                   color: isActive
                       ? AppColors.primary.withOpacity(0.3)
                       : Colors.black.withOpacity(0.1),
-                  blurRadius: 15,
+                  blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
               ],
@@ -151,7 +149,7 @@ class SubscriptionHistory extends StatelessWidget {
               children: [
                 // Header with plan info and status
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: isActive
                         ? Colors.white.withOpacity(0.1)
@@ -165,8 +163,8 @@ class SubscriptionHistory extends StatelessWidget {
                     children: [
                       // Plan image
                       Container(
-                        width: 60,
-                        height: 60,
+                        width: 50,
+                        height: 50,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           color: isActive
@@ -180,12 +178,12 @@ class SubscriptionHistory extends StatelessWidget {
                                     .subscriptionPlan?.image ??
                                 '',
                             fit: BoxFit.cover,
-                            width: 60,
-                            height: 60,
+                            width: 50,
+                            height: 50,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 10),
                       // Plan name and details
                       Expanded(
                         child: Column(
@@ -194,27 +192,19 @@ class SubscriptionHistory extends StatelessWidget {
                             Text(
                               subscriptionHistoryModel.subscriptionPlan?.name ??
                                   '',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: isActive
+                              style: AppTypography.boldHeaders(context).copyWith(color: isActive
                                     ? Colors.white
-                                    : AppColors.darkTextFieldBorder,
-                              ),
+                                    : AppColors.darkTextFieldBorder,),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 0),
                             Text(
                               Constant.amountShow(
                                   amount: subscriptionHistoryModel
                                           .subscriptionPlan?.price ??
                                       '0'),
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                                color: isActive
+                              style: AppTypography.headers(context).copyWith( color: isActive
                                     ? Colors.white.withOpacity(0.8)
-                                    : AppColors.primary,
-                              ),
+                                    : AppColors.primary,),
                             ),
                           ],
                         ),
@@ -223,7 +213,7 @@ class SubscriptionHistory extends StatelessWidget {
                       if (isActive)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
+                              horizontal: 4, vertical: 6),
                           decoration: BoxDecoration(
                             color: AppColors.ratingColour,
                             borderRadius: BorderRadius.circular(20),
@@ -234,16 +224,12 @@ class SubscriptionHistory extends StatelessWidget {
                               const Icon(
                                 Icons.check_circle,
                                 color: Colors.white,
-                                size: 14,
+                                size: 10,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'Active',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 10,
-                                  color: Colors.white,
-                                ),
+                                style:AppTypography.smBoldLabel(context).copyWith( color: Colors.white,),
                               ),
                             ],
                           ),
@@ -274,7 +260,7 @@ class SubscriptionHistory extends StatelessWidget {
                         themeChange,
                         isActive: isActive,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       _buildDetailRow(
                         'Payment Type',
                         (subscriptionHistoryModel.paymentType ?? ''),
@@ -282,7 +268,7 @@ class SubscriptionHistory extends StatelessWidget {
                         themeChange,
                         isActive: isActive,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       _buildDetailRow(
                         'Purchase Date',
                         Constant.timestampToDateTime(subscriptionHistoryModel
@@ -291,7 +277,7 @@ class SubscriptionHistory extends StatelessWidget {
                         themeChange,
                         isActive: isActive,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       _buildDetailRow(
                         'Expiry Date',
                         subscriptionHistoryModel.expiryDate == null
@@ -320,8 +306,8 @@ class SubscriptionHistory extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 32,
-          height: 32,
+          width: 28,
+          height: 28,
           decoration: BoxDecoration(
             color:
                 themeChange.getThem() ? AppColors.grey800 : AppColors.grey100,
@@ -329,7 +315,7 @@ class SubscriptionHistory extends StatelessWidget {
           ),
           child: Icon(
             icon,
-            size: 16,
+            size: 14,
             color: isActive
                 ? AppColors.primary
                 : (themeChange.getThem()
@@ -337,30 +323,23 @@ class SubscriptionHistory extends StatelessWidget {
                     : AppColors.grey600),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: isActive
+                style:AppTypography.label(Get.context!).copyWith( color: isActive
                       ? Colors.white.withOpacity(0.7)
                       : (themeChange.getThem()
                           ? AppColors.grey400
-                          : AppColors.grey600),
-                ),
+                          : AppColors.grey600)),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: isActive
+                style: AppTypography.boldLabel(Get.context!).copyWith( color: isActive
                       ? Colors.white
                       : (isExpiry && value != "Unlimited"
                           ? _getExpiryColor(value)

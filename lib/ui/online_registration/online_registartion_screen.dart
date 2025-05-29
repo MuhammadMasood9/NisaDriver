@@ -4,6 +4,7 @@ import 'package:driver/model/document_model.dart';
 import 'package:driver/model/driver_document_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/online_registration/details_upload_screen.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
@@ -29,12 +30,12 @@ class OnlineRegistrationScreen extends StatelessWidget {
                     children: [
                       // Modern Header Section
                       Container(
-                        padding: const EdgeInsets.only(bottom: 30, top: 20),
+                        padding: const EdgeInsets.only(bottom: 10, top: 10),
                         child: Column(
                           children: [
                             Container(
-                              width: 70,
-                              height: 70,
+                              width: 50,
+                              height: 50,
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(20),
@@ -42,22 +43,17 @@ class OnlineRegistrationScreen extends StatelessWidget {
                               child: const Icon(
                                 Icons.document_scanner,
                                 color: AppColors.primary,
-                                size: 40,
+                                size: 30,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 8),
                             Container(
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 36),
+                                  const EdgeInsets.symmetric(horizontal: 46),
                               child: Text(
                                 "Complete your registration by uploading required documents"
                                     .tr,
-                                style: GoogleFonts.poppins(
-                                  color:
-                                      AppColors.darkBackground.withOpacity(0.8),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style:AppTypography.boldHeaders(context).copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -69,11 +65,8 @@ class OnlineRegistrationScreen extends StatelessWidget {
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: AppColors.darkBackground.withOpacity(0.03),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(30),
-                              topRight: Radius.circular(30),
-                            ),
+                            color: AppColors.background,
+                            
                           ),
                           child: controller.isLoading.value
                               ? Constant.loader(context)
@@ -85,7 +78,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                     Expanded(
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 24, vertical: 20),
+                                            horizontal: 24, vertical: 10),
                                         child: ListView.builder(
                                           itemCount:
                                               controller.documentList.length,
@@ -114,7 +107,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
 
                                             return Container(
                                               margin: const EdgeInsets.only(
-                                                  bottom: 15),
+                                                  bottom: 10),
                                               child: Material(
                                                 color: Colors.transparent,
                                                 child: InkWell(
@@ -131,7 +124,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                   child: Container(
                                                     padding:
                                                         const EdgeInsets.all(
-                                                            20),
+                                                            15),
                                                     decoration: BoxDecoration(
                                                       color:
                                                           AppColors.background,
@@ -153,8 +146,8 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                           children: [
                                                             // Document Icon
                                                             Container(
-                                                              width: 48,
-                                                              height: 48,
+                                                              width: 40,
+                                                              height: 40,
                                                               decoration:
                                                                   BoxDecoration(
                                                                 color: isVerified
@@ -187,7 +180,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                             ),
 
                                                             const SizedBox(
-                                                                width: 16),
+                                                                width: 12),
 
                                                             // Document Details
                                                             Expanded(
@@ -200,19 +193,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                     Constant.localizationTitle(
                                                                         documentModel
                                                                             .title),
-                                                                    style: GoogleFonts
-                                                                        .poppins(
-                                                                      fontSize:
-                                                                          16,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w500,
-                                                                      color: themeChange.getThem()
-                                                                          ? Colors
-                                                                              .white
-                                                                          : AppColors
-                                                                              .darkBackground,
-                                                                    ),
+                                                                    style: AppTypography.appBar(context).copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
                                                                   ),
                                                                   const SizedBox(
                                                                       height:
@@ -223,18 +204,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                             .tr
                                                                         : "Tap to upload document"
                                                                             .tr,
-                                                                    style: GoogleFonts
-                                                                        .poppins(
-                                                                      fontSize:
-                                                                          14,
-                                                                      color: themeChange
-                                                                              .getThem()
-                                                                          ? Colors.white.withOpacity(
-                                                                              0.7)
-                                                                          : Colors
-                                                                              .grey
-                                                                              .shade500,
-                                                                    ),
+                                                                    style: AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
                                                                   ),
                                                                 ],
                                                               ),
@@ -242,8 +212,8 @@ class OnlineRegistrationScreen extends StatelessWidget {
 
                                                             // Action Icon
                                                             Container(
-                                                              width: 32,
-                                                              height: 32,
+                                                              width: 26,
+                                                              height: 26,
                                                               decoration:
                                                                   BoxDecoration(
                                                                 color: themeChange
@@ -322,16 +292,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                         .tr
                                                                     : "Pending"
                                                                         .tr,
-                                                                style:
-                                                                    GoogleFonts
-                                                                        .poppins(
-                                                                  color: Colors
-                                                                      .white,
-                                                                  fontSize: 12,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                ),
+                                                                style:AppTypography.smBoldLabel(context).copyWith(color: AppColors.background),
                                                               ),
                                                             ],
                                                           ),

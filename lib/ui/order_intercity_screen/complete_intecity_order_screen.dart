@@ -192,37 +192,36 @@ class _CompleteIntercityOrderScreenState
     }
   }
 
-  Future<List<LatLng>> _getPolylinePoints(
-      LatLng source, LatLng destination) async {
-    List<LatLng> polylineCoordinates = [];
-    try {
-      PolylineRequest request = PolylineRequest(
-        origin: PointLatLng(source.latitude, source.longitude),
-        destination: PointLatLng(destination.latitude, destination.longitude),
-        mode: TravelMode.driving,
-      );
+Future<List<LatLng>> _getPolylinePoints(
+    LatLng source, LatLng destination) async {
+  List<LatLng> polylineCoordinates = [];
+  try {
+    PolylineRequest request = PolylineRequest(
+      origin: PointLatLng(source.latitude, source.longitude),
+      destination: PointLatLng(destination.latitude, destination.longitude),
+      mode: TravelMode.driving,
+    );
 
-      List<PolylineResult> results =
-          await polylinePoints.getRouteBetweenCoordinates(
-        request: request,
-        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      );
+    // Changed: getRouteBetweenCoordinates now returns a single PolylineResult
+    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+      request: request,
+      googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
+    );
 
-      if (results.isNotEmpty && results[0].points.isNotEmpty) {
-        polylineCoordinates = results[0]
-            .points
-            .map((point) => LatLng(point.latitude, point.longitude))
-            .toList();
-      } else {
-        polylineCoordinates = [source, destination];
-      }
-    } catch (e) {
-      print('Error fetching polyline: $e');
+    // Check if the result has points
+    if (result.points.isNotEmpty) {
+      polylineCoordinates = result.points
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+    } else {
       polylineCoordinates = [source, destination];
     }
-    return polylineCoordinates;
+  } catch (e) {
+    print('Error fetching polyline: $e');
+    polylineCoordinates = [source, destination];
   }
-
+  return polylineCoordinates;
+}
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
     _mapController!.setMapStyle('''

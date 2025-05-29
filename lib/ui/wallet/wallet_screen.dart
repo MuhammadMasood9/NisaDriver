@@ -12,6 +12,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/text_field_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/order_intercity_screen/complete_intecity_order_screen.dart';
 import 'package:driver/ui/order_screen/complete_order_screen.dart';
 import 'package:driver/ui/withdraw_history/withdraw_history_screen.dart';
@@ -119,20 +120,12 @@ class WalletScreen extends StatelessWidget {
           const SizedBox(height: 40),
           Text(
             "Wallet Balance".tr,
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 22,
-            ),
+            style: AppTypography.boldHeaders(context).copyWith(color: Colors.white),
           ),
           const SizedBox(height: 10),
           Text(
             Constant.amountShow(amount: controller.driverUserModel.value.walletAmount.toString()),
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-              fontSize: 20,
-            ),
+            style: AppTypography.boldHeaders(context).copyWith(color: Colors.white,fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 20),
           Padding(
@@ -248,7 +241,7 @@ class WalletScreen extends StatelessWidget {
                 ),
                 child: SvgPicture.asset(
                   'assets/icons/ic_wallet.svg',
-                  width: 24,
+                  width: 20,
                   color: AppColors.darkBackground,
                 ),
               ),
@@ -262,19 +255,12 @@ class WalletScreen extends StatelessWidget {
                       children: [
                         Text(
                           Constant.dateFormatTimestamp(walletTransactionModel.createdDate),
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: AppColors.darkBackground,
-                          ),
+                          style: AppTypography.boldLabel(context),
                         ),
+                        
                         Text(
                           "${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? "(-" : "+"}${Constant.amountShow(amount: walletTransactionModel.amount.toString().replaceAll("-", ""))}${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? ")" : ""}",
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? Colors.red : Colors.green,
-                          ),
+                          style: AppTypography.smBoldLabel(context).copyWith(color:Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? Colors.red : Colors.green ),
                         ),
                       ],
                     ),
@@ -285,20 +271,12 @@ class WalletScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             walletTransactionModel.note.toString(),
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w400,
-                              fontSize: 12,
-                              color: AppColors.darkBackground.withOpacity(0.7),
-                            ),
+                            style:AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.6)),
                           ),
                         ),
                         Text(
                           walletTransactionModel.paymentType.toString().toUpperCase(),
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
-                            color: AppColors.primary,
-                          ),
+                          style: AppTypography.boldLabel(context).copyWith(color: AppColors.primary.withOpacity(0.6)),
                         ),
                       ],
                     ),
@@ -682,11 +660,7 @@ class WalletScreen extends StatelessWidget {
                 children: [
                   Text(
                     "Withdraw".tr,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 18,
-                      color: AppColors.darkBackground,
-                    ),
+                    style: AppTypography.headers(context),
                   ),
                   const SizedBox(height: 10),
                   Container(
@@ -766,11 +740,7 @@ class WalletScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   Text(
                     "Amount to Withdraw".tr,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: AppColors.darkBackground,
-                    ),
+                    style: AppTypography.headers(context),
                   ),
                   const SizedBox(height: 10),
                   TextFieldThem.buildTextFiled(

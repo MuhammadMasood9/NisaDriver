@@ -7,6 +7,7 @@ import 'package:driver/payment/rozorpayConroller.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/network_image_widget.dart';
 import 'package:flutter/material.dart';
@@ -107,20 +108,12 @@ class SubscriptionListScreen extends StatelessWidget {
       children: [
         Text(
           "Choose Your Plan",
-          style: GoogleFonts.poppins(
-            color: AppColors.darkBackground,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTypography.boldHeaders(Get.context!),
         ),
         const SizedBox(height: 8),
         Text(
           "Select the perfect subscription plan for your needs",
-          style: GoogleFonts.poppins(
-            color: AppColors.grey400,
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
+          style: AppTypography.label(Get.context!).copyWith(color: AppColors.grey400),
         ),
       ],
     );
@@ -210,32 +203,29 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: isSelected ? _buildSelectedGradient() : null,
               color: isSelected ? null : AppColors.background,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: isSelected ? Colors.transparent : AppColors.grey300,
-                width: 1.5,
-              ),
+              borderRadius: BorderRadius.circular(8),
+            
               boxShadow:
                   isSelected ? _buildSelectedShadow() : _buildDefaultShadow(),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(isSelected, isActive),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 15),
                   _buildPricing(isSelected, isFree),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 15),
                   if (subscriptionPlanModel.id ==
                       Constant.commissionSubscriptionID)
                     _buildCommissionInfo(isSelected),
                   if (subscriptionPlanModel.planPoints?.isNotEmpty == true) ...[
                     _buildFeaturesList(isSelected),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 15),
                   ],
                   _buildBookingLimit(isSelected),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 15),
                   _buildActionButton(isSelected, isActive),
                 ],
               ),
@@ -268,7 +258,7 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,13 +268,9 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
                   Expanded(
                     child: Text(
                       subscriptionPlanModel.name ?? '',
-                      style: GoogleFonts.poppins(
-                        color: isSelected
+                      style: AppTypography.boldHeaders(Get.context!).copyWith(color: isSelected
                             ? Colors.white
-                            : AppColors.darkBackground,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+                            : AppColors.darkBackground,),
                     ),
                   ),
                   if (isActive) _buildActiveBadge(),
@@ -293,12 +279,9 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subscriptionPlanModel.description ?? '',
-                style: GoogleFonts.poppins(
-                  color: isSelected
+                style: AppTypography.label(Get.context!).copyWith( color: isSelected
                       ? Colors.white.withOpacity(0.8)
-                      : AppColors.grey500,
-                  fontSize: 12,
-                ),
+                      : AppColors.grey500,),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -311,18 +294,14 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
 
   Widget _buildActiveBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.ratingColour,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         "Active",
-        style: GoogleFonts.poppins(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
+        style: AppTypography.smBoldLabel(Get.context!).copyWith(color: Colors.white),
       ),
     );
   }
@@ -337,26 +316,16 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
               : Constant.amountShow(
                   amount: double.parse(subscriptionPlanModel.price ?? '0.0')
                       .toString()),
-          style: GoogleFonts.poppins(
-            color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-          ),
+          style: AppTypography.boldHeaders(Get.context!).copyWith(color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         Padding(
-          padding: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.only(bottom: 5),
           child: Text(
             subscriptionPlanModel.expiryDay == "-1"
                 ? "/ Lifetime"
                 : "/ ${subscriptionPlanModel.expiryDay} Days",
-            style: GoogleFonts.poppins(
-              color: isSelected
-                  ? Colors.white.withOpacity(0.7)
-                  : AppColors.grey500,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style:AppTypography.boldLabel(Get.context!).copyWith(color: isSelected ? AppColors.grey200 : AppColors.grey500,),
           ),
         ),
       ],
@@ -366,16 +335,16 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
   Widget _buildCommissionInfo(bool isSelected) {
     return Container(
       padding: const EdgeInsets.all(8),
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isSelected
             ? Colors.white.withOpacity(0.1)
             : AppColors.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isSelected
               ? Colors.white.withOpacity(0.2)
-              : AppColors.primary.withOpacity(0.2),
+              : AppColors.primary.withOpacity(0.09),
         ),
       ),
       child: Row(
@@ -389,11 +358,8 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
           Expanded(
             child: Text(
               'Commission: ${Constant.adminCommission?.type == 'percentage' ? "${Constant.adminCommission?.amount}%" : "${Constant.amountShow(amount: Constant.adminCommission?.amount)} Flat"} per order',
-              style: GoogleFonts.poppins(
-                color: isSelected ? Colors.white : AppColors.grey400,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppTypography.label(Get.context!).copyWith(color: isSelected? Colors.white : AppColors.grey500,),
+               
             ),
           ),
         ],
@@ -407,21 +373,17 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
       children: [
         Text(
           "What's included:",
-          style: GoogleFonts.poppins(
-            color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style:AppTypography.boldLabel(Get.context!).copyWith(color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         ...subscriptionPlanModel.planPoints!.map(
           (point) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               children: [
                 Container(
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   decoration: BoxDecoration(
                     color: AppColors.ratingColour,
                     borderRadius: BorderRadius.circular(10),
@@ -432,17 +394,13 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
                     size: 14,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     point,
-                    style: GoogleFonts.poppins(
-                      color: isSelected
+                    style: AppTypography.label(Get.context!).copyWith(  color: isSelected
                           ? Colors.white.withOpacity(0.9)
-                          : AppColors.grey600,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                    ),
+                          : AppColors.grey600,),
                   ),
                 ),
               ],
@@ -455,16 +413,16 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
 
   Widget _buildBookingLimit(bool isSelected) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color:
             isSelected ? Colors.white.withOpacity(0.1) : AppColors.background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isSelected
               ? Colors.white.withOpacity(0.2)
               : AppColors.darkBackground,
-          width: 1.5,
+          width: 0.95,
         ),
       ),
       child: Row(
@@ -477,11 +435,7 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             'Booking Limit: ${subscriptionPlanModel.bookingLimit == '-1' ? 'Unlimited' : subscriptionPlanModel.bookingLimit ?? '0'}',
-            style: GoogleFonts.poppins(
-              color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+            style: AppTypography.boldLabel(Get.context!).copyWith(color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,),
           ),
         ],
       ),
@@ -491,7 +445,7 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
   Widget _buildActionButton(bool isSelected, bool isActive) {
     return SizedBox(
       width: double.infinity,
-      height: 52,
+      height: 35,
       child: ElevatedButton(
         onPressed: onClick,
         style: ElevatedButton.styleFrom(
@@ -508,10 +462,7 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
               : isSelected
                   ? "Continue with Plan"
                   : "Select Plan",
-          style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: isSelected ? AppColors.primary : AppColors.background),
+          style: AppTypography.appBar(Get.context!).copyWith( color: isSelected ? AppColors.primary : AppColors.background),
         ),
       ),
     );
@@ -528,8 +479,8 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
   List<BoxShadow> _buildSelectedShadow() {
     return [
       BoxShadow(
-        color: AppColors.primary.withOpacity(0.3),
-        blurRadius: 20,
+        color: AppColors.primary.withOpacity(0.5),
+        blurRadius: 10,
         offset: const Offset(0, 8),
       ),
     ];
@@ -538,7 +489,7 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
   List<BoxShadow> _buildDefaultShadow() {
     return [
       BoxShadow(
-        color: Colors.black.withOpacity(0.05),
+        color: Colors.black.withOpacity(0.09),
         blurRadius: 10,
         offset: const Offset(0, 4),
       ),

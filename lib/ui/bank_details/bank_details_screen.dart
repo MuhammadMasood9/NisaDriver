@@ -6,6 +6,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/text_field_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -25,12 +26,12 @@ class BankDetailsScreen extends StatelessWidget {
               children: [
                 // Header section with icon
                 Container(
-                  padding: const EdgeInsets.only(bottom: 30, top: 20),
+                  padding: const EdgeInsets.only(bottom: 10, top: 20),
                   child: Column(
                     children: [
                       Container(
-                        width: 70,
-                        height: 70,
+                        width: 50,
+                        height: 50,
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(20),
@@ -38,19 +39,15 @@ class BankDetailsScreen extends StatelessWidget {
                         child: const Icon(
                           Icons.account_balance,
                           color: AppColors.primary,
-                          size: 40,
+                          size: 25,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 5),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 60),
                         child: Text(
                           "Manage your banking information".tr,
-                          style: GoogleFonts.poppins(
-                            color: AppColors.darkBackground.withOpacity(0.8),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style:AppTypography.boldHeaders(context).copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -58,88 +55,76 @@ class BankDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 // Main content area
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: AppColors.darkBackground.withOpacity(0.03),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
+             Expanded(
+  child: Container(
+    width: double.infinity,
+    decoration: BoxDecoration(
+      color: AppColors.background,
+    ),
+    child: controller.isLoading.value
+        ? Constant.loader(context)
+        : Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Form fields
+                        _buildModernTextField(
+                          context,
+                          label: "Bank Name".tr,
+                          hint: "Enter your bank name".tr,
+                          controller: controller.bankNameController.value,
+                          icon: Icons.account_balance,
+                        ),
+                        _buildModernTextField(
+                          context,
+                          label: "Branch Name".tr,
+                          hint: "Enter branch name".tr,
+                          controller: controller.branchNameController.value,
+                          icon: Icons.business,
+                        ),
+                        _buildModernTextField(
+                          context,
+                          label: "Account Holder Name".tr,
+                          hint: "Enter account holder name".tr,
+                          controller: controller.holderNameController.value,
+                          icon: Icons.person,
+                        ),
+                        _buildModernTextField(
+                          context,
+                          label: "Account Number".tr,
+                          hint: "Enter account number".tr,
+                          controller: controller.accountNumberController.value,
+                          icon: Icons.numbers,
+                          keyboardType: TextInputType.number,
+                        ),
+                        _buildModernTextField(
+                          context,
+                          label: "Additional Information".tr,
+                          hint: "Enter any additional details".tr,
+                          controller: controller.otherInformationController.value,
+                          icon: Icons.info_outline,
+                          isOptional: true,
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                     ),
-                    child: controller.isLoading.value
-                        ? Constant.loader(context)
-                        : SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-                            child: Padding(
-                              padding: const EdgeInsets.all(24.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Progress indicator
-
-                                  // Form fields
-                                  _buildModernTextField(
-                                    context,
-                                    label: "Bank Name".tr,
-                                    hint: "Enter your bank name".tr,
-                                    controller:
-                                        controller.bankNameController.value,
-                                    icon: Icons.account_balance,
-                                  ),
-
-                                  _buildModernTextField(
-                                    context,
-                                    label: "Branch Name".tr,
-                                    hint: "Enter branch name".tr,
-                                    controller:
-                                        controller.branchNameController.value,
-                                    icon: Icons.business,
-                                  ),
-
-                                  _buildModernTextField(
-                                    context,
-                                    label: "Account Holder Name".tr,
-                                    hint: "Enter account holder name".tr,
-                                    controller:
-                                        controller.holderNameController.value,
-                                    icon: Icons.person,
-                                  ),
-
-                                  _buildModernTextField(
-                                    context,
-                                    label: "Account Number".tr,
-                                    hint: "Enter account number".tr,
-                                    controller: controller
-                                        .accountNumberController.value,
-                                    icon: Icons.numbers,
-                                    keyboardType: TextInputType.number,
-                                  ),
-
-                                  _buildModernTextField(
-                                    context,
-                                    label: "Additional Information".tr,
-                                    hint: "Enter any additional details".tr,
-                                    controller: controller
-                                        .otherInformationController.value,
-                                    icon: Icons.info_outline,
-                                    isOptional: true,
-                                  ),
-
-                                  const SizedBox(height: 20),
-
-                                  // Modern save button
-                                  _buildModernSaveButton(context, controller),
-
-                                  const SizedBox(height: 20),
-                                ],
-                              ),
-                            ),
-                          ),
                   ),
                 ),
-              ],
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                child: _buildModernSaveButton(context, controller),
+              ),
+            ],
+          ),
+  ),
+), ],
             ),
           );
         });
@@ -156,7 +141,7 @@ class BankDetailsScreen extends StatelessWidget {
     bool isOptional = false,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -164,11 +149,7 @@ class BankDetailsScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.darkBackground.withOpacity(0.8),
-                ),
+                style:AppTypography.boldLabel(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
               ),
               if (isOptional)
                 Container(
@@ -192,6 +173,7 @@ class BankDetailsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Container(
+            height: 44,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
@@ -203,34 +185,26 @@ class BankDetailsScreen extends StatelessWidget {
             child: TextField(
               controller: controller,
               keyboardType: keyboardType,
+              
               maxLines: maxLines,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
               decoration: InputDecoration(
+                
                 hintText: hint,
-                hintStyle: GoogleFonts.poppins(
-                  color: Colors.grey.shade500,
-                  fontSize: 14,
-                ),
+                hintStyle: AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
                 prefixIcon: Container(
-                  margin: const EdgeInsets.all(12),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkBackground.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                 
+                 
                   child: Icon(
                     icon,
-                    color: AppColors.darkBackground,
+                    color: AppColors.darkBackground.withOpacity(0.7),
                     size: 20,
                   ),
                 ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 20,
+                  horizontal: 10,
+                  vertical: 10,
                 ),
               ),
             ),
@@ -244,7 +218,7 @@ class BankDetailsScreen extends StatelessWidget {
       BuildContext context, BankDetailsController controller) {
     return Container(
       width: double.infinity,
-      height: 56,
+      height: 35,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -266,7 +240,7 @@ class BankDetailsScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           onTap: () => _handleSave(controller),
           child: Container(
             alignment: Alignment.center,
@@ -276,16 +250,12 @@ class BankDetailsScreen extends StatelessWidget {
                 const Icon(
                   Icons.save_rounded,
                   color: Colors.white,
-                  size: 22,
+                  size: 18,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   "Save Details".tr,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style:AppTypography.headers(context).copyWith(color: AppColors.background),
                 ),
               ],
             ),

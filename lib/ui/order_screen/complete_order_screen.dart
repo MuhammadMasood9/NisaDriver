@@ -8,6 +8,7 @@ import 'package:driver/controller/complete_order_controller.dart';
 import 'package:driver/model/tax_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_order_view.dart';
@@ -205,42 +206,42 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
     }
   }
 
-  Future<List<LatLng>> _getPolylinePoints(
-      LatLng source, LatLng destination) async {
-    List<LatLng> polylineCoordinates = [];
+Future<List<LatLng>> _getPolylinePoints(
+    LatLng source, LatLng destination) async {
+  List<LatLng> polylineCoordinates = [];
 
-    try {
-      PolylineRequest request = PolylineRequest(
-        origin: PointLatLng(source.latitude, source.longitude),
-        destination: PointLatLng(destination.latitude, destination.longitude),
-        mode: TravelMode.driving,
-      );
+  try {
+    PolylineRequest request = PolylineRequest(
+      origin: PointLatLng(source.latitude, source.longitude),
+      destination: PointLatLng(destination.latitude, destination.longitude),
+      mode: TravelMode.driving,
+    );
 
-      List<PolylineResult> results =
-          await polylinePoints.getRouteBetweenCoordinates(
-        request: request,
-        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      );
+    // FIXED: Changed from List<PolylineResult> to PolylineResult
+    PolylineResult result =
+        await polylinePoints.getRouteBetweenCoordinates(
+      request: request,
+      googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
+    );
 
-      if (results.isNotEmpty && results[0].points.isNotEmpty) {
-        polylineCoordinates = results[0]
-            .points
-            .map((point) => LatLng(point.latitude, point.longitude))
-            .toList();
-        print('Polyline points loaded: ${polylineCoordinates.length} points');
-      } else {
-        print('No polyline results found, using straight line');
-        polylineCoordinates = [source, destination];
-      }
-    } catch (e) {
-      print('Error fetching polyline: $e');
-      // Create a simple straight line as fallback
+    // FIXED: Changed condition to check result.points directly
+    if (result.points.isNotEmpty) {
+      polylineCoordinates = result.points
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+      print('Polyline points loaded: ${polylineCoordinates.length} points');
+    } else {
+      print('No polyline results found, using straight line');
       polylineCoordinates = [source, destination];
     }
-
-    return polylineCoordinates;
+  } catch (e) {
+    print('Error fetching polyline: $e');
+    // Create a simple straight line as fallback
+    polylineCoordinates = [source, destination];
   }
 
+  return polylineCoordinates;
+}
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
 
@@ -308,11 +309,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
             centerTitle: true,
             title: Text(
               "Ride Details".tr,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                fontSize: 18,
-                color: AppColors.darkBackground,
-              ),
+              style: AppTypography.appTitle(context),
             ),
           ),
           backgroundColor: themeChange.getThem()
@@ -329,24 +326,23 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                             horizontal: 16, vertical: 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 15,
                           children: [
                             _buildMapSection(context),
-                            const SizedBox(height: 24),
+                           
                             _buildSectionCard(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                spacing: 5,
                                 children: [
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
+                                        spacing: 5,
                                     children: [
                                       Text(
                                         "Ride ID".tr,
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16,
-                                          color: AppColors.darkBackground,
-                                        ),
+                                        style: AppTypography.headers(Get.context!),
                                       ),
                                       GestureDetector(
                                         onTap: () {
@@ -380,17 +376,14 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                   ),
                                   Text(
                                     "#${controller.orderModel.value.id!.toUpperCase()}",
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 12,
-                                      color: AppColors.darkBackground,
-                                    ),
+                                    style: AppTypography.label(Get.context!),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
+                          
                             _buildSectionHeader("User Details".tr),
+                         
                             _buildSectionCard(
                               child: UserDriverView(
                                 userId: controller.orderModel.value.userId
@@ -399,7 +392,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                     .toString(),
                               ),
                             ),
-                            const SizedBox(height: 24),
+                           
                             _buildSectionHeader(
                                 "Pickup and drop-off locations".tr),
                             _buildSectionCard(
@@ -412,7 +405,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                     .toString(),
                               ),
                             ),
-                            const SizedBox(height: 24),
+                           
                             _buildSectionHeader("Ride Status".tr),
                             _buildSectionCard(
                               child: Row(
@@ -422,25 +415,17 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                   Text(
                                     controller.orderModel.value.status
                                         .toString(),
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 14,
-                                      color: AppColors.darkBackground,
-                                    ),
+                                    style:AppTypography.boldLabel(Get.context!),
                                   ),
                                   Text(
                                     Constant().formatTimestamp(controller
                                         .orderModel.value.createdDate),
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                    ),
+                                    style: AppTypography.label(Get.context!),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
+                           
                             _buildSectionHeader("Booking Summary".tr),
                             _buildSectionCard(
                               child: Column(
@@ -448,11 +433,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                 children: [
                                   Text(
                                     "Booking Summary".tr,
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 16,
-                                      color: AppColors.darkBackground,
-                                    ),
+                                    style: AppTypography.boldLabel(Get.context!),
                                   ),
                                   const Divider(height: 24, thickness: 1),
                                   _buildSummaryRow(
@@ -515,16 +496,16 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                             .toString()),
                                     titleStyle: GoogleFonts.poppins(
                                         fontWeight: FontWeight.w500,
-                                        fontSize: 16),
+                                        fontSize: 14),
                                     valueStyle: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
                                         color: AppColors.primary),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
+                           
                             _buildSectionHeader("Admin Commission".tr),
                             _buildSectionCard(
                               child: Column(
@@ -532,11 +513,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                 children: [
                                   Text(
                                     "Admin Commission".tr,
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                      color: AppColors.darkBackground,
-                                    ),
+                                    style: AppTypography.boldLabel(Get.context!),
                                   ),
                                   const SizedBox(height: 10),
                                   _buildSummaryRow(
@@ -549,8 +526,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
                                   Text(
                                     "Note: Admin commission will be debited from your wallet balance. \nAdmin commission will apply on Ride Amount minus Discount (if applicable)."
                                         .tr,
-                                    style:
-                                        GoogleFonts.poppins(color: Colors.red),
+                                    style:AppTypography.smBoldLabel(Get.context!).copyWith(color: AppColors.primary),
                                   ),
                                 ],
                               ),
@@ -583,7 +559,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: SizedBox(
-          height: Responsive.height(35, context),
+          height: Responsive.height(30, context),
           child: GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
@@ -613,14 +589,10 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 1),
       child: Text(
         title,
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w500,
-          fontSize: 16,
-          color: AppColors.darkBackground,
-        ),
+        style: AppTypography.headers(Get.context!),
       ),
     );
   }
@@ -633,7 +605,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
         color: themeChange.getThem()
             ? AppColors.darkContainerBackground
             : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         gradient: themeChange.getThem()
             ? null
             : LinearGradient(
@@ -669,20 +641,12 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
           Text(
             title,
             style: titleStyle ??
-                GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                  color: AppColors.grey500,
-                ),
+                AppTypography.boldLabel(Get.context!).copyWith(color: AppColors.grey500),
           ),
           Text(
             value,
             style: valueStyle ??
-                GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: valueColor ?? AppColors.darkBackground,
-                ),
+                AppTypography.boldLabel(Get.context!),
           ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/model/user_model.dart';
 import 'package:driver/themes/app_colors.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,8 +34,8 @@ class UserDriverView extends StatelessWidget {
                           ClipRRect(
                             borderRadius: const BorderRadius.all(Radius.circular(10)),
                             child: CachedNetworkImage(
-                              height: 50,
-                              width: 50,
+                              height: 40,
+                              width: 40,
                               imageUrl: Constant.userPlaceHolder,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Constant.loader(context),
@@ -91,8 +92,8 @@ class UserDriverView extends StatelessWidget {
                           ClipRRect(
                             borderRadius: const BorderRadius.all(Radius.circular(10)),
                             child: CachedNetworkImage(
-                              height: 50,
-                              width: 50,
+                              height: 40,
+                              width: 40,
                               imageUrl: driverModel.profilePic.toString(),
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Constant.loader(context),
@@ -107,7 +108,7 @@ class UserDriverView extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(driverModel.fullName.toString(), style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                                Text(driverModel.fullName.toString(), style: AppTypography.boldLabel(context)),
                                 Row(
                                   children: [
                                     Expanded(
@@ -115,20 +116,20 @@ class UserDriverView extends StatelessWidget {
                                         children: [
                                           const Icon(
                                             Icons.star,
-                                            size: 22,
+                                            size: 16,
                                             color: AppColors.ratingColour,
                                           ),
                                           const SizedBox(
                                             width: 5,
                                           ),
                                           Text(Constant.calculateReview(reviewCount: driverModel.reviewsCount.toString(), reviewSum: driverModel.reviewsSum.toString()),
-                                              style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                                              style: AppTypography.smBoldLabel(context)),
                                         ],
                                       ),
                                     ),
                                     Text(
                                       Constant.amountShow(amount: amount),
-                                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                                      style: AppTypography.boldLabel(context),
                                     ),
 
                                   ],

@@ -1,4 +1,5 @@
 import 'package:driver/themes/app_colors.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,13 +24,15 @@ class TextFieldThem {
         controller: controller,
         textAlign: TextAlign.start,
         enabled: enable,
+        
         keyboardType: keyBoardType,
         maxLines: maxLine,
         inputFormatters: inputFormatters,
-        style: GoogleFonts.poppins(color: themeChange.getThem() ? Colors.white : Colors.black),
+        style: AppTypography.input(context),
         decoration: InputDecoration(
             filled: true,
-            fillColor: themeChange.getThem() ? AppColors.darkTextField : AppColors.textField,
+            
+            fillColor: AppColors.background,
             contentPadding: EdgeInsets.only(left: 10, right: 10, top: maxLine == 1 ? 0 : 10),
             disabledBorder: OutlineInputBorder(
               borderRadius: const BorderRadius.all(Radius.circular(4)),

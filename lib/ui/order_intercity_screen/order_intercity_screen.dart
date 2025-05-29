@@ -306,84 +306,85 @@ class OrderIntercityScreen extends StatelessWidget {
     );
   }
 
-  Future<Map<String, dynamic>> _buildMapData(
-      InterCityOrderModel orderModel) async {
-    final LatLng sourceLatLng = LatLng(
-      orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
-      orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
-    );
-    final LatLng destinationLatLng = LatLng(
-      orderModel.destinationLocationLAtLng?.latitude ?? 24.94478876378326,
-      orderModel.destinationLocationLAtLng?.longitude ?? 67.06306681036949,
-    );
+ Future<Map<String, dynamic>> _buildMapData(
+    InterCityOrderModel orderModel) async {
+  final LatLng sourceLatLng = LatLng(
+    orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
+    orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
+  );
+  final LatLng destinationLatLng = LatLng(
+    orderModel.destinationLocationLAtLng?.latitude ?? 24.94478876378326,
+    orderModel.destinationLocationLAtLng?.longitude ?? 67.06306681036949,
+  );
 
-    final bounds = LatLngBounds(
-      southwest: LatLng(
-        min(sourceLatLng.latitude, destinationLatLng.latitude),
-        min(sourceLatLng.longitude, destinationLatLng.longitude),
-      ),
-      northeast: LatLng(
-        max(sourceLatLng.latitude, destinationLatLng.latitude),
-        max(sourceLatLng.longitude, destinationLatLng.longitude),
-      ),
-    );
+  final bounds = LatLngBounds(
+    southwest: LatLng(
+      min(sourceLatLng.latitude, destinationLatLng.latitude),
+      min(sourceLatLng.longitude, destinationLatLng.longitude),
+    ),
+    northeast: LatLng(
+      max(sourceLatLng.latitude, destinationLatLng.latitude),
+      max(sourceLatLng.longitude, destinationLatLng.longitude),
+    ),
+  );
 
-    final iconStart = await BitmapDescriptor.asset(
-      const ImageConfiguration(size: Size(32, 32)),
-      'assets/images/green_mark.png',
-    );
-    final iconEnd = await BitmapDescriptor.asset(
-      const ImageConfiguration(size: Size(32, 32)),
-      'assets/images/red_mark.png',
-    );
+  final iconStart = await BitmapDescriptor.asset(
+    const ImageConfiguration(size: Size(32, 32)),
+    'assets/images/green_mark.png',
+  );
+  final iconEnd = await BitmapDescriptor.asset(
+    const ImageConfiguration(size: Size(32, 32)),
+    'assets/images/red_mark.png',
+  );
 
-    final markers = {
-      Marker(
-        markerId: const MarkerId('source'),
-        position: sourceLatLng,
-        icon: iconStart,
-        infoWindow:
-            InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
-      ),
-      Marker(
-        markerId: const MarkerId('destination'),
-        position: destinationLatLng,
-        icon: iconEnd,
-        infoWindow: InfoWindow(
-            title: 'Drop-off: ${orderModel.destinationLocationName}'),
-      ),
-    };
+  final markers = {
+    Marker(
+      markerId: const MarkerId('source'),
+      position: sourceLatLng,
+      icon: iconStart,
+      infoWindow:
+          InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
+    ),
+    Marker(
+      markerId: const MarkerId('destination'),
+      position: destinationLatLng,
+      icon: iconEnd,
+      infoWindow: InfoWindow(
+          title: 'Drop-off: ${orderModel.destinationLocationName}'),
+    ),
+  };
 
-    List<LatLng> polylineCoordinates = [];
-    try {
-      PolylineRequest request = PolylineRequest(
-        origin: PointLatLng(sourceLatLng.latitude, sourceLatLng.longitude),
-        destination: PointLatLng(
-            destinationLatLng.latitude, destinationLatLng.longitude),
-        mode: TravelMode.driving,
-      );
-      List<PolylineResult> results =
-          await PolylinePoints().getRouteBetweenCoordinates(
-        request: request,
-        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      );
-      if (results.isNotEmpty && results[0].points.isNotEmpty) {
-        polylineCoordinates = results[0]
-            .points
-            .map((point) => LatLng(point.latitude, point.longitude))
-            .toList();
-      }
-    } catch (e) {
-      print('Error fetching polyline: $e');
+  List<LatLng> polylineCoordinates = [];
+  try {
+    PolylineRequest request = PolylineRequest(
+      origin: PointLatLng(sourceLatLng.latitude, sourceLatLng.longitude),
+      destination: PointLatLng(
+          destinationLatLng.latitude, destinationLatLng.longitude),
+      mode: TravelMode.driving,
+    );
+    
+    // Changed: getRouteBetweenCoordinates now returns a single PolylineResult
+    PolylineResult result = await PolylinePoints().getRouteBetweenCoordinates(
+      request: request,
+      googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
+    );
+    
+    // Check if the result has points
+    if (result.points.isNotEmpty) {
+      polylineCoordinates = result.points
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
     }
-
-    return {
-      'markers': markers,
-      'polylineCoordinates': polylineCoordinates,
-      'bounds': bounds,
-    };
+  } catch (e) {
+    print('Error fetching polyline: $e');
   }
 
+  return {
+    'markers': markers,
+    'polylineCoordinates': polylineCoordinates,
+    'bounds': bounds,
+  };
+}
   Widget _buildMapSection(
     BuildContext context,
     InterCityOrderModel orderModel,

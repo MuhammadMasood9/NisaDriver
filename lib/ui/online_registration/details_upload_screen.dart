@@ -8,6 +8,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/text_field_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -119,11 +120,7 @@ class _EnhancedDateSelectorState extends State<EnhancedDateSelector>
           children: [
             Text(
               widget.label,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: hasError ? Colors.red[700] : Colors.grey[800],
-              ),
+              style: AppTypography.boldLabel(context),
             ),
             if (widget.isRequired)
               Text(
@@ -136,7 +133,7 @@ class _EnhancedDateSelectorState extends State<EnhancedDateSelector>
               ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 5),
         AnimatedBuilder(
           animation: _scaleAnimation,
           builder: (context, child) {
@@ -182,18 +179,15 @@ class _EnhancedDateSelectorState extends State<EnhancedDateSelector>
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 14,
+                      horizontal: 10,
+                      vertical: 10,
                     ),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          
                           decoration: BoxDecoration(
-                            color: hasValue
-                                ? widget.primaryColor.withOpacity(0.1)
-                                : Colors.grey.withOpacity(0.1),
-                            shape: BoxShape.circle,
+                           
                           ),
                           child: Icon(
                             Icons.calendar_today_rounded,
@@ -210,14 +204,7 @@ class _EnhancedDateSelectorState extends State<EnhancedDateSelector>
                                 ? DateFormat(widget.dateFormat)
                                     .format(widget.selectedDate!)
                                 : widget.hintText,
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight:
-                                  hasValue ? FontWeight.w500 : FontWeight.w400,
-                              color: hasValue
-                                  ? Colors.grey[800]
-                                  : Colors.grey[500],
-                            ),
+                            style: AppTypography.caption(context),
                           ),
                         ),
                         if (hasValue && widget.showClearButton)
@@ -310,7 +297,7 @@ class DetailsUploadScreen extends StatelessWidget {
                       child: const Icon(
                         Icons.arrow_back_ios_new,
                         color: AppColors.darkTextFieldBorder,
-                        size: 25,
+                        size: 18,
                       ),
                     ),
                   ),
@@ -318,11 +305,7 @@ class DetailsUploadScreen extends StatelessWidget {
                 title: Text(
                   Constant.localizationTitle(
                       controller.documentModel.value.title),
-                  style: GoogleFonts.poppins(
-                    color: AppColors.tabBarSelected,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTypography.appBar(context),
                 ),
                 centerTitle: true,
               ),
@@ -390,10 +373,10 @@ class DetailsUploadScreen extends StatelessWidget {
   Widget _buildProgressIndicator(DetailsUploadController controller) {
     bool isVerified = controller.documents.value.verified == true;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.15),
@@ -406,7 +389,7 @@ class DetailsUploadScreen extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: isVerified ? Colors.green : AppColors.primary,
               shape: BoxShape.circle,
@@ -414,7 +397,7 @@ class DetailsUploadScreen extends StatelessWidget {
             child: Icon(
               isVerified ? Icons.verified : Icons.upload_file,
               color: Colors.white,
-              size: 24,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
@@ -424,21 +407,15 @@ class DetailsUploadScreen extends StatelessWidget {
               children: [
                 Text(
                   isVerified ? "Document Verified".tr : "Upload Required".tr,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: isVerified ? Colors.green : AppColors.primary,
-                  ),
+                  style:AppTypography.boldLabel(Get.context!).copyWith( color: isVerified ? Colors.green : AppColors.primary),
+                   
                 ),
                 const SizedBox(height: 4),
                 Text(
                   isVerified
                       ? "Your document has been verified successfully".tr
                       : "Please upload all required documents".tr,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: AppTypography.label(Get.context!).copyWith( color: AppColors.grey500),
                 ),
               ],
             ),
@@ -504,15 +481,11 @@ class DetailsUploadScreen extends StatelessWidget {
             Text(
               "$title of ${Constant.localizationTitle(controller.documentModel.value.title)}"
                   .tr,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[800],
-              ),
+              style: AppTypography.boldLabel(context),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         InkWell(
           onTap: isVerified
               ? null
@@ -521,10 +494,10 @@ class DetailsUploadScreen extends StatelessWidget {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             width: double.infinity,
-            height: Responsive.height(25, context),
+            height: Responsive.height(22, context),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.1),
@@ -539,7 +512,7 @@ class DetailsUploadScreen extends StatelessWidget {
                 : _buildImagePlaceholder(context),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
       ],
     );
   }
@@ -681,17 +654,17 @@ class DetailsUploadScreen extends StatelessWidget {
       BuildContext context, DetailsUploadController controller) {
     return Container(
       width: double.infinity,
-      height: 56,
+      height: 46,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.9)],
+          colors: [AppColors.darkBackground, AppColors.darkBackground.withOpacity(0.9)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.darkBackground.withOpacity(0.3),
             spreadRadius: 2,
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -719,7 +692,7 @@ class DetailsUploadScreen extends StatelessWidget {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
           ),
           padding: EdgeInsets.zero,
         ),
@@ -729,25 +702,21 @@ class DetailsUploadScreen extends StatelessWidget {
             children: [
               if (controller.isLoading.value)
                 const SizedBox(
-                  width: 24,
-                  height: 24,
+                  width: 20,
+                  height: 20,
                   child: CircularProgressIndicator(
                     color: Colors.white,
                     strokeWidth: 2.5,
                   ),
                 )
               else
-                const Icon(Icons.cloud_upload, color: Colors.white, size: 24),
+                const Icon(Icons.cloud_upload, color: Colors.white, size: 20),
               const SizedBox(width: 12),
               Text(
                 controller.isLoading.value
                     ? "Uploading...".tr
                     : "Upload Document".tr,
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+                style: AppTypography.appBar(context).copyWith(color: Colors.white),
               ),
             ],
           ),
@@ -770,10 +739,10 @@ class DetailsUploadScreen extends StatelessWidget {
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(15),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -825,7 +794,7 @@ class DetailsUploadScreen extends StatelessWidget {
                           "Gallery".tr,
                           Icons.photo_library,
                           ImageSource.gallery,
-                          Colors.blue,
+                          AppColors.darkBackground,
                         ),
                       ),
                     ],
@@ -904,17 +873,13 @@ class DetailsUploadScreen extends StatelessWidget {
     bool enabled = true,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.darkBackground.withOpacity(0.8),
-            ),
+            style:AppTypography.boldLabel(context),
           ),
           const SizedBox(height: 8),
           Container(
@@ -929,11 +894,7 @@ class DetailsUploadScreen extends StatelessWidget {
             child: TextField(
               controller: controller,
               enabled: enabled,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: AppColors.darkBackground,
-              ),
+              style: AppTypography.caption(context),
               decoration: InputDecoration(
                 hintText: hint,
                 hintStyle: GoogleFonts.poppins(
@@ -941,12 +902,8 @@ class DetailsUploadScreen extends StatelessWidget {
                   fontSize: 14,
                 ),
                 prefixIcon: Container(
-                  margin: const EdgeInsets.all(12),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkBackground.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+               
+                 
                   child: Icon(
                     icon,
                     color: AppColors.darkBackground,
@@ -955,8 +912,8 @@ class DetailsUploadScreen extends StatelessWidget {
                 ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 20,
+                  horizontal: 10,
+                  vertical: 13,
                 ),
               ),
             ),

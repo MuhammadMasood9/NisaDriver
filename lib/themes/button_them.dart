@@ -1,5 +1,6 @@
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,7 +15,7 @@ class ButtonThem {
     double btnHeight = 48,
     double txtSize = 12,
     double btnWidthRatio = 0.9,
-    double btnRadius = 8,
+    double btnRadius = 5,
     final Color? textColor,
     final Color? bgColors,
     required Function() onPress,
@@ -28,7 +29,7 @@ class ButtonThem {
         width: Responsive.width(100, context) * btnWidthRatio,
         child: MaterialButton(
           onPressed: onPress,
-          height: btnHeight,
+          height: 35,
           elevation: 0.5,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(btnRadius),
@@ -40,10 +41,7 @@ class ButtonThem {
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-                fontSize: txtSize,
-                fontWeight: FontWeight.w600,
-                color: textColor),
+            style:AppTypography.buttonlight(context),
           ),
         ),
       ),
@@ -53,10 +51,10 @@ class ButtonThem {
   static buildBorderButton(
     BuildContext context, {
     required String title,
-    double btnHeight = 50,
+    double btnHeight = 35,
     double txtSize = 12,
     double btnWidthRatio = 0.9,
-    double borderRadius = 8,
+    double borderRadius = 5,
     required Function() onPress,
     bool isVisible = true,
     bool iconVisibility = false,
@@ -69,7 +67,7 @@ class ButtonThem {
       visible: isVisible,
       child: SizedBox(
         width: Responsive.width(100, context) * btnWidthRatio,
-        height: btnHeight,
+        height: 35,
         child: ElevatedButton(
           style: ButtonStyle(
             backgroundColor: MaterialStateProperty.all<Color>(
@@ -105,12 +103,7 @@ class ButtonThem {
               Text(
                 title.toUpperCase(),
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                    color: themeChange.getThem()
-                        ? AppColors.darkBackground
-                        : AppColors.darkBackground,
-                    fontSize: txtSize,
-                    fontWeight: FontWeight.w600),
+                style: AppTypography.button(context),
               ),
             ],
           ),
@@ -136,7 +129,7 @@ class ButtonThem {
         width: Responsive.width(100, context) * btnWidthRatio,
         child: MaterialButton(
           onPressed: onPress,
-          height: btnHeight,
+          height: 35,
           elevation: 0.5,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
@@ -147,8 +140,7 @@ class ButtonThem {
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-                fontSize: txtSize, fontWeight: FontWeight.w600),
+            style: AppTypography.buttonlight(context).copyWith(fontWeight: FontWeight.w600),
           ),
         ),
       ),

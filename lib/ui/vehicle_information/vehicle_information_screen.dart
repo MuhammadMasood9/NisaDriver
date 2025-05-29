@@ -13,6 +13,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/text_field_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
@@ -89,13 +90,9 @@ class VehicleInformationScreen extends StatelessWidget {
       children: [
         Text(
           'Select Service'.tr,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: themeChange.getThem() ? Colors.white : Colors.black87,
-          ),
+          style: AppTypography.headers(context),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         SizedBox(
           height: 100,
           child: ListView.separated(
@@ -211,11 +208,7 @@ class VehicleInformationScreen extends StatelessWidget {
       children: [
         Text(
           'Vehicle Details'.tr,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: themeChange.getThem() ? Colors.white : Colors.black87,
-          ),
+          style: AppTypography.headers(context),
         ),
         const SizedBox(height: 16),
         Container(
@@ -272,11 +265,7 @@ class VehicleInformationScreen extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: themeChange.getThem() ? Colors.white70 : Colors.black54,
-            ),
+            style: AppTypography.boldLabel(Get.context!).copyWith(color: AppColors.grey600),
           ),
           const SizedBox(height: 8),
           Container(
@@ -284,7 +273,7 @@ class VehicleInformationScreen extends StatelessWidget {
               color: themeChange.getThem()
                   ? const Color(0xFF1A1A1A)
                   : const Color(0xFFF8F9FA),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: themeChange.getThem()
                     ? Colors.grey.withOpacity(0.2)
@@ -294,10 +283,7 @@ class VehicleInformationScreen extends StatelessWidget {
             child: TextFormField(
               controller: controller,
               enabled: enabled,
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                color: themeChange.getThem() ? Colors.white : Colors.black87,
-              ),
+              style: AppTypography.caption(Get.context!),
               decoration: InputDecoration(
                 prefixIcon: Icon(
                   icon,
@@ -395,15 +381,11 @@ class VehicleInformationScreen extends StatelessWidget {
       children: [
         Text(
           'Driver Rules'.tr,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: themeChange.getThem() ? Colors.white : Colors.black87,
-          ),
+          style: AppTypography.headers(context),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
             color:
                 themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
@@ -423,12 +405,12 @@ class VehicleInformationScreen extends StatelessWidget {
                   -1;
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: const EdgeInsets.only(bottom: 6),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withOpacity(0.1)
+                      ? AppColors.primary.withOpacity(0.08)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: CheckboxListTile(
                   value: isSelected,
@@ -444,11 +426,7 @@ class VehicleInformationScreen extends StatelessWidget {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                   title: Text(
                     Constant.localizationName(item.name),
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color:
-                          themeChange.getThem() ? Colors.white : Colors.black87,
-                    ),
+                    style: AppTypography.label(context),
                   ),
                 ),
               );
@@ -464,7 +442,7 @@ class VehicleInformationScreen extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.amber.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Colors.amber.withOpacity(0.3),
         ),
@@ -481,11 +459,8 @@ class VehicleInformationScreen extends StatelessWidget {
             child: Text(
               "You cannot change service type once selected. Contact administrator to change."
                   .tr,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: Colors.amber.shade700,
-                height: 1.4,
-              ),
+              style: AppTypography.label(context).copyWith(color: Colors.amber.shade700,),
+                
             ),
           ),
         ],
@@ -501,7 +476,7 @@ class VehicleInformationScreen extends StatelessWidget {
         onPressed: () => _handleSave(controller),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.darkBackground,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 11),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -509,11 +484,7 @@ class VehicleInformationScreen extends StatelessWidget {
         ),
         child: Text(
           "Save Information".tr,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
+          style: AppTypography.appTitle(context).copyWith(color: Colors.white),
         ),
       ),
     );

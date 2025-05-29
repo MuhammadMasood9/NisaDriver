@@ -1,5 +1,6 @@
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dash/flutter_dash.dart';
@@ -22,9 +23,9 @@ class LocationView extends StatelessWidget {
       children: [
         Column(
           children: [
-            SvgPicture.asset(themeChange.getThem() ? 'assets/icons/ic_source_dark.svg' : 'assets/icons/ic_source.svg', width: 18),
-            Dash(direction: Axis.vertical, length: Responsive.height(5, context), dashLength: 12, dashColor: AppColors.dottedDivider),
-            SvgPicture.asset(themeChange.getThem() ? 'assets/icons/ic_destination_dark.svg' : 'assets/icons/ic_destination.svg', width: 20),
+            SvgPicture.asset('assets/icons/ic_destination.svg', width: 18),
+            Dash(direction: Axis.vertical, length: Responsive.height(4, context), dashLength: 12, dashColor: AppColors.dottedDivider),
+            SvgPicture.asset( 'assets/icons/ic_destination_dark.svg'  , width: 20),
           ],
         ),
         const SizedBox(
@@ -34,15 +35,15 @@ class LocationView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(sourceLocation.toString(), maxLines: 2, style: GoogleFonts.poppins()),
+              Text(sourceLocation.toString(), maxLines: 2, style: AppTypography.label(context)),
               SizedBox(
                   height: calculateLineWraps(text: sourceLocation.toString(), textStyle: TextStyle(), maxWidth: Responsive.width(80, context)) == 2
                       ? Responsive.height(2.2, context)
-                      : Responsive.height(4.4, context)),
+                      : Responsive.height(2.4, context)),
               Text(
                 destinationLocation.toString(),
                 maxLines: 2,
-                style: GoogleFonts.poppins(),
+                style: AppTypography.label(context),
               )
             ],
           ),

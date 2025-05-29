@@ -3,6 +3,7 @@ import 'package:driver/controller/home_controller.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/home_screens/order_map_screen.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
@@ -65,24 +66,23 @@ class NewOrderScreen extends StatelessWidget {
                                   });
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
+                                  padding: const EdgeInsets.all(4.0),
                                   child: Container(
                                     decoration: BoxDecoration(
                                       color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
                                       borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                      border: Border.all(color: themeChange.getThem() ? AppColors.darkContainerBorder : AppColors.containerBorder, width: 0.5),
                                       boxShadow: themeChange.getThem()
                                           ? null
                                           : [
                                               BoxShadow(
-                                                color: Colors.grey.withOpacity(0.5),
+                                                color: Colors.grey.withOpacity(0.4),
                                                 blurRadius: 8,
                                                 offset: const Offset(0, 2), // changes position of shadow
                                               ),
                                             ],
                                     ),
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                                       child: Column(
                                         children: [
                                           UserView(
@@ -111,11 +111,11 @@ class NewOrderScreen extends StatelessWidget {
                                                   decoration: BoxDecoration(
                                                       color: themeChange.getThem() ? AppColors.darkGray : AppColors.gray, borderRadius: BorderRadius.all(Radius.circular(10))),
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical:8),
                                                     child: Center(
                                                       child: Text(
                                                         'Recommended Price is ${Constant.amountShow(amount: amount)}. Approx distance ${double.parse(orderModel.distance.toString()).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${Constant.distanceType}',
-                                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+                                                        style: AppTypography.smBoldLabel(context),
                                                       ),
                                                     ),
                                                   ),

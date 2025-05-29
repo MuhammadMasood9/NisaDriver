@@ -11,6 +11,7 @@ import 'package:driver/model/ChatVideoContainer.dart';
 import 'package:driver/model/conversation_model.dart';
 import 'package:driver/model/inbox_model.dart';
 import 'package:driver/themes/app_colors.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/FullScreenImageViewer.dart';
 import 'package:driver/ui/chat_screen/FullScreenVideoViewer.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
@@ -323,7 +324,7 @@ class _ChatScreensState extends State<ChatScreens> {
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: themeChange.getThem() ? AppColors.darkBackground : Colors.white,
-        elevation: 2,
+        elevation: 0.2,
         backgroundColor: themeChange.getThem() ? AppColors.darkBackground : Colors.white,
         title: Row(
           children: [
@@ -357,11 +358,7 @@ class _ChatScreensState extends State<ChatScreens> {
               children: [
                 Text(
                   widget.customerName ?? 'Customer',
-                  style: GoogleFonts.poppins(
-                    color: themeChange.getThem() ? Colors.white : Colors.black,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: AppTypography.boldLabel(context),
                 ),
                 Text(
                   '#${widget.orderId}',
@@ -426,18 +423,11 @@ class _ChatScreensState extends State<ChatScreens> {
                         children: [
                           Text(
                             "Replying to ${widget.customerName ?? 'Customer'}",
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: themeChange.getThem() ? Colors.white70 : Colors.black54,
-                            ),
+                            style: AppTypography.boldLabel(context),
                           ),
                           Text(
                             _replyingToMessage!.message ?? '',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: themeChange.getThem() ? Colors.white70 : Colors.black54,
-                              fontStyle: FontStyle.italic,
-                            ),
+                            style: AppTypography.smBoldLabel(context).copyWith(color: Colors.grey[600]),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -466,6 +456,8 @@ class _ChatScreensState extends State<ChatScreens> {
                     children: [
                       Container(
                         margin: const EdgeInsets.only(right: 4.0),
+                        height: 40,
+                        width: 40,
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(30),
@@ -474,7 +466,7 @@ class _ChatScreensState extends State<ChatScreens> {
                         child: IconButton(
                           color: Colors.white,
                           onPressed: _onCameraClick,
-                          icon: const Icon(Icons.camera_alt, size: 20),
+                          icon: const Icon(Icons.camera_alt, size: 18),
                         ),
                       ),
                       Expanded(
@@ -528,9 +520,7 @@ class _ChatScreensState extends State<ChatScreens> {
                               icon: const Icon(Icons.send_rounded, color: AppColors.primary),
                             ),
                             hintText: 'Start typing ...'.tr,
-                            hintStyle: GoogleFonts.poppins(
-                              color: themeChange.getThem() ? Colors.white70 : Colors.grey,
-                            ),
+                            hintStyle: AppTypography.input(context).copyWith(color: Colors.grey[700]),
                           ),
                           style: GoogleFonts.poppins(
                             color: themeChange.getThem() ? Colors.white : Colors.black,
@@ -574,7 +564,7 @@ class _ChatScreensState extends State<ChatScreens> {
         _showMessageOptionsModal(data, isMe);
       },
       child: Container(
-        padding: const EdgeInsets.only(left: 14, right: 14, top: 10, bottom: 10),
+        padding: const EdgeInsets.only(left: 15, right: 15, top: 10, bottom: 10),
         child: Column(
           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
@@ -612,14 +602,13 @@ class _ChatScreensState extends State<ChatScreens> {
                                 topLeft: Radius.circular(10),
                                 topRight: Radius.circular(10),
                                 bottomLeft: Radius.circular(10),
+                                   bottomRight: Radius.circular(10),
                               ),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             child: Text(
                               data.message.toString(),
-                              style: GoogleFonts.poppins(
-                                color: themeChange.getThem() ? Colors.black : Colors.white,
-                              ),
+                              style:  AppTypography.boldLabel(context).copyWith(color: Colors.white),
                             ),
                           )
                         else if (data.messageType == "image")
@@ -630,6 +619,7 @@ class _ChatScreensState extends State<ChatScreens> {
                                 topLeft: Radius.circular(10),
                                 topRight: Radius.circular(10),
                                 bottomLeft: Radius.circular(10),
+                                  bottomRight: Radius.circular(10),
                               ),
                               child: Stack(
                                 alignment: Alignment.center,
@@ -667,21 +657,10 @@ class _ChatScreensState extends State<ChatScreens> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              "Me".tr,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: themeChange.getThem() ? Colors.white70 : Colors.grey[600],
-                              ),
-                            ),
+                           
                             Text(
                               Constant.dateAndTimeFormatTimestamp(data.createdAt),
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: themeChange.getThem() ? Colors.white70 : Colors.grey[600],
-                              ),
+                              style:  AppTypography.timeLabel(context),
                             ),
                           ],
                         ),
@@ -698,33 +677,22 @@ class _ChatScreensState extends State<ChatScreens> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 3),
-                                child: Text(
-                                  widget.customerName ?? 'Customer',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w400,
-                                    color: themeChange.getThem() ? Colors.white70 : Colors.grey[600],
-                                  ),
-                                ),
-                              ),
+                              
                               if (data.messageType == "text")
                                 Container(
                                   decoration: BoxDecoration(
-                                    color: themeChange.getThem() ? Colors.grey[700] : Colors.grey.shade300,
+                                    color:  Colors.grey.shade300,
                                     borderRadius: const BorderRadius.only(
                                       topLeft: Radius.circular(10),
                                       topRight: Radius.circular(10),
                                       bottomRight: Radius.circular(10),
+                                         bottomLeft: Radius.circular(10),
                                     ),
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                   child: Text(
                                     data.message.toString(),
-                                    style: GoogleFonts.poppins(
-                                      color: themeChange.getThem() ? Colors.white : Colors.black,
-                                    ),
+                                     style:  AppTypography.boldLabel(context),
                                   ),
                                 )
                               else if (data.messageType == "image")
@@ -775,11 +743,7 @@ class _ChatScreensState extends State<ChatScreens> {
                       const SizedBox(height: 2),
                       Text(
                         Constant.dateAndTimeFormatTimestamp(data.createdAt),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: themeChange.getThem() ? Colors.white70 : Colors.grey[600],
-                        ),
+                         style:  AppTypography.timeLabel(context),
                       ),
                     ],
                   ),
@@ -885,11 +849,7 @@ class _ChatScreensState extends State<ChatScreens> {
                   children: [
                     Text(
                       "Send Media".tr,
-                      style: GoogleFonts.poppins(
-                        color: const Color.fromARGB(255, 44, 44, 44),
-                        fontWeight: FontWeight.w500,
-                        fontSize: 15,
-                      ),
+                      style:  AppTypography.headers(context),
                     ),
                     const Spacer(),
                     ElevatedButton(
@@ -1023,11 +983,7 @@ class _ChatScreensState extends State<ChatScreens> {
               child: Text(
                 label,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                  color: const Color.fromARGB(255, 38, 38, 38),
-                  fontSize: 12,
-                ),
+                style:  AppTypography.boldLabel(context),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

@@ -6,6 +6,7 @@ import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -33,11 +34,7 @@ class DashBoardScreen extends StatelessWidget {
                   ? 'Driver Dashboard'.tr
                   : controller.drawerItems[controller.selectedDrawerIndex.value]
                       .title.tr,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
+              style: AppTypography.appBar(context),
             ),
             leading: Builder(
               builder: (context) {
@@ -112,32 +109,31 @@ class DashBoardScreen extends StatelessWidget {
       drawerOptions.add(InkWell(
         onTap: () => controller.onSelectItem(i),
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(6.0),
           child: Container(
             decoration: BoxDecoration(
               color: i == controller.selectedDrawerIndex.value
                   ? AppColors.primary
                   : Colors.transparent,
-              borderRadius: const BorderRadius.all(Radius.circular(10)),
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
             ),
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
                 SvgPicture.asset(
                   d.icon,
-                  width: 20,
+                  width: 16,
                   color: i == controller.selectedDrawerIndex.value
                       ? Colors.white
-                      : AppColors.drawerIcon,
+                      : AppColors.grey500,
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 15),
                 Text(
                   d.title,
-                  style: GoogleFonts.poppins(
+                  style: AppTypography.sideBar(context).copyWith(
                     color: i == controller.selectedDrawerIndex.value
                         ? Colors.white
                         : Colors.black,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -164,14 +160,15 @@ class DashBoardScreen extends StatelessWidget {
                       return Text(snapshot.error.toString());
                     } else {
                       DriverUserModel driverModel = snapshot.data!;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        spacing: 10,
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(60),
+                            borderRadius: BorderRadius.circular(10),
                             child: CachedNetworkImage(
-                              height: Responsive.width(20, context),
-                              width: Responsive.width(20, context),
+                              height: Responsive.width(24, context),
+                              width: Responsive.width(24, context),
                               imageUrl: driverModel.profilePic.toString(),
                               fit: BoxFit.cover,
                               placeholder: (context, url) =>
@@ -180,21 +177,44 @@ class DashBoardScreen extends StatelessWidget {
                                   Image.network(Constant.userPlaceHolder),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              driverModel.fullName.toString(),
-                              style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              driverModel.email.toString(),
-                              style: GoogleFonts.poppins(),
-                            ),
-                          ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  driverModel.fullName.toString(),
+                                  style: AppTypography.boldHeaders(context),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  driverModel.email.toString(),
+                                  style: AppTypography.caption(context),
+                                ),
+                              ),
+                              Row(
+                                spacing: 5,
+                                children: [
+                                  const Icon(
+                                    Icons.star,
+                                    size: 15,
+                                    color: AppColors.ratingColour,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      driverModel.reviewsSum.toString(),
+                                      style: AppTypography.boldLabel(context),
+                                    ),
+                                  ),
+                                  
+                                ],
+                              ),
+                            ],
+                          )
                         ],
                       );
                     }

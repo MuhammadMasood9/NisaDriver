@@ -10,6 +10,7 @@ import 'package:driver/model/user_model.dart';
 import 'package:driver/model/wallet_transaction_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/ui/order_screen/complete_order_screen.dart';
 import 'package:driver/ui/review/review_screen.dart';
@@ -126,16 +127,7 @@ class OrderScreen extends StatelessWidget {
                                                 controller,
                                                 themeChange),
                                             const SizedBox(height: 10),
-                                            ButtonThem.buildButton(
-                                              context,
-                                              title: orderModel.paymentStatus ==
-                                                      true
-                                                  ? "Payment completed".tr
-                                                  : "Payment Pending".tr,
-                                              btnHeight: 44,
-                                              onPress: () async {},
-                                            ),
-                                            const SizedBox(height: 10),
+                                          
                                             Visibility(
                                               visible: controller.paymentModel
                                                           .value.cash!.name ==
@@ -298,7 +290,7 @@ class OrderScreen extends StatelessWidget {
     );
   }
 
-  Future<Map<String, dynamic>> _buildMapData(OrderModel orderModel) async {
+Future<Map<String, dynamic>> _buildMapData(OrderModel orderModel) async {
     final LatLng sourceLatLng = LatLng(
       orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
       orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
@@ -353,14 +345,16 @@ class OrderScreen extends StatelessWidget {
             destinationLatLng.latitude, destinationLatLng.longitude),
         mode: TravelMode.driving,
       );
-      List<PolylineResult> results =
-          await PolylinePoints().getRouteBetweenCoordinates(
+      
+      // Fixed: getRouteBetweenCoordinates returns a single PolylineResult, not a List
+      PolylineResult result = await PolylinePoints().getRouteBetweenCoordinates(
         request: request,
         googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
       );
-      if (results.isNotEmpty && results[0].points.isNotEmpty) {
-        polylineCoordinates = results[0]
-            .points
+      
+      // Check if the result has points
+      if (result.points.isNotEmpty) {
+        polylineCoordinates = result.points
             .map((point) => LatLng(point.latitude, point.longitude))
             .toList();
       }
@@ -374,7 +368,6 @@ class OrderScreen extends StatelessWidget {
       'bounds': bounds,
     };
   }
-
   Widget _buildMapSection(
     BuildContext context,
     OrderModel orderModel,
@@ -488,11 +481,11 @@ class OrderScreen extends StatelessWidget {
           children: [
             Text(
               orderModel.status.toString(),
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              style: AppTypography.boldLabel(Get.context!),
             ),
             Text(
               Constant().formatTimestamp(orderModel.createdDate),
-              style: GoogleFonts.poppins(),
+              style: AppTypography.label(Get.context!),
             ),
           ],
         ),
@@ -546,12 +539,12 @@ class OrderScreen extends StatelessWidget {
                   ));
                 },
                 child: Container(
-                  height: 44,
-                  width: 44,
+                  height: 35,
+                  width: 35,
                   decoration: BoxDecoration(
                     color: themeChange.getThem()
-                        ? AppColors.darkModePrimary
-                        : AppColors.primary,
+                        ? AppColors.darkBackground
+                        : AppColors.darkBackground,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Icon(Icons.chat,
@@ -568,12 +561,12 @@ class OrderScreen extends StatelessWidget {
                       "${customer!.countryCode}${customer.phoneNumber}");
                 },
                 child: Container(
-                  height: 44,
-                  width: 44,
+                  height: 35,
+                  width: 35,
                   decoration: BoxDecoration(
                     color: themeChange.getThem()
-                        ? AppColors.darkModePrimary
-                        : AppColors.primary,
+                        ? AppColors.darkBackground
+                        : AppColors.darkBackground,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Icon(Icons.call,

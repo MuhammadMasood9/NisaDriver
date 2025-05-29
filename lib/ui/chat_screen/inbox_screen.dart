@@ -7,6 +7,7 @@ import 'package:driver/model/inbox_model.dart';
 import 'package:driver/model/user_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
@@ -145,31 +146,31 @@ class _InboxScreenState extends State<InboxScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text("Delete Chat", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-            content: Text("Are you sure you want to delete this chat?", style: GoogleFonts.poppins()),
+            title: Text("Delete Chat", style: AppTypography.boldHeaders(context)),
+            content: Text("Are you sure you want to delete this chat?", style: AppTypography.caption(context)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text("Cancel", style: GoogleFonts.poppins()),
+                child: Text("Cancel", style: GoogleFonts.poppins(color: AppColors.darkBackground)),
               ),
               TextButton(
                 onPressed: () {
                   _deleteChat(inboxModel.orderId!);
                   Navigator.pop(context);
                 },
-                child: Text("Delete", style: GoogleFonts.poppins(color: Colors.red)),
+                child: Text("Delete", style: GoogleFonts.poppins(color: AppColors.primary)),
               ),
             ],
           ),
         );
       },
       child: Padding(
-        padding: const EdgeInsets.all(4.0),
+        padding: const EdgeInsets.all(6.0),
         child: Container(
           decoration: BoxDecoration(
             color: themeChange.getThem() ? AppColors.darkContainerBackground : Colors.white,
-            borderRadius: const BorderRadius.all(Radius.circular(10)),
-            border: Border.all(color: AppColors.containerBorder, width: 0.5),
+            borderRadius: const BorderRadius.all(Radius.circular(6)),
+           
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.3),
@@ -179,8 +180,9 @@ class _InboxScreenState extends State<InboxScreen> {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.symmetric(vertical: 0),
             child: ListTile(
+            
               leading: ClipOval(
                 child: CachedNetworkImage(
                   width: 40,
@@ -210,18 +212,18 @@ class _InboxScreenState extends State<InboxScreen> {
                   Expanded(
                     child: Text(
                       inboxModel.customerName.toString(),
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      style: AppTypography.boldLabel(context),
                     ),
                   ),
                   Text(
                     Constant.dateFormatTimestamp(inboxModel.createdAt),
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w400),
+                    style:AppTypography.label(context),
                   ),
                 ],
               ),
               subtitle: Text(
-                "Ride Id : #${inboxModel.orderId}".tr,
-                style: GoogleFonts.poppins(fontSize: 12),
+                "Last Message: ${inboxModel.lastMessage}".tr,
+                style: AppTypography.label(context),
               ),
             ),
           ),
@@ -257,7 +259,7 @@ class _InboxScreenState extends State<InboxScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: "Search conversations...".tr,
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey, fontSize: 14),
+                  hintStyle: AppTypography.caption(context).copyWith(color: Colors.grey),
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
@@ -270,7 +272,7 @@ class _InboxScreenState extends State<InboxScreen> {
                         )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
                 ),
                 style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
                 onChanged: _performSearch,

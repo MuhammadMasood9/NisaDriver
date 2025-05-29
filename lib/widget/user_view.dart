@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/model/user_model.dart';
 import 'package:driver/themes/app_colors.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,8 +34,8 @@ class UserView extends StatelessWidget {
                       ClipRRect(
                         borderRadius: const BorderRadius.all(Radius.circular(10)),
                         child: CachedNetworkImage(
-                          height: 50,
-                          width: 50,
+                          height: 40,
+                          width: 40,
                           imageUrl: Constant.userPlaceHolder,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Constant.loader(context),
@@ -49,35 +50,35 @@ class UserView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Asynchronous user", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                            Text("Asynchronous user", style: AppTypography.boldLabel(context)),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(Constant.amountShow(amount: amount.toString()), style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                                Text(Constant.amountShow(amount: amount.toString()), style: AppTypography.label(context)),
                                 Row(
                                   children: [
                                     const Icon(
                                       Icons.location_on,
-                                      size: 18,
+                                      size: 15,
                                     ),
                                     const SizedBox(
                                       width: 5,
                                     ),
                                     Text("${(double.parse(distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} $distanceType",
-                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                                        style: AppTypography.boldLabel(context)),
                                   ],
                                 ),
                                 Row(
                                   children: [
                                     const Icon(
                                       Icons.star,
-                                      size: 22,
+                                      size: 18,
                                       color: AppColors.ratingColour,
                                     ),
                                     const SizedBox(
                                       width: 5,
                                     ),
-                                    Text(Constant.calculateReview(reviewCount: "0.0", reviewSum: "0.0"), style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                                    Text(Constant.calculateReview(reviewCount: "0.0", reviewSum: "0.0"), style: AppTypography.boldLabel(context)),
                                   ],
                                 ),
                               ],
@@ -95,8 +96,8 @@ class UserView extends StatelessWidget {
                     ClipRRect(
                       borderRadius: const BorderRadius.all(Radius.circular(10)),
                       child: CachedNetworkImage(
-                        height: 50,
-                        width: 50,
+                        height: 40,
+                        width: 40,
                         imageUrl: driverModel.profilePic.toString(),
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Constant.loader(context),
@@ -111,35 +112,35 @@ class UserView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(driverModel.fullName.toString(), style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                          Text(driverModel.fullName.toString(), style: AppTypography.boldLabel(context)),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(Constant.amountShow(amount: amount.toString()), style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                              Text(Constant.amountShow(amount: amount.toString()), style: AppTypography.boldLabel(context)),
                               Row(
                                 children: [
                                   const Icon(
                                     Icons.location_on,
-                                    size: 18,
+                                    size: 15,
                                   ),
                                   const SizedBox(
                                     width: 5,
                                   ),
                                   Text("${(double.parse(distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} $distanceType",
-                                      style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                                      style: AppTypography.boldLabel(context)),
                                 ],
                               ),
                               Row(
                                 children: [
                                   const Icon(
                                     Icons.star,
-                                    size: 22,
+                                    size: 18,
                                     color: AppColors.ratingColour,
                                   ),
                                   const SizedBox(
                                     width: 5,
                                   ),
-                                  Text(Constant.calculateReview(reviewCount: driverModel.reviewsCount, reviewSum: driverModel.reviewsSum), style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                                  Text(Constant.calculateReview(reviewCount: driverModel.reviewsCount, reviewSum: driverModel.reviewsSum), style: AppTypography.boldLabel(context)),
                                 ],
                               ),
                             ],

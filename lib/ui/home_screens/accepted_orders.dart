@@ -6,6 +6,7 @@ import 'package:driver/controller/accepted_orders_controller.dart';
 import 'package:driver/model/order/driverId_accept_reject.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/themes/app_colors.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
@@ -87,12 +88,14 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
   final RxBool _isExpired = false.obs;
   Timer? _timer;
   DriverIdAcceptReject? _driverIdAcceptReject;
+  DateTime? _timerStartTime;
+  static const int TIMER_DURATION = 30; // 30 seconds
 
   @override
   void initState() {
     super.initState();
     _loadDriverData();
-    _startTimer();
+    _initializeTimer();
   }
 
   Future<void> _loadDriverData() async {
@@ -105,9 +108,60 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     }
   }
 
+  Future<void> _initializeTimer() async {
+    String driverId = FireStoreUtils.getCurrentUid();
+    String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
+    
+    try {
+      // Check if timer start time exists in Firestore
+      DocumentSnapshot timerDoc = await FirebaseFirestore.instance
+          .collection('driver_timers')
+          .doc(timerKey)
+          .get();
+
+      if (timerDoc.exists) {
+        // Timer already exists, calculate remaining time
+        Map<String, dynamic> timerData = timerDoc.data() as Map<String, dynamic>;
+        Timestamp startTimestamp = timerData['startTime'];
+        _timerStartTime = startTimestamp.toDate();
+        
+        int elapsedSeconds = DateTime.now().difference(_timerStartTime!).inSeconds;
+        int remaining = TIMER_DURATION - elapsedSeconds;
+        
+        if (remaining <= 0) {
+          // Timer already expired
+          _isExpired.value = true;
+          await _handleExpiredTimer();
+          return;
+        } else {
+          _remainingSeconds.value = remaining;
+        }
+      } else {
+        // Create new timer
+        _timerStartTime = DateTime.now();
+        await FirebaseFirestore.instance
+            .collection('driver_timers')
+            .doc(timerKey)
+            .set({
+          'startTime': Timestamp.fromDate(_timerStartTime!),
+          'orderId': widget.orderModel.id,
+          'driverId': driverId,
+          'duration': TIMER_DURATION,
+        });
+        _remainingSeconds.value = TIMER_DURATION;
+      }
+      
+      _startTimer();
+    } catch (e) {
+      print('Error initializing timer: $e');
+      // Fallback to local timer
+      _remainingSeconds.value = TIMER_DURATION;
+      _startTimer();
+    }
+  }
+
   void _startTimer() {
     _timer?.cancel();
-    _remainingSeconds.value = 30;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds.value > 0) {
         _remainingSeconds.value--;
@@ -121,7 +175,15 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
 
   Future<void> _handleExpiredTimer() async {
     String driverId = FireStoreUtils.getCurrentUid();
+    String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
+    
     try {
+      // Clean up timer document
+      await FirebaseFirestore.instance
+          .collection('driver_timers')
+          .doc(timerKey)
+          .delete();
+
       DocumentReference orderRef = FirebaseFirestore.instance
           .collection(CollectionName.orders)
           .doc(widget.orderModel.id);
@@ -160,6 +222,25 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     }
   }
 
+  Future<void> _cancelTimer() async {
+    String driverId = FireStoreUtils.getCurrentUid();
+    String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
+    
+    try {
+      // Clean up timer document
+      await FirebaseFirestore.instance
+          .collection('driver_timers')
+          .doc(timerKey)
+          .delete();
+    } catch (e) {
+      print('Error cleaning up timer: $e');
+    }
+    
+    _timer?.cancel();
+    _isExpired.value = true;
+    _handleExpiredTimer();
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -179,12 +260,7 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                       ? AppColors.darkContainerBackground
                       : AppColors.containerBackground,
                   borderRadius: const BorderRadius.all(Radius.circular(10)),
-                  border: Border.all(
-                    color: widget.themeChange.getThem()
-                        ? AppColors.darkContainerBorder
-                        : AppColors.containerBorder,
-                    width: 0.5,
-                  ),
+                 
                   boxShadow: widget.themeChange.getThem()
                       ? null
                       : [
@@ -225,24 +301,22 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                                 .toString(),
                           ),
                           const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    _timer?.cancel();
-                                    _isExpired.value = true;
-                                    _handleExpiredTimer();
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    foregroundColor: Colors.white,
+                          Center(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: _cancelTimer,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: Text('Cancel'.tr,style: AppTypography.boldLabel(context).copyWith(color: AppColors.background),),
                                   ),
-                                  child: Text('Cancel'.tr),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                            ],
+                                const SizedBox(width: 10),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -259,24 +333,18 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
       return Constant.loader(context);
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Container(
         decoration: BoxDecoration(
           color: widget.themeChange.getThem()
               ? AppColors.darkContainerBackground
               : AppColors.containerBackground,
           borderRadius: const BorderRadius.all(Radius.circular(10)),
-          border: Border.all(
-            color: widget.themeChange.getThem()
-                ? AppColors.darkContainerBorder
-                : AppColors.containerBorder,
-            width: 0.5,
-          ),
           boxShadow: widget.themeChange.getThem()
               ? null
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
+                    color: Colors.black.withOpacity(0.09),
                     blurRadius: 5,
                     offset: const Offset(0, 4),
                   ),
@@ -289,12 +357,13 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
               Expanded(
                 child: Text(
                   "Offer Rate".tr,
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  style: AppTypography.boldLabel(context),
                 ),
               ),
               Text(
                 Constant.amountShow(
                     amount: _driverIdAcceptReject!.offerAmount.toString()),
+                style: AppTypography.boldLabel(context),
               ),
             ],
           ),
