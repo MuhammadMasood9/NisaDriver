@@ -47,7 +47,9 @@ class BankDetailsScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 60),
                         child: Text(
                           "Manage your banking information".tr,
-                          style:AppTypography.boldHeaders(context).copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
+                          style: AppTypography.boldHeaders(context).copyWith(
+                            color: AppColors.darkBackground.withOpacity(0.7),
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -55,76 +57,86 @@ class BankDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 // Main content area
-             Expanded(
-  child: Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: AppColors.background,
-    ),
-    child: controller.isLoading.value
-        ? Constant.loader(context)
-        : Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Form fields
-                        _buildModernTextField(
-                          context,
-                          label: "Bank Name".tr,
-                          hint: "Enter your bank name".tr,
-                          controller: controller.bankNameController.value,
-                          icon: Icons.account_balance,
-                        ),
-                        _buildModernTextField(
-                          context,
-                          label: "Branch Name".tr,
-                          hint: "Enter branch name".tr,
-                          controller: controller.branchNameController.value,
-                          icon: Icons.business,
-                        ),
-                        _buildModernTextField(
-                          context,
-                          label: "Account Holder Name".tr,
-                          hint: "Enter account holder name".tr,
-                          controller: controller.holderNameController.value,
-                          icon: Icons.person,
-                        ),
-                        _buildModernTextField(
-                          context,
-                          label: "Account Number".tr,
-                          hint: "Enter account number".tr,
-                          controller: controller.accountNumberController.value,
-                          icon: Icons.numbers,
-                          keyboardType: TextInputType.number,
-                        ),
-                        _buildModernTextField(
-                          context,
-                          label: "Additional Information".tr,
-                          hint: "Enter any additional details".tr,
-                          controller: controller.otherInformationController.value,
-                          icon: Icons.info_outline,
-                          isOptional: true,
-                        ),
-                        const SizedBox(height: 10),
-                      ],
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
                     ),
+                    child: controller.isLoading.value
+                        ? Constant.loader(context)
+                        : Column(
+                            children: [
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(20.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Form fields
+                                        _buildModernTextField(
+                                          context,
+                                          label: "Bank Name".tr,
+                                          hint: "Enter your bank name".tr,
+                                          controller: controller
+                                              .bankNameController.value,
+                                          icon: Icons.account_balance,
+                                        ),
+                                        _buildModernTextField(
+                                          context,
+                                          label: "Branch Name".tr,
+                                          hint: "Enter branch name".tr,
+                                          controller: controller
+                                              .branchNameController.value,
+                                          icon: Icons.business,
+                                        ),
+                                        _buildModernTextField(
+                                          context,
+                                          label: "Account Holder Name".tr,
+                                          hint: "Enter account holder name".tr,
+                                          controller: controller
+                                              .holderNameController.value,
+                                          icon: Icons.person,
+                                        ),
+                                        _buildModernTextField(
+                                          context,
+                                          label: "Account Number".tr,
+                                          hint: "Enter account number".tr,
+                                          controller: controller
+                                              .accountNumberController.value,
+                                          icon: Icons.numbers,
+                                          keyboardType: TextInputType.number,
+                                        ),
+                                        _buildModernTextField(
+                                          context,
+                                          label: "Additional Information".tr,
+                                          hint:
+                                              "Enter any additional details".tr,
+                                          controller: controller
+                                              .otherInformationController.value,
+                                          icon: Icons.info_outline,
+                                          isOptional: true,
+                                        ),
+                                        const SizedBox(height: 10),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20.0, vertical: 10.0),
+                                child:
+                                    _buildModernSaveButton(context, controller),
+                              ),
+                            ],
+                          ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                child: _buildModernSaveButton(context, controller),
-              ),
-            ],
-          ),
-  ),
-), ],
+              ],
             ),
           );
         });
@@ -149,7 +161,8 @@ class BankDetailsScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style:AppTypography.boldLabel(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+                style: AppTypography.boldLabel(context)
+                    .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
               ),
               if (isOptional)
                 Container(
@@ -185,16 +198,14 @@ class BankDetailsScreen extends StatelessWidget {
             child: TextField(
               controller: controller,
               keyboardType: keyboardType,
-              
               maxLines: maxLines,
-              style: AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+              style: AppTypography.label(context)
+                  .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
               decoration: InputDecoration(
-                
                 hintText: hint,
-                hintStyle: AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+                hintStyle: AppTypography.label(context)
+                    .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
                 prefixIcon: Container(
-                 
-                 
                   child: Icon(
                     icon,
                     color: AppColors.darkBackground.withOpacity(0.7),
@@ -218,7 +229,7 @@ class BankDetailsScreen extends StatelessWidget {
       BuildContext context, BankDetailsController controller) {
     return Container(
       width: double.infinity,
-      height: 35,
+      height: 40,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -250,12 +261,13 @@ class BankDetailsScreen extends StatelessWidget {
                 const Icon(
                   Icons.save_rounded,
                   color: Colors.white,
-                  size: 18,
+                  size: 15,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   "Save Details".tr,
-                  style:AppTypography.headers(context).copyWith(color: AppColors.background),
+                  style: AppTypography.button(context)
+                      .copyWith(color: AppColors.background),
                 ),
               ],
             ),

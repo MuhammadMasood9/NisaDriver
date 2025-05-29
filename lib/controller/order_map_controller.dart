@@ -124,7 +124,7 @@ class OrderMapController extends GetxController {
     update(); // Force GetX to rebuild the UI
   }
 
-Future<void> getPolyline() async {
+  Future<void> getPolyline() async {
     if (orderModel.value.sourceLocationLAtLng != null &&
         orderModel.value.destinationLocationLAtLng != null) {
       await movePosition(); // Ensure movePosition is awaited
@@ -142,11 +142,12 @@ Future<void> getPolyline() async {
       );
 
       try {
-        // Fixed: getRouteBetweenCoordinates returns a single PolylineResult, not a List
-        PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+        List<PolylineResult> results =
+            await polylinePoints.getRouteBetweenCoordinates(
           googleApiKey: Constant.mapAPIKey,
           request: polylineRequest,
         );
+        PolylineResult result = results.first;
 
         // Check if the result has points
         if (result.points.isNotEmpty) {
@@ -184,6 +185,7 @@ Future<void> getPolyline() async {
       update(); // Trigger GetX UI rebuild
     }
   }
+
   getData(String id) async {
     await FireStoreUtils.getOrder(id).then((value) {
       if (value != null) {

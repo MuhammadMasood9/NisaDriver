@@ -3,14 +3,16 @@ import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/parcel_details_controller.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
+import 'package:driver/utils/DarkThemeProvider.dart';
+import 'package:driver/widget/location_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:provider/provider.dart';
 import 'dart:math';
+import 'dart:ui';
 
 class ParcelDetailsScreen extends StatefulWidget {
   const ParcelDetailsScreen({super.key});
@@ -29,6 +31,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
   LatLngBounds? _bounds;
   AnimationController? _animationController;
   Animation<double>? _fadeAnimation;
+  Animation<Offset>? _slideAnimation;
   GoogleMapController? _mapController;
   bool _isMapReady = false;
 
@@ -41,6 +44,13 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
     );
     _fadeAnimation =
         CurvedAnimation(parent: _animationController!, curve: Curves.easeInOut);
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController!,
+      curve: Curves.easeOutCubic,
+    ));
     _animationController!.forward();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -89,6 +99,8 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
     final LatLng sourceLatLng = LatLng(sourceLat, sourceLng);
     final LatLng destinationLatLng = LatLng(destLat, destLng);
 
+    print('Source: $sourceLatLng, Destination: $destinationLatLng');
+
     _bounds = LatLngBounds(
       southwest: LatLng(
         min(sourceLatLng.latitude, destinationLatLng.latitude) - 0.01,
@@ -116,6 +128,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
       );
       pickupIcon = customPickupIcon;
       dropoffIcon = customDropoffIcon;
+      print('Custom marker icons loaded successfully');
     } catch (e) {
       print('Using default marker icons due to error: $e');
     }
@@ -129,6 +142,10 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
           title: 'Pickup Location',
           snippet: orderModel.sourceLocationName ?? 'Source location',
         ),
+        consumeTapEvents: true,
+        onTap: () {
+          print('Pickup marker tapped');
+        },
       ),
       Marker(
         markerId: const MarkerId('dropoff_location'),
@@ -138,12 +155,18 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
           title: 'Drop-off Location',
           snippet: orderModel.destinationLocationName ?? 'Destination location',
         ),
+        consumeTapEvents: true,
+        onTap: () {
+          print('Dropoff marker tapped');
+        },
       ),
     };
 
-    setState(() {
-      _markers = newMarkers;
-    });
+    if (mounted) {
+      setState(() {
+        _markers = newMarkers;
+      });
+    }
 
     try {
       _polylineCoordinates =
@@ -161,47 +184,53 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
             endCap: Cap.roundCap,
           ),
         };
-        setState(() {
-          _polylines = newPolylines;
-        });
+
+        if (mounted) {
+          setState(() {
+            _polylines = newPolylines;
+          });
+        }
       }
     } catch (e) {
       print('Error getting polyline: $e');
     }
   }
 
-Future<List<LatLng>> _getPolylinePoints(
-    LatLng source, LatLng destination) async {
-  List<LatLng> polylineCoordinates = [];
-  try {
-    PolylineRequest request = PolylineRequest(
-      origin: PointLatLng(source.latitude, source.longitude),
-      destination: PointLatLng(destination.latitude, destination.longitude),
-      mode: TravelMode.driving,
-    );
+  Future<List<LatLng>> _getPolylinePoints(
+      LatLng source, LatLng destination) async {
+    List<LatLng> polylineCoordinates = [];
+    try {
+      PolylineRequest request = PolylineRequest(
+        origin: PointLatLng(source.latitude, source.longitude),
+        destination: PointLatLng(destination.latitude, destination.longitude),
+        mode: TravelMode.driving,
+      );
 
-    // Changed: getRouteBetweenCoordinates now returns a single PolylineResult
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      request: request,
-      googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-    );
+      PolylineResult result = (await polylinePoints.getRouteBetweenCoordinates(
+        request: request,
+        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
+      ))
+          .first;
 
-    // Check if the result has points
-    if (result.points.isNotEmpty) {
-      polylineCoordinates = result.points
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-    } else {
+      if (result.points.isNotEmpty) {
+        polylineCoordinates = result.points
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
+        print('Polyline points loaded: ${polylineCoordinates.length} points');
+      } else {
+        print('No polyline results found, using straight line');
+        polylineCoordinates = [source, destination];
+      }
+    } catch (e) {
+      print('Error fetching polyline: $e');
       polylineCoordinates = [source, destination];
     }
-  } catch (e) {
-    print('Error fetching polyline: $e');
-    polylineCoordinates = [source, destination];
+    return polylineCoordinates;
   }
-  return polylineCoordinates;
-}
+
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+
     _mapController!.setMapStyle('''
       [
         {"featureType": "all", "elementType": "labels", "stylers": [{"visibility": "on"}]},
@@ -236,33 +265,18 @@ Future<List<LatLng>> _getPolylinePoints(
   @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
-    return GetX<ParcelDetailsController>(
-      builder: (controller) {
-        return Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
-              onPressed: () => Get.back(),
-            ),
-            centerTitle: true,
-            title: Text(
-              "Parcel Details".tr,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                fontSize: 18,
-                color: AppColors.darkBackground,
-              ),
-            ),
-          ),
-          backgroundColor: themeChange.getThem()
-              ? AppColors.darkBackground
-              : AppColors.background,
-          body: controller.isLoading.value
-              ? Constant.loader(context)
-              : FadeTransition(
-                  opacity: _fadeAnimation!,
+    return Obx(() {
+      return Scaffold(
+        backgroundColor: themeChange.getThem()
+            ? AppColors.darkBackground
+            : AppColors.background,
+        appBar: _buildSimpleAppBar(context),
+        body: controller.isLoading.value
+            ? Constant.loader(context)
+            : FadeTransition(
+                opacity: _fadeAnimation!,
+                child: SlideTransition(
+                  position: _slideAnimation!,
                   child: SingleChildScrollView(
                     child: SafeArea(
                       child: Padding(
@@ -270,144 +284,41 @@ Future<List<LatLng>> _getPolylinePoints(
                             horizontal: 16, vertical: 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 15,
                           children: [
                             _buildMapSection(context),
+                            _buildLocationTimeline(context, themeChange),
+                            _buildParcelInfo(context, themeChange),
+                            _buildImageGallery(context, themeChange),
                             const SizedBox(height: 24),
-                            _buildSectionHeader("Parcel Information".tr),
-                            _buildSectionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildSummaryRow(
-                                    title: "Order Status".tr,
-                                    value: controller.orderModel.value.status ??
-                                        'N/A',
-                                  ),
-                                  const Divider(height: 24, thickness: 1),
-                                  _buildSummaryRow(
-                                    title: "Payment Status".tr,
-                                    value: controller
-                                            .orderModel.value.paymentStatus!
-                                        ? "Paid"
-                                        : "Pending",
-                                  ),
-                                  const Divider(height: 24, thickness: 1),
-                                  _buildSummaryRow(
-                                    title: "Order ID".tr,
-                                    value:
-                                        controller.orderModel.value.id ?? 'N/A',
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            _buildSectionHeader("Location Details".tr),
-                            _buildSectionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildSummaryRow(
-                                    title: "Source".tr,
-                                    value:
-                                        "${controller.orderModel.value.sourceCity ?? 'N/A'}, ${controller.orderModel.value.sourceLocationName ?? 'N/A'}",
-                                  ),
-                                  const Divider(height: 24, thickness: 1),
-                                  _buildSummaryRow(
-                                    title: "Destination".tr,
-                                    value:
-                                        "${controller.orderModel.value.destinationCity ?? 'N/A'}, ${controller.orderModel.value.destinationLocationName ?? 'N/A'}",
-                                  ),
-                                  const Divider(height: 24, thickness: 1),
-                                  _buildSummaryRow(
-                                    title: "Distance".tr,
-                                    value:
-                                        "${controller.orderModel.value.distance ?? 'N/A'} ${controller.orderModel.value.distanceType ?? ''}",
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            _buildSectionHeader("Parcel Images".tr),
-                            _buildSectionCard(
-                              child: controller
-                                      .orderModel.value.parcelImage!.isEmpty
-                                  ? Center(
-                                      child: Text(
-                                        "No Images Available".tr,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          color: AppColors.grey500,
-                                        ),
-                                      ),
-                                    )
-                                  : GridView.builder(
-                                      shrinkWrap: true,
-                                      physics:
-                                          const NeverScrollableScrollPhysics(),
-                                      itemCount: controller
-                                          .orderModel.value.parcelImage!.length,
-                                      gridDelegate:
-                                          SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: MediaQuery.of(context)
-                                                    .orientation ==
-                                                Orientation.portrait
-                                            ? 2
-                                            : 3,
-                                        crossAxisSpacing: 8,
-                                        mainAxisSpacing: 8,
-                                        childAspectRatio: 1,
-                                      ),
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                        return ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          child: CachedNetworkImage(
-                                            imageUrl: controller.orderModel
-                                                .value.parcelImage![index]
-                                                .toString(),
-                                            imageBuilder:
-                                                (context, imageProvider) =>
-                                                    Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                image: DecorationImage(
-                                                  image: imageProvider,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black
-                                                        .withOpacity(0.08),
-                                                    spreadRadius: 2,
-                                                    blurRadius: 12,
-                                                    offset: const Offset(0, 4),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            placeholder: (context, url) =>
-                                                const Center(
-                                                    child:
-                                                        CircularProgressIndicator()),
-                                            errorWidget:
-                                                (context, url, error) =>
-                                                    const Icon(Icons.error),
-                                            fit: BoxFit.cover,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
                 ),
-        );
-      },
+              ),
+      );
+    });
+  }
+
+  PreferredSizeWidget _buildSimpleAppBar(BuildContext context) {
+    final themeChange = Provider.of<DarkThemeProvider>(context);
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
+          onPressed: () => Get.back(),
+        ),
+        centerTitle: true,
+        title: Text(
+          "Parcel Details".tr,
+          style: AppTypography.appTitle(context),
+        ),
+      ),
     );
   }
 
@@ -427,7 +338,7 @@ Future<List<LatLng>> _getPolylinePoints(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: SizedBox(
-          height: Responsive.height(35, context),
+          height: Responsive.height(30, context),
           child: GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
@@ -446,22 +357,288 @@ Future<List<LatLng>> _getPolylinePoints(
             myLocationButtonEnabled: false,
             compassEnabled: true,
             mapToolbarEnabled: false,
+            onTap: (LatLng location) {
+              print('Map tapped at: $location');
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildLocationTimeline(
+      BuildContext context, DarkThemeProvider themeChange) {
+    return _buildSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 5,
+        children: [
+          Text(
+            "Route Information".tr,
+            style: AppTypography.headers(Get.context!),
+          ),
+          LocationView(
+            sourceLocation:
+                controller.orderModel.value.sourceLocationName?.toString() ??
+                    'N/A',
+            destinationLocation:
+                controller.orderModel.value.destinationCity?.toString() ??
+                    'N/A',
+          ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: themeChange.getThem()
+                  ? AppColors.darkContainerBackground
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  spreadRadius: 2,
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.straighten_rounded,
+                    color: AppColors.primary, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  "Distance: ${controller.orderModel.value.distance ?? 'N/A'} ${controller.orderModel.value.distanceType ?? ''}",
+                  style: AppTypography.label(Get.context!)
+                      .copyWith(color: AppColors.primary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParcelInfo(BuildContext context, DarkThemeProvider themeChange) {
+    return _buildSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 5,
+        children: [
+          Text(
+            "Order Information".tr,
+            style: AppTypography.headers(Get.context!),
+          ),
+          _buildInfoRow(
+            icon: Icons.confirmation_number_rounded,
+            title: "Order ID".tr,
+            value: controller.orderModel.value.id?.toString() ?? 'N/A',
+            themeChange: themeChange,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String title,
+    required String value,
+    required DarkThemeProvider themeChange,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w500,
-          fontSize: 16,
-          color: AppColors.darkBackground,
-        ),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.label(Get.context!)
+                      .copyWith(color: AppColors.grey500),
+                ),
+                Text(
+                  value,
+                  style: AppTypography.boldLabel(Get.context!),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageGallery(
+      BuildContext context, DarkThemeProvider themeChange) {
+    return _buildSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 5,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.photo_library_rounded,
+                  color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Parcel Images".tr,
+                  style: AppTypography.headers(Get.context!),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${controller.orderModel.value.parcelImage?.length ?? 0}",
+                  style: AppTypography.label(Get.context!)
+                      .copyWith(color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          controller.orderModel.value.parcelImage?.isEmpty ?? true
+              ? Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: themeChange.getThem()
+                        ? AppColors.darkContainerBackground
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        spreadRadius: 2,
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_not_supported_rounded,
+                          size: 32,
+                          color: AppColors.grey500,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "No Images Available".tr,
+                          style: AppTypography.label(Get.context!)
+                              .copyWith(color: AppColors.grey500),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: controller.orderModel.value.parcelImage!.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: MediaQuery.of(context).orientation ==
+                            Orientation.portrait
+                        ? 2
+                        : 3,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1,
+                  ),
+                  itemBuilder: (BuildContext context, int index) {
+                    return Hero(
+                      tag: 'parcel_image_$index',
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              spreadRadius: 2,
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: CachedNetworkImage(
+                            imageUrl: controller
+                                .orderModel.value.parcelImage![index]
+                                .toString(),
+                            imageBuilder: (context, imageProvider) => Container(
+                              decoration: BoxDecoration(
+                                image: DecorationImage(
+                                  image: imageProvider,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    // Add image preview functionality
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.black.withOpacity(0.1),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[100],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey[100],
+                              child: Center(
+                                child: Icon(
+                                  Icons.broken_image_rounded,
+                                  color: AppColors.grey500,
+                                  size: 32,
+                                ),
+                              ),
+                            ),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ],
       ),
     );
   }
@@ -474,7 +651,7 @@ Future<List<LatLng>> _getPolylinePoints(
         color: themeChange.getThem()
             ? AppColors.darkContainerBackground
             : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         gradient: themeChange.getThem()
             ? null
             : LinearGradient(
@@ -492,44 +669,6 @@ Future<List<LatLng>> _getPolylinePoints(
         ],
       ),
       child: child,
-    );
-  }
-
-  Widget _buildSummaryRow({
-    required String title,
-    required String value,
-    Color? valueColor,
-    TextStyle? titleStyle,
-    TextStyle? valueStyle,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: titleStyle ??
-                GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                  color: AppColors.grey500,
-                ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              style: valueStyle ??
-                  GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: valueColor ?? AppColors.darkBackground,
-                  ),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

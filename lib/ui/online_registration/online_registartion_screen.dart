@@ -53,7 +53,10 @@ class OnlineRegistrationScreen extends StatelessWidget {
                               child: Text(
                                 "Complete your registration by uploading required documents"
                                     .tr,
-                                style:AppTypography.boldHeaders(context).copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
+                                style: AppTypography.boldHeaders(context)
+                                    .copyWith(
+                                        color: AppColors.darkBackground
+                                            .withOpacity(0.8)),
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -66,7 +69,6 @@ class OnlineRegistrationScreen extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             color: AppColors.background,
-                            
                           ),
                           child: controller.isLoading.value
                               ? Constant.loader(context)
@@ -193,7 +195,11 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                     Constant.localizationTitle(
                                                                         documentModel
                                                                             .title),
-                                                                    style: AppTypography.appBar(context).copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
+                                                                    style: AppTypography.appBar(
+                                                                            context)
+                                                                        .copyWith(
+                                                                            color:
+                                                                                AppColors.darkBackground.withOpacity(0.8)),
                                                                   ),
                                                                   const SizedBox(
                                                                       height:
@@ -204,7 +210,11 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                             .tr
                                                                         : "Tap to upload document"
                                                                             .tr,
-                                                                    style: AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
+                                                                    style: AppTypography.label(
+                                                                            context)
+                                                                        .copyWith(
+                                                                            color:
+                                                                                AppColors.darkBackground.withOpacity(0.8)),
                                                                   ),
                                                                 ],
                                                               ),
@@ -252,6 +262,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                             height: 16),
 
                                                         // Status Badge
+                                                        // Status Badge - Updated with white background, shadow, and colored icons
                                                         Container(
                                                           padding:
                                                               const EdgeInsets
@@ -261,13 +272,38 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                   vertical: 6),
                                                           decoration:
                                                               BoxDecoration(
-                                                            color: isVerified
-                                                                ? Colors.green
-                                                                : Colors.orange,
+                                                            color: Colors
+                                                                .white, // White background
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
                                                                         20),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: Colors
+                                                                    .black
+                                                                    .withOpacity(
+                                                                        0.06),
+                                                                spreadRadius:
+                                                                    0.7,
+                                                                blurRadius: 1,
+                                                                offset: const Offset(
+                                                                    0,
+                                                                    1), // Shadow position
+                                                              ),
+                                                              BoxShadow(
+                                                                color: Colors
+                                                                    .black
+                                                                    .withOpacity(
+                                                                        0.06),
+                                                                spreadRadius:
+                                                                    0.7,
+                                                                blurRadius: 1,
+                                                                offset: const Offset(
+                                                                    0,
+                                                                    -1), // Shadow position
+                                                              ),
+                                                            ],
                                                           ),
                                                           child: Row(
                                                             mainAxisSize:
@@ -279,10 +315,13 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                     ? Icons
                                                                         .check_circle_outline
                                                                     : Icons
-                                                                        .pending_outlined,
+                                                                        .info,
                                                                 size: 14,
-                                                                color: Colors
-                                                                    .white,
+                                                                color: isVerified
+                                                                    ? Colors
+                                                                        .green
+                                                                    : Colors
+                                                                        .orange,
                                                               ),
                                                               const SizedBox(
                                                                   width: 4),
@@ -292,7 +331,14 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                         .tr
                                                                     : "Pending"
                                                                         .tr,
-                                                                style:AppTypography.smBoldLabel(context).copyWith(color: AppColors.background),
+                                                                style: AppTypography
+                                                                        .smBoldLabel(
+                                                                            context)
+                                                                    .copyWith(
+                                                                  color: Colors
+                                                                      .grey
+                                                                      .shade600,
+                                                                ),
                                                               ),
                                                             ],
                                                           ),

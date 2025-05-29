@@ -196,15 +196,14 @@ class ActiveOrderScreen extends StatelessWidget {
                                     width: 35,
                                     decoration: BoxDecoration(
                                       color: themeChange.getThem()
-                                          ? AppColors.darkBackground
-                                          : AppColors.darkBackground,
+                                          ? AppColors.primary
+                                          : AppColors.primary,
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Icon(
                                       Icons.chat,
-                                      color: themeChange.getThem()
-                                          ? Colors.black
-                                          : Colors.white,
+                                      color: Colors.white,
+                                      size: 20,
                                     ),
                                   ),
                                 ),
@@ -222,15 +221,14 @@ class ActiveOrderScreen extends StatelessWidget {
                                     width: 35,
                                     decoration: BoxDecoration(
                                       color: themeChange.getThem()
-                                          ? AppColors.darkBackground
-                                          : AppColors.darkBackground,
+                                          ? AppColors.primary
+                                          : AppColors.primary,
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Icon(
                                       Icons.call,
-                                      color: themeChange.getThem()
-                                          ? Colors.black
-                                          : Colors.white,
+                                      color: Colors.white,
+                                      size: 20,
                                     ),
                                   ),
                                 ),
@@ -240,9 +238,7 @@ class ActiveOrderScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         // Cancel Ride Button
-                        Row(
-                          spacing: 10,
-                          children: [
+                        Row(spacing: 10, children: [
                           Expanded(
                             child: ButtonThem.buildBorderButton(
                               context,

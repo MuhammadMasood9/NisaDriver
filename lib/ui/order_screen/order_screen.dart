@@ -127,7 +127,7 @@ class OrderScreen extends StatelessWidget {
                                                 controller,
                                                 themeChange),
                                             const SizedBox(height: 10),
-                                          
+
                                             Visibility(
                                               visible: controller.paymentModel
                                                           .value.cash!.name ==
@@ -290,7 +290,7 @@ class OrderScreen extends StatelessWidget {
     );
   }
 
-Future<Map<String, dynamic>> _buildMapData(OrderModel orderModel) async {
+  Future<Map<String, dynamic>> _buildMapData(OrderModel orderModel) async {
     final LatLng sourceLatLng = LatLng(
       orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
       orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
@@ -345,13 +345,15 @@ Future<Map<String, dynamic>> _buildMapData(OrderModel orderModel) async {
             destinationLatLng.latitude, destinationLatLng.longitude),
         mode: TravelMode.driving,
       );
-      
+
       // Fixed: getRouteBetweenCoordinates returns a single PolylineResult, not a List
-      PolylineResult result = await PolylinePoints().getRouteBetweenCoordinates(
+      PolylineResult result =
+          (await PolylinePoints().getRouteBetweenCoordinates(
         request: request,
         googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      );
-      
+      ))
+              .first;
+
       // Check if the result has points
       if (result.points.isNotEmpty) {
         polylineCoordinates = result.points
@@ -368,6 +370,7 @@ Future<Map<String, dynamic>> _buildMapData(OrderModel orderModel) async {
       'bounds': bounds,
     };
   }
+
   Widget _buildMapSection(
     BuildContext context,
     OrderModel orderModel,
@@ -543,13 +546,15 @@ Future<Map<String, dynamic>> _buildMapData(OrderModel orderModel) async {
                   width: 35,
                   decoration: BoxDecoration(
                     color: themeChange.getThem()
-                        ? AppColors.darkBackground
-                        : AppColors.darkBackground,
+                        ? AppColors.primary
+                        : AppColors.primary,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: Icon(Icons.chat,
-                      color:
-                          themeChange.getThem() ? Colors.black : Colors.white),
+                  child: Icon(
+                    Icons.chat,
+                    color: themeChange.getThem() ? Colors.black : Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -565,13 +570,15 @@ Future<Map<String, dynamic>> _buildMapData(OrderModel orderModel) async {
                   width: 35,
                   decoration: BoxDecoration(
                     color: themeChange.getThem()
-                        ? AppColors.darkBackground
-                        : AppColors.darkBackground,
+                        ? AppColors.primary
+                        : AppColors.primary,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: Icon(Icons.call,
-                      color:
-                          themeChange.getThem() ? Colors.black : Colors.white),
+                  child: Icon(
+                    Icons.call,
+                    color: themeChange.getThem() ? Colors.black : Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ],

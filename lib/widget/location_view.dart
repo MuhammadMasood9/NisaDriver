@@ -12,7 +12,8 @@ class LocationView extends StatelessWidget {
   final String? sourceLocation;
   final String? destinationLocation;
 
-  const LocationView({super.key, this.sourceLocation, this.destinationLocation});
+  const LocationView(
+      {super.key, this.sourceLocation, this.destinationLocation});
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +25,12 @@ class LocationView extends StatelessWidget {
         Column(
           children: [
             SvgPicture.asset('assets/icons/ic_destination.svg', width: 18),
-            Dash(direction: Axis.vertical, length: Responsive.height(4, context), dashLength: 12, dashColor: AppColors.dottedDivider),
-            SvgPicture.asset( 'assets/icons/ic_destination_dark.svg'  , width: 20),
+            Dash(
+                direction: Axis.vertical,
+                length: Responsive.height(4, context),
+                dashLength: 10,
+                dashColor: AppColors.dottedDivider),
+            SvgPicture.asset('assets/icons/ic_destination_dark.svg', width: 16),
           ],
         ),
         const SizedBox(
@@ -35,11 +40,16 @@ class LocationView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(sourceLocation.toString(), maxLines: 2, style: AppTypography.label(context)),
+              Text(sourceLocation.toString(),
+                  maxLines: 2, style: AppTypography.label(context)),
               SizedBox(
-                  height: calculateLineWraps(text: sourceLocation.toString(), textStyle: TextStyle(), maxWidth: Responsive.width(80, context)) == 2
-                      ? Responsive.height(2.2, context)
-                      : Responsive.height(2.4, context)),
+                  height: calculateLineWraps(
+                              text: sourceLocation.toString(),
+                              textStyle: TextStyle(),
+                              maxWidth: Responsive.width(80, context)) ==
+                          2
+                      ? Responsive.height(3.2, context)
+                      : Responsive.height(3.2, context)),
               Text(
                 destinationLocation.toString(),
                 maxLines: 2,

@@ -55,12 +55,16 @@ class LiveTrackingController extends GetxController {
   StreamSubscription<Position>? _positionStream;
   DateTime? _lastRerouteTime;
   StreamSubscription<CompassEvent>? _compassSubscription;
+  RxList<double> announcedDistances =
+      <double>[].obs; // Tracks announced distances for current step
   Rx<DriverUserModel> driverUserModel = DriverUserModel().obs;
   Rx<OrderModel> orderModel = OrderModel().obs;
   Rx<InterCityOrderModel> intercityOrderModel = InterCityOrderModel().obs;
 
   Rx<Position?> currentPosition = Rx<Position?>(null);
   RxDouble deviceBearing = 0.0.obs;
+  RxDouble lastProcessedBearing =
+      0.0.obs; // Tracks last bearing used for map/marker
   StreamSubscription<MagnetometerEvent>? _magnetometerSubscription;
   RxBool isLocationPermissionGranted = false.obs;
   Rx<TextEditingController> otpController = TextEditingController().obs;
@@ -122,6 +126,11 @@ class LiveTrackingController extends GetxController {
 
   final List<Map<String, dynamic>> _ttsQueue = [];
   bool _isSpeaking = false;
+  bool _shouldUpdateBearing(double newBearing) {
+    double diff = (newBearing - lastProcessedBearing.value).abs();
+    if (diff > 180) diff = 360 - diff; // Handle angle wraparound
+    return diff >= 6.0; // Only update if change is ≥15 degrees
+  }
 
   void onInit() {
     addMarkerSetup();
@@ -133,24 +142,33 @@ class LiveTrackingController extends GetxController {
     is3DNavigationMode.value = true;
     navigationTilt.value = 70.0;
     navigationZoom.value = 19.0;
+    announcedDistances.clear();
 
     // Set up continuous magnetometer subscription for live bearing
+
     _magnetometerSubscription = magnetometerEventStream().listen(
       (MagnetometerEvent event) {
         double rawBearing = atan2(event.y, event.x) * (180.0 / pi);
         if (rawBearing < 0) rawBearing += 360.0;
-        deviceBearing.value = 0.8 * deviceBearing.value + 0.2 * rawBearing;
+        // Stronger smoothing: 90% old value, 10% new value
+        deviceBearing.value = 0.9 * deviceBearing.value + 0.1 * rawBearing;
+
+        // Check if bearing change exceeds 15 degrees
+        if (_shouldUpdateBearing(deviceBearing.value)) {
+          lastProcessedBearing.value = deviceBearing.value;
+          addDeviceMarker();
+          if (isFollowingDriver.value && isNavigationView.value) {
+            updateNavigationViewAligned();
+          }
+        }
       },
     );
-
-    // Set up periodic timer to update map and marker
-    _bearingUpdateTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
+    _bearingUpdateTimer = Timer.periodic(Duration(milliseconds: 50), (timer) {
       if (isFollowingDriver.value && isNavigationView.value) {
         updateNavigationViewAligned();
         addDeviceMarker();
       }
     });
-
     dev.log("Debug: Device bearing initialized");
     addDeviceMarker();
     startLocationTracking();
@@ -183,7 +201,7 @@ class LiveTrackingController extends GetxController {
     _flutterTts = FlutterTts();
     try {
       await _flutterTts?.setLanguage("en-US");
-      await _flutterTts?.setSpeechRate(1);
+      await _flutterTts?.setSpeechRate(0.5);
       await _flutterTts?.setVolume(1.0);
       await _flutterTts?.setPitch(1.0);
       if (Platform.isAndroid) {
@@ -278,68 +296,6 @@ class LiveTrackingController extends GetxController {
     optimizePerformance();
   }
 
-  // void updateDeviceLocation(Position position) {
-  //   Position previousPos = currentPosition.value ?? position;
-  //   currentPosition.value = position;
-  //   currentSpeed.value = position.speed * 3.6;
-
-  //   if (_previousPosition != null && _previousTime != null) {
-  //     dev.log("NULL");
-  //     deviceBearing.value = position.heading;
-  //     dev.log("Debug: position.heading: ${position.heading}");
-  //     dev.log("Debug: Device bearing: ${deviceBearing.value}");
-  //     double distanceMeters = Geolocator.distanceBetween(
-  //       _previousPosition!.latitude,
-  //       _previousPosition!.longitude,
-  //       position.latitude,
-  //       position.longitude,
-  //     );
-
-  //     if (distanceMeters > 2 && currentSpeed.value > 5) {
-  //       dev.log("one");
-  //       if (position.heading >= 0 && position.heading <= 360) {
-  //         dev.log("2");
-  //         if (position.headingAccuracy <= 45) {
-  //           deviceBearing.value =
-  //               position.heading; // Marker faces device heading
-
-  //           dev.log("Debug: position.heading: ${position.heading}");
-  //           dev.log("Debug: Device bearing: ${deviceBearing.value}");
-  //         } else {
-  //           ShowToastDialog.showToast("Please calibrate your compass");
-  //         }
-  //       } else {
-  //         print("Debug: Invalid heading data");
-  //       }
-
-  //       if (is3DNavigationMode.value) {
-  //         navigationBearing.value =
-  //             position.heading; // Align map with device heading
-  //       } else {
-  //         navigationBearing.value =
-  //             interpolateBearing(navigationBearing.value, position.heading);
-  //       }
-  //     }
-  //   }
-
-  //   _previousPosition = position;
-  //   _previousTime = DateTime.now();
-
-  //   addDeviceMarker();
-  //   fetchSpeedLimit(LatLng(position.latitude, position.longitude));
-
-  //   if (isFollowingDriver.value && isNavigationView.value) {
-  //     updateNavigationViewAligned();
-  //   }
-
-  //   updateRouteVisibility();
-  //   updateNavigationInstructions();
-  //   updateNextRoutePoint();
-  //   checkOffRoute();
-  //   updateTimeAndDistanceEstimates();
-  //   updateDynamicPolyline();
-  // }
-
   void updateDeviceLocation(Position position) {
     currentPosition.value = position;
     currentSpeed.value = position.speed * 3.6; // Convert m/s to km/h
@@ -353,16 +309,15 @@ class LiveTrackingController extends GetxController {
         position.latitude,
         position.longitude,
       );
-      dev.log("Debug: Distance moved: $distanceMeters");
 
-      // Use GPS bearing only if moving significantly and speed is above threshold
+      // Update bearing with GPS data only if moving significantly
       if (distanceMeters > 5 && currentSpeed.value > 10) {
         double gpsBearing = position.heading;
         if (gpsBearing >= 0 &&
             gpsBearing <= 360 &&
             position.headingAccuracy <= 30) {
-          // Blend GPS bearing with magnetometer bearing
-          deviceBearing.value = 0.7 * deviceBearing.value + 0.3 * gpsBearing;
+          // Stronger smoothing for GPS bearing
+          deviceBearing.value = 0.9 * deviceBearing.value + 0.1 * gpsBearing;
           dev.log("Debug: Blended bearing with GPS: ${deviceBearing.value}");
         }
       }
@@ -371,13 +326,16 @@ class LiveTrackingController extends GetxController {
     _previousPosition = position;
     _previousTime = now;
 
-    addDeviceMarker(); // Update marker with smoothed bearing
-    fetchSpeedLimit(LatLng(position.latitude, position.longitude));
-
-    if (isFollowingDriver.value && isNavigationView.value) {
-      updateNavigationViewAligned();
+    // Only update marker and map if bearing change exceeds 15 degrees
+    if (_shouldUpdateBearing(deviceBearing.value)) {
+      lastProcessedBearing.value = deviceBearing.value;
+      addDeviceMarker();
+      if (isFollowingDriver.value && isNavigationView.value) {
+        updateNavigationViewAligned();
+      }
     }
 
+    fetchSpeedLimit(LatLng(position.latitude, position.longitude));
     updateRouteVisibility();
     updateNavigationInstructions();
     updateNextRoutePoint();
@@ -396,7 +354,10 @@ class LiveTrackingController extends GetxController {
         longitude: currentPosition.value!.longitude,
         id: "Device",
         descriptor: driverIcon!,
-        rotation: deviceBearing.value // Use compass heading for marker rotation
+        rotation: is3DNavigationMode.value
+            ? lastProcessedBearing.value - 60
+            : lastProcessedBearing
+                .value // Use compass heading for marker rotation
         );
   }
 
@@ -576,23 +537,34 @@ class LiveTrackingController extends GetxController {
     currentManeuver.value = currentStep.maneuver;
 
     if (isVoiceEnabled.value) {
-      if (distanceToStep <= 200 && distanceToStep > 100) {
-        queueAnnouncement("In 200 meters, ${currentStep.instruction}",
-            priority: 2);
-      } else if (distanceToStep <= 100 && distanceToStep > 50) {
-        queueAnnouncement("In 100 meters, ${currentStep.instruction}",
-            priority: 2);
-      } else if (distanceToStep <= 50 && distanceToStep > 20) {
-        queueAnnouncement("In 50 meters, ${currentStep.instruction}",
-            priority: 2);
-      } else if (distanceToStep <= 20) {
-        queueAnnouncement("Now, ${currentStep.instruction}", priority: 2);
+      // Define announcement thresholds
+      const List<double> announcementDistances = [200, 100, 50, 20];
+
+      // Find the closest threshold
+      double? targetDistance;
+      for (var dist in announcementDistances) {
+        if (distanceToStep <= dist && distanceToStep > (dist - 10)) {
+          targetDistance = dist;
+          break;
+        }
+      }
+
+      // Announce only if the distance hasn’t been announced yet
+      if (targetDistance != null &&
+          !announcedDistances.contains(targetDistance)) {
+        String announcement = targetDistance == 20
+            ? "Now: ${currentStep.instruction}"
+            : currentStep.instruction;
+        queueAnnouncement(announcement, priority: 2);
+        announcedDistances.add(targetDistance);
       }
     }
 
+    // Move to next step when close enough
     if (distanceToStep < 10) {
       currentStepIndex.value =
           min(currentStepIndex.value + 1, navigationSteps.length - 1);
+      announcedDistances.clear(); // Reset for new step
       updateNavigationInstructions();
     }
   }
@@ -974,8 +946,8 @@ class LiveTrackingController extends GetxController {
           zoom: navigationZoom.value,
           tilt: 0.0,
           bearing: is3DNavigationMode.value
-              ? deviceBearing.value - 83
-              : deviceBearing.value + 83,
+              ? lastProcessedBearing.value
+              : lastProcessedBearing.value,
         ),
       ),
     );
@@ -999,55 +971,8 @@ class LiveTrackingController extends GetxController {
     return bearing;
   }
 
-  // void updateNavigationInstructions() async {
-  //   // Step 1: Get the current bearing (direction in degrees)
-  //   try {
-  //     Position position = await Geolocator.getCurrentPosition(
-  //       desiredAccuracy: LocationAccuracy.high,
-  //     );
-  //     deviceBearing.value = position.heading;
-
-  //     dev.log("SET DEVICE BEARING: ${deviceBearing.value} DEGREE");
-  //   } catch (e) {
-  //     dev.log("SET DEVICE BEARING: ${e} DEGREE");
-  //     dev.log("SET DEVICE BEARING: ${deviceBearing.value} DEGREE");
-  //     deviceBearing.value = 0.0; // fallback in case of error
-  //   }
-
-  //   // Step 2: Update navigation instructions as usual
-  //   if (navigationSteps.isEmpty ||
-  //       currentStepIndex.value >= navigationSteps.length) {
-  //     navigationInstruction.value = "Follow the route";
-  //     nextTurnInstruction.value = "";
-  //     return;
-  //   }
-  //   dev.log("navigationInstruction.value: ${navigationInstruction.value}");
-
-  //   NavigationStep currentStep = navigationSteps[currentStepIndex.value];
-
-  //   if (isOffRoute.value) {
-  //     navigationInstruction.value = "Off route! Recalculating...";
-  //     nextTurnInstruction.value = "Please return to the highlighted route";
-  //     return;
-  //   }
-
-  //   navigationInstruction.value = currentStep.instruction;
-
-  //   if (currentStepIndex.value + 1 < navigationSteps.length) {
-  //     NavigationStep nextStep = navigationSteps[currentStepIndex.value + 1];
-  //     nextTurnInstruction.value = "Then ${nextStep.instruction}";
-  //   } else {
-  //     String target =
-  //         showDriverToPickupRoute.value ? "pickup location" : "destination";
-  //     nextTurnInstruction.value = "Approaching $target";
-  //   }
-
-  //   // (Optional) Log or show the bearing
-  //   print("Current Device Bearing: ${deviceBearing.value}");
-  // }
-
   void updateNavigationInstructions() async {
-    // Step 1: Get device bearing
+    // Get device bearing
     try {
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
@@ -1057,42 +982,46 @@ class LiveTrackingController extends GetxController {
       deviceBearing.value = 0.0;
     }
 
-    // Step 2: Check step availability
+    // Check step availability
     if (navigationSteps.isEmpty ||
         currentStepIndex.value >= navigationSteps.length) {
-      navigationInstruction.value = "Follow the route";
+      navigationInstruction.value = "Follow route";
       nextTurnInstruction.value = "";
+      announcedDistances.clear(); // Reset for no steps
       return;
     }
 
     NavigationStep currentStep = navigationSteps[currentStepIndex.value];
 
-    // Step 3: Handle off-route
+    // Handle off-route
     if (isOffRoute.value) {
-      navigationInstruction.value = "Off route! Recalculating...";
-      nextTurnInstruction.value = "Please return to the highlighted route";
+      navigationInstruction.value = "Off route";
+      nextTurnInstruction.value = "Return to route";
+      announcedDistances.clear(); // Reset for off-route
+      if (isVoiceEnabled.value) {
+        queueAnnouncement("Off route", priority: 3);
+      }
       return;
     }
 
-    // Step 4: Set current instruction
-    navigationInstruction.value = currentStep.instruction;
+    // Set current instruction and announce it once
+    if (navigationInstruction.value != currentStep.instruction) {
+      navigationInstruction.value = currentStep.instruction;
+      announcedDistances.clear(); // Reset for new step
+      if (isVoiceEnabled.value) {
+        queueAnnouncement(currentStep.instruction,
+            priority: 2); // Initial announcement
+      }
+    }
 
-    // Step 5: Extract compass heading (e.g., "Head southeast") and convert to angle
-    // double? extractedBearing =
-    //     extractBearingFromInstruction(currentStep.instruction);
-    // if (extractedBearing != null) {
-    //   deviceBearing.value = extractedBearing;
-    //   print("Step Bearing: $extractedBearing°");
-    // }
-
-    // Step 6: Set next instruction
+    // Set next instruction
     if (currentStepIndex.value + 1 < navigationSteps.length) {
-      NavigationStep nextStep = navigationSteps[currentStepIndex.value + 1];
-      nextTurnInstruction.value = "Then ${nextStep.instruction}";
+      nextTurnInstruction.value =
+          navigationSteps[currentStepIndex.value + 1].instruction;
     } else {
-      String target =
-          showDriverToPickupRoute.value ? "pickup location" : "destination";
-      nextTurnInstruction.value = "Approaching $target";
+      nextTurnInstruction.value = showDriverToPickupRoute.value
+          ? "Nearing pickup"
+          : "Nearing destination";
     }
   }
 
@@ -1477,30 +1406,60 @@ class LiveTrackingController extends GetxController {
     List<dynamic> steps = directionsData['routes'][0]['legs'][0]['steps'];
     if (steps.isNotEmpty) {
       for (var step in steps) {
-        String instruction =
+        String rawInstruction =
             _stripHtmlTags(step['html_instructions'] ?? "Continue");
         double distance = (step['distance']['value'] ?? 0).toDouble();
         String maneuver = step['maneuver'] ?? "straight";
-        double duration = (step['duration']['value'] ?? 0).toDouble();
         LatLng location = LatLng(
           step['end_location']['lat'],
           step['end_location']['lng'],
         );
+
+        // Simplify instruction
+        String instruction = _simplifyInstruction(maneuver, distance);
 
         navigationSteps.add(NavigationStep(
           instruction: instruction,
           distance: distance,
           maneuver: maneuver,
           location: location,
-          duration: duration,
+          duration: (step['duration']['value'] ?? 0).toDouble(),
         ));
       }
     } else {
-      navigationInstruction.value = "No navigation steps available";
+      navigationInstruction.value = "Follow route";
       ShowToastDialog.showToast("No navigation steps available");
     }
 
     updateNavigationInstructions();
+  }
+
+  String _simplifyInstruction(String maneuver, double distance) {
+    String formattedDistance =
+        formatDistance(distance / 1000); // Convert to km or m
+    switch (maneuver) {
+      case 'turn-left':
+        return "Left in $formattedDistance";
+      case 'turn-right':
+        return "Right in $formattedDistance";
+      case 'turn-sharp-left':
+        return "Sharp left in $formattedDistance";
+      case 'turn-sharp-right':
+        return "Sharp right in $formattedDistance";
+      case 'turn-slight-left':
+        return "Slight left in $formattedDistance";
+      case 'turn-slight-right':
+        return "Slight right in $formattedDistance";
+      case 'roundabout-left':
+      case 'roundabout-right':
+        return "Roundabout in $formattedDistance";
+      case 'straight':
+        return "Continue $formattedDistance Stright";
+      case 'destination':
+        return "Destination in $formattedDistance";
+      default:
+        return "Proceed $formattedDistance";
+    }
   }
 
   String _stripHtmlTags(String htmlText) {
@@ -1664,14 +1623,11 @@ class LiveTrackingController extends GetxController {
                 : navigationZoom.value,
             tilt: is3DNavigationMode.value ? navigation3DTilt.value : 0.0,
             bearing: is3DNavigationMode.value
-                ? deviceBearing.value + 88
-                : deviceBearing.value + 83, // Use live compass bearing
+                ? lastProcessedBearing.value + 55
+                : lastProcessedBearing.value, // Use last processed bearing
           ),
         ),
       );
-
-      // dev.log(
-      //     "Debug: Map bearing updated: ${deviceBearing.value.toStringAsFixed(1)}°");
     } catch (e) {
       dev.log("Debug: Error updating navigation view: $e");
     }
@@ -1821,9 +1777,9 @@ class LiveTrackingController extends GetxController {
   String formatDistance(double distanceInKm) {
     if (distanceInKm < 1) {
       int meters = (distanceInKm * 1000).round();
-      return "$meters m";
+      return "${meters}m";
     }
-    return "${distanceInKm.toStringAsFixed(1)} km";
+    return "${distanceInKm.toStringAsFixed(1)}km";
   }
 
   String formatSpeed(double speedKmh) {

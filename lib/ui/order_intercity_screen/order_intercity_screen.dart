@@ -10,6 +10,7 @@ import 'package:driver/model/user_model.dart';
 import 'package:driver/model/wallet_transaction_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/ui/order_intercity_screen/complete_intecity_order_screen.dart';
 import 'package:driver/ui/review/review_screen.dart';
@@ -19,7 +20,6 @@ import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -98,7 +98,6 @@ class OrderIntercityScreen extends StatelessWidget {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            // Map Section
                                             _buildMapSection(
                                               context,
                                               orderModel,
@@ -132,16 +131,6 @@ class OrderIntercityScreen extends StatelessWidget {
                                                 orderModel,
                                                 controller,
                                                 themeChange),
-                                            const SizedBox(height: 10),
-                                            ButtonThem.buildButton(
-                                              context,
-                                              title: orderModel.paymentStatus ==
-                                                      true
-                                                  ? "Payment completed".tr
-                                                  : "Payment Pending".tr,
-                                              btnHeight: 44,
-                                              onPress: () async {},
-                                            ),
                                             const SizedBox(height: 10),
                                             Visibility(
                                               visible: controller.paymentModel
@@ -306,85 +295,86 @@ class OrderIntercityScreen extends StatelessWidget {
     );
   }
 
- Future<Map<String, dynamic>> _buildMapData(
-    InterCityOrderModel orderModel) async {
-  final LatLng sourceLatLng = LatLng(
-    orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
-    orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
-  );
-  final LatLng destinationLatLng = LatLng(
-    orderModel.destinationLocationLAtLng?.latitude ?? 24.94478876378326,
-    orderModel.destinationLocationLAtLng?.longitude ?? 67.06306681036949,
-  );
-
-  final bounds = LatLngBounds(
-    southwest: LatLng(
-      min(sourceLatLng.latitude, destinationLatLng.latitude),
-      min(sourceLatLng.longitude, destinationLatLng.longitude),
-    ),
-    northeast: LatLng(
-      max(sourceLatLng.latitude, destinationLatLng.latitude),
-      max(sourceLatLng.longitude, destinationLatLng.longitude),
-    ),
-  );
-
-  final iconStart = await BitmapDescriptor.asset(
-    const ImageConfiguration(size: Size(32, 32)),
-    'assets/images/green_mark.png',
-  );
-  final iconEnd = await BitmapDescriptor.asset(
-    const ImageConfiguration(size: Size(32, 32)),
-    'assets/images/red_mark.png',
-  );
-
-  final markers = {
-    Marker(
-      markerId: const MarkerId('source'),
-      position: sourceLatLng,
-      icon: iconStart,
-      infoWindow:
-          InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
-    ),
-    Marker(
-      markerId: const MarkerId('destination'),
-      position: destinationLatLng,
-      icon: iconEnd,
-      infoWindow: InfoWindow(
-          title: 'Drop-off: ${orderModel.destinationLocationName}'),
-    ),
-  };
-
-  List<LatLng> polylineCoordinates = [];
-  try {
-    PolylineRequest request = PolylineRequest(
-      origin: PointLatLng(sourceLatLng.latitude, sourceLatLng.longitude),
-      destination: PointLatLng(
-          destinationLatLng.latitude, destinationLatLng.longitude),
-      mode: TravelMode.driving,
+  Future<Map<String, dynamic>> _buildMapData(
+      InterCityOrderModel orderModel) async {
+    final LatLng sourceLatLng = LatLng(
+      orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
+      orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
     );
-    
-    // Changed: getRouteBetweenCoordinates now returns a single PolylineResult
-    PolylineResult result = await PolylinePoints().getRouteBetweenCoordinates(
-      request: request,
-      googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
+    final LatLng destinationLatLng = LatLng(
+      orderModel.destinationLocationLAtLng?.latitude ?? 24.94478876378326,
+      orderModel.destinationLocationLAtLng?.longitude ?? 67.06306681036949,
     );
-    
-    // Check if the result has points
-    if (result.points.isNotEmpty) {
-      polylineCoordinates = result.points
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        min(sourceLatLng.latitude, destinationLatLng.latitude),
+        min(sourceLatLng.longitude, destinationLatLng.longitude),
+      ),
+      northeast: LatLng(
+        max(sourceLatLng.latitude, destinationLatLng.latitude),
+        max(sourceLatLng.longitude, destinationLatLng.longitude),
+      ),
+    );
+
+    final iconStart = await BitmapDescriptor.asset(
+      const ImageConfiguration(size: Size(32, 32)),
+      'assets/images/green_mark.png',
+    );
+    final iconEnd = await BitmapDescriptor.asset(
+      const ImageConfiguration(size: Size(32, 32)),
+      'assets/images/red_mark.png',
+    );
+
+    final markers = {
+      Marker(
+        markerId: const MarkerId('source'),
+        position: sourceLatLng,
+        icon: iconStart,
+        infoWindow:
+            InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
+      ),
+      Marker(
+        markerId: const MarkerId('destination'),
+        position: destinationLatLng,
+        icon: iconEnd,
+        infoWindow: InfoWindow(
+            title: 'Drop-off: ${orderModel.destinationLocationName}'),
+      ),
+    };
+
+    List<LatLng> polylineCoordinates = [];
+    try {
+      PolylineRequest request = PolylineRequest(
+        origin: PointLatLng(sourceLatLng.latitude, sourceLatLng.longitude),
+        destination: PointLatLng(
+            destinationLatLng.latitude, destinationLatLng.longitude),
+        mode: TravelMode.driving,
+      );
+
+      PolylineResult result =
+          (await PolylinePoints().getRouteBetweenCoordinates(
+        request: request,
+        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
+      ))
+              .first;
+
+      if (result.points.isNotEmpty) {
+        polylineCoordinates = result.points
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
+      }
+    } catch (e) {
+      print('Error fetching polyline: $e');
     }
-  } catch (e) {
-    print('Error fetching polyline: $e');
+
+    return {
+      'markers': markers,
+      'polylineCoordinates': polylineCoordinates,
+      'bounds': bounds,
+    };
   }
 
-  return {
-    'markers': markers,
-    'polylineCoordinates': polylineCoordinates,
-    'bounds': bounds,
-  };
-}
   Widget _buildMapSection(
     BuildContext context,
     InterCityOrderModel orderModel,
@@ -498,11 +488,11 @@ class OrderIntercityScreen extends StatelessWidget {
           children: [
             Text(
               orderModel.status.toString(),
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              style: AppTypography.boldLabel(Get.context!),
             ),
             Text(
               Constant().formatTimestamp(orderModel.createdDate),
-              style: GoogleFonts.poppins(),
+              style: AppTypography.label(Get.context!),
             ),
           ],
         ),
@@ -556,17 +546,19 @@ class OrderIntercityScreen extends StatelessWidget {
                   ));
                 },
                 child: Container(
-                  height: 44,
-                  width: 44,
+                  height: 35,
+                  width: 35,
                   decoration: BoxDecoration(
                     color: themeChange.getThem()
-                        ? AppColors.darkBackground
-                        : AppColors.darkBackground,
+                        ? AppColors.primary
+                        : AppColors.primary,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: Icon(Icons.chat,
-                      color:
-                          themeChange.getThem() ? Colors.black : Colors.white),
+                  child: Icon(
+                    Icons.chat,
+                    color: themeChange.getThem() ? Colors.black : Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -578,17 +570,19 @@ class OrderIntercityScreen extends StatelessWidget {
                       "${customer!.countryCode}${customer.phoneNumber}");
                 },
                 child: Container(
-                  height: 44,
-                  width: 44,
+                  height: 35,
+                  width: 35,
                   decoration: BoxDecoration(
                     color: themeChange.getThem()
-                        ? AppColors.darkBackground
-                        : AppColors.darkBackground,
+                        ? AppColors.primary
+                        : AppColors.primary,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: Icon(Icons.call,
-                      color:
-                          themeChange.getThem() ? Colors.black : Colors.white),
+                  child: Icon(
+                    Icons.call,
+                    color: themeChange.getThem() ? Colors.black : Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ],

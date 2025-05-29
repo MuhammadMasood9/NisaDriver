@@ -128,8 +128,10 @@ class _InboxScreenState extends State<InboxScreen> {
     final themeChange = Provider.of<DarkThemeProvider>(context);
     return InkWell(
       onTap: () async {
-        UserModel? customer = await FireStoreUtils.getCustomer(inboxModel.customerId.toString());
-        DriverUserModel? driver = await FireStoreUtils.getDriverProfile(inboxModel.driverId.toString());
+        UserModel? customer =
+            await FireStoreUtils.getCustomer(inboxModel.customerId.toString());
+        DriverUserModel? driver = await FireStoreUtils.getDriverProfile(
+            inboxModel.driverId.toString());
 
         Get.to(ChatScreens(
           driverId: driver!.id,
@@ -146,19 +148,24 @@ class _InboxScreenState extends State<InboxScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text("Delete Chat", style: AppTypography.boldHeaders(context)),
-            content: Text("Are you sure you want to delete this chat?", style: AppTypography.caption(context)),
+            title:
+                Text("Delete Chat", style: AppTypography.boldHeaders(context)),
+            content: Text("Are you sure you want to delete this chat?",
+                style: AppTypography.caption(context)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text("Cancel", style: GoogleFonts.poppins(color: AppColors.darkBackground)),
+                child: Text("Cancel",
+                    style:
+                        GoogleFonts.poppins(color: AppColors.darkBackground)),
               ),
               TextButton(
                 onPressed: () {
                   _deleteChat(inboxModel.orderId!);
                   Navigator.pop(context);
                 },
-                child: Text("Delete", style: GoogleFonts.poppins(color: AppColors.primary)),
+                child: Text("Delete",
+                    style: GoogleFonts.poppins(color: AppColors.primary)),
               ),
             ],
           ),
@@ -168,9 +175,10 @@ class _InboxScreenState extends State<InboxScreen> {
         padding: const EdgeInsets.all(6.0),
         child: Container(
           decoration: BoxDecoration(
-            color: themeChange.getThem() ? AppColors.darkContainerBackground : Colors.white,
+            color: themeChange.getThem()
+                ? AppColors.darkContainerBackground
+                : Colors.white,
             borderRadius: const BorderRadius.all(Radius.circular(6)),
-           
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.3),
@@ -182,7 +190,6 @@ class _InboxScreenState extends State<InboxScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 0),
             child: ListTile(
-            
               leading: ClipOval(
                 child: CachedNetworkImage(
                   width: 40,
@@ -217,7 +224,7 @@ class _InboxScreenState extends State<InboxScreen> {
                   ),
                   Text(
                     Constant.dateFormatTimestamp(inboxModel.createdAt),
-                    style:AppTypography.label(context),
+                    style: AppTypography.label(context),
                   ),
                 ],
               ),
@@ -236,7 +243,7 @@ class _InboxScreenState extends State<InboxScreen> {
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
     return Scaffold(
-     backgroundColor: Colors.white,
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           SizedBox(height: Responsive.width(3, context)),
@@ -246,7 +253,8 @@ class _InboxScreenState extends State<InboxScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.containerBorder, width: 0.5),
+                border:
+                    Border.all(color: AppColors.containerBorder, width: 0.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.withOpacity(0.2),
@@ -259,7 +267,8 @@ class _InboxScreenState extends State<InboxScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: "Search conversations...".tr,
-                  hintStyle: AppTypography.caption(context).copyWith(color: Colors.grey),
+                  hintStyle: AppTypography.caption(context)
+                      .copyWith(color: Colors.grey),
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
@@ -288,31 +297,54 @@ class _InboxScreenState extends State<InboxScreen> {
                 padding: const EdgeInsets.only(top: 0, left: 10, right: 10),
                 child: _searchQuery.isNotEmpty
                     ? _isLoading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? const Center(
+                            child: SizedBox(
+                              width: 24.0,
+                              height: 24.0,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.0,
+                              ),
+                            ),
+                          )
                         : _searchResults.isEmpty
-                            ? Center(child: Text("No results found".tr, style: GoogleFonts.poppins()))
+                            ? Center(
+                                child: Text("No results found".tr,
+                                    style: GoogleFonts.poppins()))
                             : ListView.builder(
                                 physics: const BouncingScrollPhysics(),
                                 itemCount: _searchResults.length,
                                 itemBuilder: (context, index) {
-                                  return _buildChatItem(_searchResults[index], context);
+                                  return _buildChatItem(
+                                      _searchResults[index], context);
                                 },
                               )
                     : FirestorePagination(
                         physics: const BouncingScrollPhysics(),
                         itemBuilder: (context, documentSnapshots, index) {
-                          final data = documentSnapshots[index].data() as Map<String, dynamic>?;
+                          final data = documentSnapshots[index].data()
+                              as Map<String, dynamic>?;
                           InboxModel inboxModel = InboxModel.fromJson(data!);
                           return _buildChatItem(inboxModel, context);
                         },
                         shrinkWrap: true,
-                        onEmpty: Center(child: Text("No Conversion found".tr, style: GoogleFonts.poppins())),
+                        onEmpty: Center(
+                            child: Text("No Conversion found".tr,
+                                style: GoogleFonts.poppins())),
                         query: FirebaseFirestore.instance
                             .collection(CollectionName.chat)
-                            .where("driverId", isEqualTo: FireStoreUtils.getCurrentUid())
+                            .where("driverId",
+                                isEqualTo: FireStoreUtils.getCurrentUid())
                             .orderBy('createdAt', descending: true),
                         viewType: ViewType.list,
-                        initialLoader: const CircularProgressIndicator(),
+                        initialLoader: const Center(
+                          child: SizedBox(
+                            width: 24.0,
+                            height: 24.0,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.0,
+                            ),
+                          ),
+                        ),
                         isLive: true,
                       ),
               ),

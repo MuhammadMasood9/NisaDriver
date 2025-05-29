@@ -6,6 +6,7 @@ import 'package:driver/controller/otp_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/auth_screen/information_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/ui/subscription_plan_screen/subscription_list_screen.dart';
@@ -166,12 +167,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                               // Title
                               Text(
                                 "Verify Phone Number".tr,
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 24,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                  letterSpacing: -0.5,
-                                ),
+                                style: AppTypography.boldHeaders(context),
                                 textAlign: TextAlign.center,
                               ),
 
@@ -195,14 +191,14 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                       TextSpan(
                                           text:
                                               "We've sent a verification code to"
-                                                  .tr),
+                                                  .tr,
+                                          style:
+                                              AppTypography.caption(context)),
                                       TextSpan(
                                         text:
                                             "\n${controller.countryCode.value + controller.phoneNumber.value}",
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.primary,
-                                        ),
+                                        style: AppTypography.headers(context)
+                                            .copyWith(color: AppColors.primary),
                                       ),
                                     ],
                                   ),
@@ -283,11 +279,8 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                 ),
                                 label: Text(
                                   "Didn't receive code? Resend".tr,
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.primary,
-                                    fontSize: 14,
-                                  ),
+                                  style: AppTypography.headers(context)
+                                      .copyWith(color: AppColors.primary),
                                 ),
                                 style: TextButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
@@ -314,7 +307,8 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                   borderRadius: BorderRadius.circular(8),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.darkBackground.withOpacity(0.3),
+                                      color: AppColors.darkBackground
+                                          .withOpacity(0.3),
                                       blurRadius: 16,
                                       offset: const Offset(0, 8),
                                     ),
@@ -466,12 +460,8 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                     child: Center(
                                       child: Text(
                                         "Verify".tr,
-                                        style: GoogleFonts.inter(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.5,
-                                        ),
+                                        style:
+                                            AppTypography.buttonlight(context),
                                       ),
                                     ),
                                   ),
@@ -504,12 +494,11 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                       child: Text(
                                         "Keep your code secure and don't share it with anyone"
                                             .tr,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
+                                        style: AppTypography.boldLabel(context)
+                                            .copyWith(
                                           color: isDark
                                               ? Colors.amber[200]
                                               : Colors.amber[800],
-                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                     ),

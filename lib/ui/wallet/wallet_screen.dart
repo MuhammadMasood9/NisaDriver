@@ -44,7 +44,8 @@ class WalletScreen extends StatelessWidget {
                   children: [
                     _buildHeader(context, controller, themeChange),
                     Expanded(
-                      child: _buildTransactionList(context, controller, themeChange),
+                      child: _buildTransactionList(
+                          context, controller, themeChange),
                     ),
                   ],
                 ),
@@ -56,18 +57,24 @@ class WalletScreen extends StatelessWidget {
                   child: ButtonThem.buildBorderButton(
                     context,
                     title: "withdraw".tr,
-                    
                     onPress: () async {
-                      if (double.parse(controller.driverUserModel.value.walletAmount.toString()) <= 0) {
+                      if (double.parse(controller
+                              .driverUserModel.value.walletAmount
+                              .toString()) <=
+                          0) {
                         ShowToastDialog.showToast("Insufficient balance".tr);
                       } else {
                         ShowToastDialog.showLoader("Please wait".tr);
-                        await FireStoreUtils.bankDetailsIsAvailable().then((value) {
+                        await FireStoreUtils.bankDetailsIsAvailable()
+                            .then((value) {
                           ShowToastDialog.closeLoader();
                           if (value == true) {
-                            withdrawAmountBottomSheet(context, controller, themeChange);
+                            withdrawAmountBottomSheet(
+                                context, controller, themeChange);
                           } else {
-                            ShowToastDialog.showToast("Your bank details is not available.Please add bank details".tr);
+                            ShowToastDialog.showToast(
+                                "Your bank details is not available.Please add bank details"
+                                    .tr);
                           }
                         });
                       }
@@ -78,8 +85,7 @@ class WalletScreen extends StatelessWidget {
                 Expanded(
                   child: ButtonThem.buildButton(
                     context,
-                    title: "Withdrawal history".tr,
-                  
+                    title: "History".tr,
                     onPress: () {
                       Get.to(const WithDrawHistoryScreen());
                     },
@@ -93,7 +99,8 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, WalletController controller, DarkThemeProvider themeChange) {
+  Widget _buildHeader(BuildContext context, WalletController controller,
+      DarkThemeProvider themeChange) {
     return Container(
       height: Responsive.width(65, context),
       decoration: BoxDecoration(
@@ -120,12 +127,16 @@ class WalletScreen extends StatelessWidget {
           const SizedBox(height: 40),
           Text(
             "Wallet Balance".tr,
-            style: AppTypography.boldHeaders(context).copyWith(color: Colors.white),
+            style: AppTypography.boldHeaders(context)
+                .copyWith(color: Colors.white),
           ),
           const SizedBox(height: 10),
           Text(
-            Constant.amountShow(amount: controller.driverUserModel.value.walletAmount.toString()),
-            style: AppTypography.boldHeaders(context).copyWith(color: Colors.white,fontWeight: FontWeight.w600),
+            Constant.amountShow(
+                amount:
+                    controller.driverUserModel.value.walletAmount.toString()),
+            style: AppTypography.boldHeaders(context)
+                .copyWith(color: Colors.white, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 20),
           Padding(
@@ -133,7 +144,6 @@ class WalletScreen extends StatelessWidget {
             child: ButtonThem.roundButton(
               context,
               title: "Topup Wallet".tr,
-             
               btnWidthRatio: 0.5,
               btnHeight: 50,
               onPress: () async {
@@ -146,10 +156,13 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTransactionList(BuildContext context, WalletController controller, DarkThemeProvider themeChange) {
+  Widget _buildTransactionList(BuildContext context,
+      WalletController controller, DarkThemeProvider themeChange) {
     return Container(
       decoration: BoxDecoration(
-        color: themeChange.getThem() ? AppColors.darkBackground : AppColors.background,
+        color: themeChange.getThem()
+            ? AppColors.darkBackground
+            : AppColors.background,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -170,7 +183,8 @@ class WalletScreen extends StatelessWidget {
             : ListView.builder(
                 itemCount: controller.transactionList.length,
                 itemBuilder: (context, index) {
-                  WalletTransactionModel walletTransactionModel = controller.transactionList[index];
+                  WalletTransactionModel walletTransactionModel =
+                      controller.transactionList[index];
                   return AnimatedOpacity(
                     opacity: 1.0,
                     duration: Duration(milliseconds: 300 + (index * 100)),
@@ -186,7 +200,8 @@ class WalletScreen extends StatelessWidget {
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: _buildTransactionCard(context, walletTransactionModel, themeChange),
+                        child: _buildTransactionCard(
+                            context, walletTransactionModel, themeChange),
                       ),
                     ),
                   );
@@ -196,30 +211,44 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTransactionCard(BuildContext context, WalletTransactionModel walletTransactionModel, DarkThemeProvider themeChange) {
+  Widget _buildTransactionCard(
+      BuildContext context,
+      WalletTransactionModel walletTransactionModel,
+      DarkThemeProvider themeChange) {
     return InkWell(
       onTap: () async {
         if (walletTransactionModel.orderType == "city") {
-          await FireStoreUtils.getOrder(walletTransactionModel.transactionId.toString()).then((value) {
+          await FireStoreUtils.getOrder(
+                  walletTransactionModel.transactionId.toString())
+              .then((value) {
             if (value != null) {
               OrderModel orderModel = value;
-              Get.to(const CompleteOrderScreen(), arguments: {"orderModel": orderModel});
+              Get.to(const CompleteOrderScreen(),
+                  arguments: {"orderModel": orderModel});
             }
           });
         } else if (walletTransactionModel.orderType == "intercity") {
-          await FireStoreUtils.getInterCityOrder(walletTransactionModel.transactionId.toString()).then((value) {
+          await FireStoreUtils.getInterCityOrder(
+                  walletTransactionModel.transactionId.toString())
+              .then((value) {
             if (value != null) {
               InterCityOrderModel orderModel = value;
-              Get.to(const CompleteIntercityOrderScreen(), arguments: {"orderModel": orderModel});
+              Get.to(const CompleteIntercityOrderScreen(),
+                  arguments: {"orderModel": orderModel});
             }
           });
         } else {
-          showTransactionDetails(context: context, walletTransactionModel: walletTransactionModel, themeChange: themeChange);
+          showTransactionDetails(
+              context: context,
+              walletTransactionModel: walletTransactionModel,
+              themeChange: themeChange);
         }
       },
       child: Container(
         decoration: BoxDecoration(
-          color: themeChange.getThem() ? AppColors.darkContainerBackground : Colors.white,
+          color: themeChange.getThem()
+              ? AppColors.darkContainerBackground
+              : Colors.white,
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
@@ -254,13 +283,17 @@ class WalletScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          Constant.dateFormatTimestamp(walletTransactionModel.createdDate),
+                          Constant.dateFormatTimestamp(
+                              walletTransactionModel.createdDate),
                           style: AppTypography.boldLabel(context),
                         ),
-                        
                         Text(
                           "${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? "(-" : "+"}${Constant.amountShow(amount: walletTransactionModel.amount.toString().replaceAll("-", ""))}${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? ")" : ""}",
-                          style: AppTypography.smBoldLabel(context).copyWith(color:Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? Colors.red : Colors.green ),
+                          style: AppTypography.smBoldLabel(context).copyWith(
+                              color: Constant.IsNegative(double.parse(
+                                      walletTransactionModel.amount.toString()))
+                                  ? Colors.red
+                                  : Colors.green),
                         ),
                       ],
                     ),
@@ -271,12 +304,17 @@ class WalletScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             walletTransactionModel.note.toString(),
-                            style:AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.6)),
+                            style: AppTypography.label(context).copyWith(
+                                color:
+                                    AppColors.darkBackground.withOpacity(0.6)),
                           ),
                         ),
                         Text(
-                          walletTransactionModel.paymentType.toString().toUpperCase(),
-                          style: AppTypography.boldLabel(context).copyWith(color: AppColors.primary.withOpacity(0.6)),
+                          walletTransactionModel.paymentType
+                              .toString()
+                              .toUpperCase(),
+                          style: AppTypography.boldLabel(context).copyWith(
+                              color: AppColors.primary.withOpacity(0.6)),
                         ),
                       ],
                     ),
@@ -290,7 +328,8 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  void paymentMethodDialog(BuildContext context, WalletController controller, DarkThemeProvider themeChange) {
+  void paymentMethodDialog(BuildContext context, WalletController controller,
+      DarkThemeProvider themeChange) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -314,7 +353,8 @@ class WalletScreen extends StatelessWidget {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back_ios, color: AppColors.darkBackground),
+                              icon: const Icon(Icons.arrow_back_ios,
+                                  color: AppColors.darkBackground),
                               onPressed: () => Get.back(),
                             ),
                             Expanded(
@@ -351,7 +391,8 @@ class WalletScreen extends StatelessWidget {
                                   hintText: 'Enter Amount'.tr,
                                   controller: controller.amountController.value,
                                   inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                                    FilteringTextInputFormatter.allow(
+                                        RegExp(r'[0-9]')),
                                   ],
                                 ),
                                 const SizedBox(height: 20),
@@ -365,11 +406,14 @@ class WalletScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 10),
                                 Visibility(
-                                  visible: controller.paymentModel.value.strip?.enable == true,
+                                  visible: controller
+                                          .paymentModel.value.strip?.enable ==
+                                      true,
                                   child: _buildPaymentOption(
                                     context,
                                     controller,
-                                    controller.paymentModel.value.strip!.name.toString(),
+                                    controller.paymentModel.value.strip!.name
+                                        .toString(),
                                     'assets/images/stripe.png',
                                     themeChange,
                                   ),
@@ -382,50 +426,109 @@ class WalletScreen extends StatelessWidget {
                         ButtonThem.buildButton(
                           context,
                           title: "Topup".tr,
-                         
                           onPress: () {
-                            if (controller.amountController.value.text.isNotEmpty) {
+                            if (controller
+                                .amountController.value.text.isNotEmpty) {
                               Get.back();
-                              if (controller.selectedPaymentMethod.value == controller.paymentModel.value.strip!.name) {
-                                controller.stripeMakePayment(amount: controller.amountController.value.text);
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.paypal?.name) {
-                                controller.paypalPaymentSheet(controller.amountController.value.text, context1);
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.payStack?.name) {
-                                controller.payStackPayment(controller.amountController.value.text);
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.mercadoPago?.name) {
-                                controller.mercadoPagoMakePayment(context: context, amount: controller.amountController.value.text);
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.flutterWave?.name) {
-                                controller.flutterWaveInitiatePayment(context: context, amount: controller.amountController.value.text);
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.payfast?.name) {
-                                controller.payFastPayment(context: context, amount: controller.amountController.value.text);
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.paytm?.name) {
-                                controller.getPaytmCheckSum(context, amount: double.parse(controller.amountController.value.text));
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.razorpay?.name) {
+                              if (controller.selectedPaymentMethod.value ==
+                                  controller.paymentModel.value.strip!.name) {
+                                controller.stripeMakePayment(
+                                    amount:
+                                        controller.amountController.value.text);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller.paymentModel.value.paypal?.name) {
+                                controller.paypalPaymentSheet(
+                                    controller.amountController.value.text,
+                                    context1);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller
+                                      .paymentModel.value.payStack?.name) {
+                                controller.payStackPayment(
+                                    controller.amountController.value.text);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller
+                                      .paymentModel.value.mercadoPago?.name) {
+                                controller.mercadoPagoMakePayment(
+                                    context: context,
+                                    amount:
+                                        controller.amountController.value.text);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller
+                                      .paymentModel.value.flutterWave?.name) {
+                                controller.flutterWaveInitiatePayment(
+                                    context: context,
+                                    amount:
+                                        controller.amountController.value.text);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller.paymentModel.value.payfast?.name) {
+                                controller.payFastPayment(
+                                    context: context,
+                                    amount:
+                                        controller.amountController.value.text);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller.paymentModel.value.paytm?.name) {
+                                controller.getPaytmCheckSum(context,
+                                    amount: double.parse(controller
+                                        .amountController.value.text));
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller
+                                      .paymentModel.value.razorpay?.name) {
                                 RazorPayController()
                                     .createOrderRazorPay(
-                                  amount: int.parse(controller.amountController.value.text),
-                                  razorpayModel: controller.paymentModel.value.razorpay,
+                                  amount: int.parse(
+                                      controller.amountController.value.text),
+                                  razorpayModel:
+                                      controller.paymentModel.value.razorpay,
                                 )
                                     .then((value) {
                                   if (value == null) {
                                     Get.back();
-                                    ShowToastDialog.showToast("Something went wrong, please contact admin.".tr);
+                                    ShowToastDialog.showToast(
+                                        "Something went wrong, please contact admin."
+                                            .tr);
                                   } else {
                                     CreateRazorPayOrderModel result = value;
-                                    controller.openCheckout(amount: controller.amountController.value.text, orderId: result.id);
+                                    controller.openCheckout(
+                                        amount: controller
+                                            .amountController.value.text,
+                                        orderId: result.id);
                                   }
                                 });
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.midtrans?.name) {
-                                controller.midtransMakePayment(context: context, amount: controller.amountController.value.text);
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.orangePay?.name) {
-                                controller.orangeMakePayment(context: context, amount: controller.amountController.value.text);
-                              } else if (controller.selectedPaymentMethod.value == controller.paymentModel.value.xendit?.name) {
-                                controller.xenditPayment(context, controller.amountController.value.text);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller
+                                      .paymentModel.value.midtrans?.name) {
+                                controller.midtransMakePayment(
+                                    context: context,
+                                    amount:
+                                        controller.amountController.value.text);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller
+                                      .paymentModel.value.orangePay?.name) {
+                                controller.orangeMakePayment(
+                                    context: context,
+                                    amount:
+                                        controller.amountController.value.text);
+                              } else if (controller
+                                      .selectedPaymentMethod.value ==
+                                  controller.paymentModel.value.xendit?.name) {
+                                controller.xenditPayment(context,
+                                    controller.amountController.value.text);
                               } else {
-                                ShowToastDialog.showToast("Please select payment method".tr);
+                                ShowToastDialog.showToast(
+                                    "Please select payment method".tr);
                               }
                             } else {
-                              ShowToastDialog.showToast("Please enter amount".tr);
+                              ShowToastDialog.showToast(
+                                  "Please enter amount".tr);
                             }
                           },
                         ),
@@ -539,7 +642,8 @@ class WalletScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildDetailCard(
                   title: "Transaction ID".tr,
-                  value: "#${walletTransactionModel.transactionId!.toUpperCase()}",
+                  value:
+                      "#${walletTransactionModel.transactionId!.toUpperCase()}",
                   themeChange: themeChange,
                 ),
                 const SizedBox(height: 12),
@@ -578,7 +682,9 @@ class WalletScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      DateFormat('KK:mm:ss a, dd MMM yyyy').format(walletTransactionModel.createdDate!.toDate()).toUpperCase(),
+                      DateFormat('KK:mm:ss a, dd MMM yyyy')
+                          .format(walletTransactionModel.createdDate!.toDate())
+                          .toUpperCase(),
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         color: AppColors.darkBackground.withOpacity(0.7),
@@ -604,7 +710,9 @@ class WalletScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: themeChange.getThem() ? AppColors.darkContainerBackground : Colors.white,
+        color: themeChange.getThem()
+            ? AppColors.darkContainerBackground
+            : Colors.white,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
@@ -642,12 +750,14 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  void withdrawAmountBottomSheet(BuildContext context, WalletController controller, DarkThemeProvider themeChange) {
+  void withdrawAmountBottomSheet(BuildContext context,
+      WalletController controller, DarkThemeProvider themeChange) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(25)),
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(25), topRight: Radius.circular(25)),
       ),
       builder: (context) {
         return StatefulBuilder(builder: (context, setState) {
@@ -665,7 +775,9 @@ class WalletScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Container(
                     decoration: BoxDecoration(
-                      color: themeChange.getThem() ? AppColors.darkContainerBackground : Colors.white,
+                      color: themeChange.getThem()
+                          ? AppColors.darkContainerBackground
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
@@ -684,7 +796,8 @@ class WalletScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                controller.bankDetailsModel.value.bankName.toString(),
+                                controller.bankDetailsModel.value.bankName
+                                    .toString(),
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 18,
@@ -700,7 +813,8 @@ class WalletScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            controller.bankDetailsModel.value.accountNumber.toString(),
+                            controller.bankDetailsModel.value.accountNumber
+                                .toString(),
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w500,
                               fontSize: 16,
@@ -709,7 +823,8 @@ class WalletScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            controller.bankDetailsModel.value.holderName.toString(),
+                            controller.bankDetailsModel.value.holderName
+                                .toString(),
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w500,
                               fontSize: 16,
@@ -718,7 +833,8 @@ class WalletScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            controller.bankDetailsModel.value.branchName.toString(),
+                            controller.bankDetailsModel.value.branchName
+                                .toString(),
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w400,
                               fontSize: 14,
@@ -726,7 +842,8 @@ class WalletScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            controller.bankDetailsModel.value.otherInformation.toString(),
+                            controller.bankDetailsModel.value.otherInformation
+                                .toString(),
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w400,
                               fontSize: 14,
@@ -762,26 +879,38 @@ class WalletScreen extends StatelessWidget {
                   ButtonThem.buildButton(
                     context,
                     title: "Withdrawal".tr,
-                   
                     onPress: () async {
-                      if (double.parse(controller.driverUserModel.value.walletAmount.toString()) < double.parse(controller.withdrawalAmountController.value.text)) {
+                      if (double.parse(controller
+                              .driverUserModel.value.walletAmount
+                              .toString()) <
+                          double.parse(controller
+                              .withdrawalAmountController.value.text)) {
                         ShowToastDialog.showToast("Insufficient balance".tr);
-                      } else if (double.parse(Constant.minimumAmountToWithdrawal) > double.parse(controller.withdrawalAmountController.value.text)) {
+                      } else if (double.parse(
+                              Constant.minimumAmountToWithdrawal) >
+                          double.parse(controller
+                              .withdrawalAmountController.value.text)) {
                         ShowToastDialog.showToast(
-                            "Withdraw amount must be greater or equal to ${Constant.amountShow(amount: Constant.minimumAmountToWithdrawal.toString())}".tr);
+                            "Withdraw amount must be greater or equal to ${Constant.amountShow(amount: Constant.minimumAmountToWithdrawal.toString())}"
+                                .tr);
                       } else {
                         ShowToastDialog.showLoader("Please wait".tr);
                         WithdrawModel withdrawModel = WithdrawModel();
                         withdrawModel.id = Constant.getUuid();
                         withdrawModel.userId = FireStoreUtils.getCurrentUid();
                         withdrawModel.paymentStatus = "pending";
-                        withdrawModel.amount = controller.withdrawalAmountController.value.text;
-                        withdrawModel.note = controller.noteController.value.text;
+                        withdrawModel.amount =
+                            controller.withdrawalAmountController.value.text;
+                        withdrawModel.note =
+                            controller.noteController.value.text;
                         withdrawModel.createdDate = Timestamp.now();
 
-                        await FireStoreUtils.updatedDriverWallet(amount: "-${controller.withdrawalAmountController.value.text}");
+                        await FireStoreUtils.updatedDriverWallet(
+                            amount:
+                                "-${controller.withdrawalAmountController.value.text}");
 
-                        await FireStoreUtils.setWithdrawRequest(withdrawModel).then((value) {
+                        await FireStoreUtils.setWithdrawRequest(withdrawModel)
+                            .then((value) {
                           controller.getUser();
                           ShowToastDialog.closeLoader();
                           ShowToastDialog.showToast("Request sent to admin".tr);

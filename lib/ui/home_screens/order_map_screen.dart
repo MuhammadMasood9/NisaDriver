@@ -7,6 +7,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/text_field_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
@@ -38,11 +39,7 @@ class OrderMapScreen extends StatelessWidget {
             ),
             title: Text(
               'Order Details'.tr,
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
+              style: AppTypography.appBar(context),
             ),
             centerTitle: true,
             surfaceTintColor: Colors.white,
@@ -77,7 +74,7 @@ class OrderMapScreen extends StatelessWidget {
               ),
               Positioned(
                 bottom: 350,
-                right: 10,
+                right: 20,
                 child: FloatingActionButton(
                   backgroundColor: AppColors.primary,
                   onPressed: () async {

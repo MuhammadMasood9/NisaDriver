@@ -206,42 +206,41 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
     }
   }
 
-Future<List<LatLng>> _getPolylinePoints(
-    LatLng source, LatLng destination) async {
-  List<LatLng> polylineCoordinates = [];
+  Future<List<LatLng>> _getPolylinePoints(
+      LatLng source, LatLng destination) async {
+    List<LatLng> polylineCoordinates = [];
 
-  try {
-    PolylineRequest request = PolylineRequest(
-      origin: PointLatLng(source.latitude, source.longitude),
-      destination: PointLatLng(destination.latitude, destination.longitude),
-      mode: TravelMode.driving,
-    );
+    try {
+      PolylineRequest request = PolylineRequest(
+        origin: PointLatLng(source.latitude, source.longitude),
+        destination: PointLatLng(destination.latitude, destination.longitude),
+        mode: TravelMode.driving,
+      );
 
-    // FIXED: Changed from List<PolylineResult> to PolylineResult
-    PolylineResult result =
-        await polylinePoints.getRouteBetweenCoordinates(
-      request: request,
-      googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-    );
+      PolylineResult result = (await polylinePoints.getRouteBetweenCoordinates(
+        request: request,
+        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
+      ))
+          .first;
 
-    // FIXED: Changed condition to check result.points directly
-    if (result.points.isNotEmpty) {
-      polylineCoordinates = result.points
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-      print('Polyline points loaded: ${polylineCoordinates.length} points');
-    } else {
-      print('No polyline results found, using straight line');
+      if (result.points.isNotEmpty) {
+        polylineCoordinates = result.points
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
+        print('Polyline points loaded: ${polylineCoordinates.length} points');
+      } else {
+        print('No polyline results found, using straight line');
+        polylineCoordinates = [source, destination];
+      }
+    } catch (e) {
+      print('Error fetching polyline: $e');
+      // Create a simple straight line as fallback
       polylineCoordinates = [source, destination];
     }
-  } catch (e) {
-    print('Error fetching polyline: $e');
-    // Create a simple straight line as fallback
-    polylineCoordinates = [source, destination];
+
+    return polylineCoordinates;
   }
 
-  return polylineCoordinates;
-}
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
 
@@ -302,9 +301,9 @@ Future<List<LatLng>> _getPolylinePoints(
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
-              onPressed: () => Get.back(),
+            leading: InkWell(
+              onTap: () => Get.back(),
+              child: const Icon(Icons.arrow_back, color: Colors.black),
             ),
             centerTitle: true,
             title: Text(
@@ -329,7 +328,6 @@ Future<List<LatLng>> _getPolylinePoints(
                           spacing: 15,
                           children: [
                             _buildMapSection(context),
-                           
                             _buildSectionCard(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,11 +336,12 @@ Future<List<LatLng>> _getPolylinePoints(
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
-                                        spacing: 5,
+                                    spacing: 5,
                                     children: [
                                       Text(
                                         "Ride ID".tr,
-                                        style: AppTypography.headers(Get.context!),
+                                        style:
+                                            AppTypography.headers(Get.context!),
                                       ),
                                       GestureDetector(
                                         onTap: () {
@@ -381,9 +380,7 @@ Future<List<LatLng>> _getPolylinePoints(
                                 ],
                               ),
                             ),
-                          
                             _buildSectionHeader("User Details".tr),
-                         
                             _buildSectionCard(
                               child: UserDriverView(
                                 userId: controller.orderModel.value.userId
@@ -392,7 +389,6 @@ Future<List<LatLng>> _getPolylinePoints(
                                     .toString(),
                               ),
                             ),
-                           
                             _buildSectionHeader(
                                 "Pickup and drop-off locations".tr),
                             _buildSectionCard(
@@ -405,7 +401,6 @@ Future<List<LatLng>> _getPolylinePoints(
                                     .toString(),
                               ),
                             ),
-                           
                             _buildSectionHeader("Ride Status".tr),
                             _buildSectionCard(
                               child: Row(
@@ -415,7 +410,8 @@ Future<List<LatLng>> _getPolylinePoints(
                                   Text(
                                     controller.orderModel.value.status
                                         .toString(),
-                                    style:AppTypography.boldLabel(Get.context!),
+                                    style:
+                                        AppTypography.boldLabel(Get.context!),
                                   ),
                                   Text(
                                     Constant().formatTimestamp(controller
@@ -425,7 +421,6 @@ Future<List<LatLng>> _getPolylinePoints(
                                 ],
                               ),
                             ),
-                           
                             _buildSectionHeader("Booking Summary".tr),
                             _buildSectionCard(
                               child: Column(
@@ -433,7 +428,8 @@ Future<List<LatLng>> _getPolylinePoints(
                                 children: [
                                   Text(
                                     "Booking Summary".tr,
-                                    style: AppTypography.boldLabel(Get.context!),
+                                    style:
+                                        AppTypography.boldLabel(Get.context!),
                                   ),
                                   const Divider(height: 24, thickness: 1),
                                   _buildSummaryRow(
@@ -505,7 +501,6 @@ Future<List<LatLng>> _getPolylinePoints(
                                 ],
                               ),
                             ),
-                           
                             _buildSectionHeader("Admin Commission".tr),
                             _buildSectionCard(
                               child: Column(
@@ -513,7 +508,8 @@ Future<List<LatLng>> _getPolylinePoints(
                                 children: [
                                   Text(
                                     "Admin Commission".tr,
-                                    style: AppTypography.boldLabel(Get.context!),
+                                    style:
+                                        AppTypography.boldLabel(Get.context!),
                                   ),
                                   const SizedBox(height: 10),
                                   _buildSummaryRow(
@@ -526,7 +522,9 @@ Future<List<LatLng>> _getPolylinePoints(
                                   Text(
                                     "Note: Admin commission will be debited from your wallet balance. \nAdmin commission will apply on Ride Amount minus Discount (if applicable)."
                                         .tr,
-                                    style:AppTypography.smBoldLabel(Get.context!).copyWith(color: AppColors.primary),
+                                    style:
+                                        AppTypography.smBoldLabel(Get.context!)
+                                            .copyWith(color: AppColors.primary),
                                   ),
                                 ],
                               ),
@@ -641,12 +639,12 @@ Future<List<LatLng>> _getPolylinePoints(
           Text(
             title,
             style: titleStyle ??
-                AppTypography.boldLabel(Get.context!).copyWith(color: AppColors.grey500),
+                AppTypography.boldLabel(Get.context!)
+                    .copyWith(color: AppColors.grey500),
           ),
           Text(
             value,
-            style: valueStyle ??
-                AppTypography.boldLabel(Get.context!),
+            style: valueStyle ?? AppTypography.boldLabel(Get.context!),
           ),
         ],
       ),

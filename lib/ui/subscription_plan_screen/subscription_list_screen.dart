@@ -113,7 +113,8 @@ class SubscriptionListScreen extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           "Select the perfect subscription plan for your needs",
-          style: AppTypography.label(Get.context!).copyWith(color: AppColors.grey400),
+          style: AppTypography.label(Get.context!)
+              .copyWith(color: AppColors.grey400),
         ),
       ],
     );
@@ -204,7 +205,6 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
               gradient: isSelected ? _buildSelectedGradient() : null,
               color: isSelected ? null : AppColors.background,
               borderRadius: BorderRadius.circular(8),
-            
               boxShadow:
                   isSelected ? _buildSelectedShadow() : _buildDefaultShadow(),
             ),
@@ -268,9 +268,11 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
                   Expanded(
                     child: Text(
                       subscriptionPlanModel.name ?? '',
-                      style: AppTypography.boldHeaders(Get.context!).copyWith(color: isSelected
+                      style: AppTypography.boldHeaders(Get.context!).copyWith(
+                        color: isSelected
                             ? Colors.white
-                            : AppColors.darkBackground,),
+                            : AppColors.darkBackground,
+                      ),
                     ),
                   ),
                   if (isActive) _buildActiveBadge(),
@@ -279,9 +281,11 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subscriptionPlanModel.description ?? '',
-                style: AppTypography.label(Get.context!).copyWith( color: isSelected
+                style: AppTypography.label(Get.context!).copyWith(
+                  color: isSelected
                       ? Colors.white.withOpacity(0.8)
-                      : AppColors.grey500,),
+                      : AppColors.grey500,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -301,7 +305,8 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
       ),
       child: Text(
         "Active",
-        style: AppTypography.smBoldLabel(Get.context!).copyWith(color: Colors.white),
+        style: AppTypography.smBoldLabel(Get.context!)
+            .copyWith(color: Colors.white),
       ),
     );
   }
@@ -316,7 +321,9 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
               : Constant.amountShow(
                   amount: double.parse(subscriptionPlanModel.price ?? '0.0')
                       .toString()),
-          style: AppTypography.boldHeaders(Get.context!).copyWith(color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,),
+          style: AppTypography.boldHeaders(Get.context!).copyWith(
+            color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,
+          ),
         ),
         const SizedBox(width: 4),
         Padding(
@@ -325,7 +332,9 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
             subscriptionPlanModel.expiryDay == "-1"
                 ? "/ Lifetime"
                 : "/ ${subscriptionPlanModel.expiryDay} Days",
-            style:AppTypography.boldLabel(Get.context!).copyWith(color: isSelected ? AppColors.grey200 : AppColors.grey500,),
+            style: AppTypography.boldLabel(Get.context!).copyWith(
+              color: isSelected ? AppColors.grey200 : AppColors.grey500,
+            ),
           ),
         ),
       ],
@@ -358,8 +367,9 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
           Expanded(
             child: Text(
               'Commission: ${Constant.adminCommission?.type == 'percentage' ? "${Constant.adminCommission?.amount}%" : "${Constant.amountShow(amount: Constant.adminCommission?.amount)} Flat"} per order',
-              style: AppTypography.label(Get.context!).copyWith(color: isSelected? Colors.white : AppColors.grey500,),
-               
+              style: AppTypography.label(Get.context!).copyWith(
+                color: isSelected ? Colors.white : AppColors.grey500,
+              ),
             ),
           ),
         ],
@@ -373,7 +383,9 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
       children: [
         Text(
           "What's included:",
-          style:AppTypography.boldLabel(Get.context!).copyWith(color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,),
+          style: AppTypography.boldLabel(Get.context!).copyWith(
+            color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,
+          ),
         ),
         const SizedBox(height: 8),
         ...subscriptionPlanModel.planPoints!.map(
@@ -398,9 +410,11 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
                 Expanded(
                   child: Text(
                     point,
-                    style: AppTypography.label(Get.context!).copyWith(  color: isSelected
+                    style: AppTypography.label(Get.context!).copyWith(
+                      color: isSelected
                           ? Colors.white.withOpacity(0.9)
-                          : AppColors.grey600,),
+                          : AppColors.grey600,
+                    ),
                   ),
                 ),
               ],
@@ -435,7 +449,9 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             'Booking Limit: ${subscriptionPlanModel.bookingLimit == '-1' ? 'Unlimited' : subscriptionPlanModel.bookingLimit ?? '0'}',
-            style: AppTypography.boldLabel(Get.context!).copyWith(color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,),
+            style: AppTypography.boldLabel(Get.context!).copyWith(
+              color: isSelected ? Colors.white : AppColors.darkTextFieldBorder,
+            ),
           ),
         ],
       ),
@@ -462,7 +478,8 @@ class ModernSubscriptionPlanWidget extends StatelessWidget {
               : isSelected
                   ? "Continue with Plan"
                   : "Select Plan",
-          style: AppTypography.appBar(Get.context!).copyWith( color: isSelected ? AppColors.primary : AppColors.background),
+          style: AppTypography.button(Get.context!).copyWith(
+              color: isSelected ? AppColors.primary : AppColors.background),
         ),
       ),
     );

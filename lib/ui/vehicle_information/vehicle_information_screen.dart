@@ -265,7 +265,8 @@ class VehicleInformationScreen extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTypography.boldLabel(Get.context!).copyWith(color: AppColors.grey600),
+            style: AppTypography.boldLabel(Get.context!)
+                .copyWith(color: AppColors.grey600),
           ),
           const SizedBox(height: 8),
           Container(
@@ -459,8 +460,9 @@ class VehicleInformationScreen extends StatelessWidget {
             child: Text(
               "You cannot change service type once selected. Contact administrator to change."
                   .tr,
-              style: AppTypography.label(context).copyWith(color: Colors.amber.shade700,),
-                
+              style: AppTypography.label(context).copyWith(
+                color: Colors.amber.shade700,
+              ),
             ),
           ),
         ],

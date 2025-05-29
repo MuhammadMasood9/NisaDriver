@@ -7,6 +7,7 @@ import 'package:driver/model/order/complete_intercity_order_controller.dart';
 import 'package:driver/model/tax_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_order_view.dart';
@@ -99,6 +100,8 @@ class _CompleteIntercityOrderScreenState
     final LatLng sourceLatLng = LatLng(sourceLat, sourceLng);
     final LatLng destinationLatLng = LatLng(destLat, destLng);
 
+    print('Source: $sourceLatLng, Destination: $destinationLatLng');
+
     _bounds = LatLngBounds(
       southwest: LatLng(
         min(sourceLatLng.latitude, destinationLatLng.latitude) - 0.01,
@@ -160,6 +163,8 @@ class _CompleteIntercityOrderScreenState
       ),
     };
 
+    print('Created ${newMarkers.length} markers');
+
     if (mounted) {
       setState(() {
         _markers = newMarkers;
@@ -169,6 +174,7 @@ class _CompleteIntercityOrderScreenState
     try {
       _polylineCoordinates =
           await _getPolylinePoints(sourceLatLng, destinationLatLng);
+
       if (_polylineCoordinates.isNotEmpty) {
         final Set<Polyline> newPolylines = {
           Polyline(
@@ -181,6 +187,7 @@ class _CompleteIntercityOrderScreenState
             endCap: Cap.roundCap,
           ),
         };
+
         if (mounted) {
           setState(() {
             _polylines = newPolylines;
@@ -192,44 +199,65 @@ class _CompleteIntercityOrderScreenState
     }
   }
 
-Future<List<LatLng>> _getPolylinePoints(
-    LatLng source, LatLng destination) async {
-  List<LatLng> polylineCoordinates = [];
-  try {
-    PolylineRequest request = PolylineRequest(
-      origin: PointLatLng(source.latitude, source.longitude),
-      destination: PointLatLng(destination.latitude, destination.longitude),
-      mode: TravelMode.driving,
-    );
+  Future<List<LatLng>> _getPolylinePoints(
+      LatLng source, LatLng destination) async {
+    List<LatLng> polylineCoordinates = [];
 
-    // Changed: getRouteBetweenCoordinates now returns a single PolylineResult
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      request: request,
-      googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-    );
+    try {
+      PolylineRequest request = PolylineRequest(
+        origin: PointLatLng(source.latitude, source.longitude),
+        destination: PointLatLng(destination.latitude, destination.longitude),
+        mode: TravelMode.driving,
+      );
 
-    // Check if the result has points
-    if (result.points.isNotEmpty) {
-      polylineCoordinates = result.points
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-    } else {
+      PolylineResult result = (await polylinePoints.getRouteBetweenCoordinates(
+        request: request,
+        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
+      ))
+          .first;
+
+      if (result.points.isNotEmpty) {
+        polylineCoordinates = result.points
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
+        print('Polyline points loaded: ${polylineCoordinates.length} points');
+      } else {
+        print('No polyline results found, using straight line');
+        polylineCoordinates = [source, destination];
+      }
+    } catch (e) {
+      print('Error fetching polyline: $e');
       polylineCoordinates = [source, destination];
     }
-  } catch (e) {
-    print('Error fetching polyline: $e');
-    polylineCoordinates = [source, destination];
+
+    return polylineCoordinates;
   }
-  return polylineCoordinates;
-}
+
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+
     _mapController!.setMapStyle('''
       [
-        {"featureType": "all", "elementType": "labels", "stylers": [{"visibility": "on"}]},
-        {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#e0e0e0"}]},
-        {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#c4e4ff"}]},
-        {"featureType": "poi", "elementType": "labels", "stylers": [{"visibility": "simplified"}]}
+        {
+          "featureType": "all",
+          "elementType": "labels",
+          "stylers": [{"visibility": "on"}]
+        },
+        {
+          "featureType": "road",
+          "elementType": "geometry",
+          "stylers": [{"color": "#e0e0e0"}]
+        },
+        {
+          "featureType": "water",
+          "elementType": "geometry",
+          "stylers": [{"color": "#c4e4ff"}]
+        },
+        {
+          "featureType": "poi",
+          "elementType": "labels",
+          "stylers": [{"visibility": "simplified"}]
+        }
       ]
     ''');
 
@@ -237,8 +265,9 @@ Future<List<LatLng>> _getPolylinePoints(
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (_mapController != null && mounted) {
           try {
-            _mapController!
-                .animateCamera(CameraUpdate.newLatLngBounds(_bounds!, 100));
+            _mapController!.animateCamera(
+              CameraUpdate.newLatLngBounds(_bounds!, 100),
+            );
           } catch (e) {
             print('Error fitting bounds: $e');
           }
@@ -262,18 +291,14 @@ Future<List<LatLng>> _getPolylinePoints(
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
-              onPressed: () => Get.back(),
+            leading: InkWell(
+              onTap: () => Get.back(),
+              child: const Icon(Icons.arrow_back, color: Colors.black),
             ),
             centerTitle: true,
             title: Text(
               "Ride Details".tr,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                fontSize: 18,
-                color: AppColors.darkBackground,
-              ),
+              style: AppTypography.appTitle(context),
             ),
           ),
           backgroundColor: themeChange.getThem()
@@ -290,24 +315,23 @@ Future<List<LatLng>> _getPolylinePoints(
                             horizontal: 16, vertical: 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 15,
                           children: [
                             _buildMapSection(context),
-                            const SizedBox(height: 24),
                             _buildSectionCard(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                spacing: 5,
                                 children: [
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
+                                    spacing: 5,
                                     children: [
                                       Text(
                                         "Ride ID".tr,
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16,
-                                          color: AppColors.darkBackground,
-                                        ),
+                                        style:
+                                            AppTypography.headers(Get.context!),
                                       ),
                                       GestureDetector(
                                         onTap: () {
@@ -341,16 +365,11 @@ Future<List<LatLng>> _getPolylinePoints(
                                   ),
                                   Text(
                                     "#${controller.orderModel.value.id!.toUpperCase()}",
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 12,
-                                      color: AppColors.darkBackground,
-                                    ),
+                                    style: AppTypography.label(Get.context!),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
                             _buildSectionHeader("User Details".tr),
                             _buildSectionCard(
                               child: UserDriverView(
@@ -360,7 +379,6 @@ Future<List<LatLng>> _getPolylinePoints(
                                     .toString(),
                               ),
                             ),
-                            const SizedBox(height: 24),
                             _buildSectionHeader(
                                 "Pickup and drop-off locations".tr),
                             _buildSectionCard(
@@ -373,7 +391,6 @@ Future<List<LatLng>> _getPolylinePoints(
                                     .toString(),
                               ),
                             ),
-                            const SizedBox(height: 24),
                             _buildSectionHeader("Ride Status".tr),
                             _buildSectionCard(
                               child: Row(
@@ -383,25 +400,17 @@ Future<List<LatLng>> _getPolylinePoints(
                                   Text(
                                     controller.orderModel.value.status
                                         .toString(),
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 14,
-                                      color: AppColors.darkBackground,
-                                    ),
+                                    style:
+                                        AppTypography.boldLabel(Get.context!),
                                   ),
                                   Text(
                                     Constant().formatTimestamp(controller
                                         .orderModel.value.createdDate),
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                    ),
+                                    style: AppTypography.label(Get.context!),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
                             _buildSectionHeader("Booking Summary".tr),
                             _buildSectionCard(
                               child: Column(
@@ -409,11 +418,8 @@ Future<List<LatLng>> _getPolylinePoints(
                                 children: [
                                   Text(
                                     "Booking Summary".tr,
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 16,
-                                      color: AppColors.darkBackground,
-                                    ),
+                                    style:
+                                        AppTypography.boldLabel(Get.context!),
                                   ),
                                   const Divider(height: 24, thickness: 1),
                                   _buildSummaryRow(
@@ -476,16 +482,15 @@ Future<List<LatLng>> _getPolylinePoints(
                                             .toString()),
                                     titleStyle: GoogleFonts.poppins(
                                         fontWeight: FontWeight.w500,
-                                        fontSize: 16),
+                                        fontSize: 14),
                                     valueStyle: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
                                         color: AppColors.primary),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
                             _buildSectionHeader("Admin Commission".tr),
                             _buildSectionCard(
                               child: Column(
@@ -493,11 +498,8 @@ Future<List<LatLng>> _getPolylinePoints(
                                 children: [
                                   Text(
                                     "Admin Commission".tr,
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                      color: AppColors.darkBackground,
-                                    ),
+                                    style:
+                                        AppTypography.boldLabel(Get.context!),
                                   ),
                                   const SizedBox(height: 10),
                                   _buildSummaryRow(
@@ -511,7 +513,8 @@ Future<List<LatLng>> _getPolylinePoints(
                                     "Note: Admin commission will be debited from your wallet balance. \nAdmin commission will apply on Ride Amount minus Discount (if applicable)."
                                         .tr,
                                     style:
-                                        GoogleFonts.poppins(color: Colors.red),
+                                        AppTypography.smBoldLabel(Get.context!)
+                                            .copyWith(color: AppColors.primary),
                                   ),
                                 ],
                               ),
@@ -544,7 +547,7 @@ Future<List<LatLng>> _getPolylinePoints(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: SizedBox(
-          height: Responsive.height(35, context),
+          height: Responsive.height(30, context),
           child: GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
@@ -574,14 +577,10 @@ Future<List<LatLng>> _getPolylinePoints(
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 1),
       child: Text(
         title,
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w500,
-          fontSize: 16,
-          color: AppColors.darkBackground,
-        ),
+        style: AppTypography.headers(Get.context!),
       ),
     );
   }
@@ -594,7 +593,7 @@ Future<List<LatLng>> _getPolylinePoints(
         color: themeChange.getThem()
             ? AppColors.darkContainerBackground
             : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         gradient: themeChange.getThem()
             ? null
             : LinearGradient(
@@ -630,20 +629,12 @@ Future<List<LatLng>> _getPolylinePoints(
           Text(
             title,
             style: titleStyle ??
-                GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                  color: AppColors.grey500,
-                ),
+                AppTypography.boldLabel(Get.context!)
+                    .copyWith(color: AppColors.grey500),
           ),
           Text(
             value,
-            style: valueStyle ??
-                GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: valueColor ?? AppColors.darkBackground,
-                ),
+            style: valueStyle ?? AppTypography.boldLabel(Get.context!),
           ),
         ],
       ),

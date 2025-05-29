@@ -88,7 +88,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             "Manage your profile".tr,
-            style:  AppTypography.boldHeaders(context),
+            style: AppTypography.boldHeaders(context),
             textAlign: TextAlign.center,
           ),
         ],
@@ -130,53 +130,55 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-Widget _buildProfileForm(BuildContext context, ProfileController controller) {
-  return Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: AppColors.background,
-    ),
-    child: Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 14),
-                  _buildModernTextField(
-                    context,
-                    label: "Full Name".tr,
-                    hint: "Enter your full name".tr,
-                    controller: controller.fullNameController.value,
-                    icon: Icons.person,
-                  ),
-                  _buildModernTextField(
-                    context,
-                    label: "Email".tr,
-                    hint: "Enter your email".tr,
-                    controller: controller.emailController.value,
-                    icon: Icons.email,
-                    // enabled: false,
-                  ),
-                  _buildModernPhoneField(context, controller),
-                  const SizedBox(height: 20),
-                ],
+  Widget _buildProfileForm(BuildContext context, ProfileController controller) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.background,
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 14),
+                    _buildModernTextField(
+                      context,
+                      label: "Full Name".tr,
+                      hint: "Enter your full name".tr,
+                      controller: controller.fullNameController.value,
+                      icon: Icons.person,
+                    ),
+                    _buildModernTextField(
+                      context,
+                      label: "Email".tr,
+                      hint: "Enter your email".tr,
+                      controller: controller.emailController.value,
+                      icon: Icons.email,
+                      // enabled: false,
+                    ),
+                    _buildModernPhoneField(context, controller),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
-          child: _buildModernUpdateButton(context, controller),
-        ),
-      ],
-    ),
-  );
-}
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
+            child: _buildModernUpdateButton(context, controller),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildModernTextField(
     BuildContext context, {
     required String label,
@@ -196,7 +198,8 @@ Widget _buildProfileForm(BuildContext context, ProfileController controller) {
             children: [
               Text(
                 label,
-                style:AppTypography.boldLabel(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+                style: AppTypography.boldLabel(context)
+                    .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
               ),
               if (isOptional)
                 Container(
@@ -232,16 +235,14 @@ Widget _buildProfileForm(BuildContext context, ProfileController controller) {
             child: TextField(
               controller: controller,
               keyboardType: keyboardType,
-              
               maxLines: maxLines,
-              style: AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+              style: AppTypography.label(context)
+                  .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
               decoration: InputDecoration(
-                
                 hintText: hint,
-                hintStyle: AppTypography.label(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+                hintStyle: AppTypography.label(context)
+                    .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
                 prefixIcon: Container(
-                 
-                 
                   child: Icon(
                     icon,
                     color: AppColors.darkBackground.withOpacity(0.7),
@@ -270,52 +271,64 @@ Widget _buildProfileForm(BuildContext context, ProfileController controller) {
         children: [
           Text(
             "Phone Number".tr,
-           style:AppTypography.boldLabel(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+            style: AppTypography.boldLabel(context)
+                .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
           ),
           const SizedBox(height: 8),
           Container(
-            height: 48,
+            height: 45,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.grey.shade200,
-                width: 1.5,
-              ),
+              border: Border.all(color: Colors.grey.shade200, width: 1.0),
               color: Colors.grey.shade100,
             ),
             child: TextField(
               controller: controller.phoneNumberController.value,
-              enabled: false,
-             style:AppTypography.input(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+              enabled: true, // Enable for interaction
+              style: AppTypography.input(context).copyWith(
+                color: AppColors.darkBackground.withOpacity(0.7),
+              ),
               decoration: InputDecoration(
                 hintText: "Enter phone number".tr,
-                hintStyle:AppTypography.input(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
-                prefixIcon: CountryCodePicker(
-                  onChanged: (value) {
-                    controller.countryCode.value = value.dialCode.toString();
-                  },
-                  dialogBackgroundColor:
-                      Theme.of(context).colorScheme.background,
-                  initialSelection: controller.countryCode.value,
-                  comparator: (a, b) => b.name!.compareTo(a.name.toString()),
-                  flagDecoration: const BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.circular(2)),
-                  ),
-                  textStyle: AppTypography.input(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
-                  searchDecoration: InputDecoration(
-                    hintText: "Search country".tr,
-                    hintStyle: AppTypography.input(context).copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
+                hintStyle: AppTypography.input(context).copyWith(
+                  color: AppColors.darkBackground.withOpacity(0.6),
+                ),
+                prefixIcon: Container(
+                  width: 80, // Increased width for better rendering
+                  padding: const EdgeInsets.only(left: 0),
+                  child: CountryCodePicker(
+                    onChanged: (value) {
+                      controller.countryCode.value = value.dialCode.toString();
+                    },
+                    dialogBackgroundColor:
+                        Theme.of(context).colorScheme.background,
+                    initialSelection: controller.countryCode.value.isEmpty
+                        ? "+1" // Fallback to a default code
+                        : controller.countryCode.value,
+                    comparator: (a, b) => b.name!.compareTo(a.name.toString()),
+                    flagDecoration: const BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(2)),
                     ),
+                    textStyle: AppTypography.boldLabel(context).copyWith(
+                      color: AppColors.darkBackground.withOpacity(0.7),
+                      // fontSize: 14,
+                    ),
+                    searchDecoration: InputDecoration(
+                      hintText: "Search country".tr,
+                      hintStyle: AppTypography.input(context).copyWith(
+                        color: AppColors.darkBackground.withOpacity(0.7),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                    padding: EdgeInsets.zero,
                   ),
                 ),
                 border: InputBorder.none,
-                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 14,
-                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
               ),
             ),
           ),
@@ -328,7 +341,7 @@ Widget _buildProfileForm(BuildContext context, ProfileController controller) {
       BuildContext context, ProfileController controller) {
     return Container(
       width: double.infinity,
-      height: 35,
+      height: 40,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -389,12 +402,13 @@ Widget _buildProfileForm(BuildContext context, ProfileController controller) {
                 const Icon(
                   Icons.save_rounded,
                   color: Colors.white,
-                  size: 18,
+                  size: 15,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   "Update Profile".tr,
-                  style:AppTypography.headers(context).copyWith(color: AppColors.background),
+                  style: AppTypography.button(context)
+                      .copyWith(color: AppColors.background),
                 ),
               ],
             ),

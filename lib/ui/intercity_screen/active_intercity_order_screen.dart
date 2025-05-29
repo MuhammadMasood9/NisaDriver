@@ -11,6 +11,7 @@ import 'package:driver/model/user_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/ui/home_screens/live_tracking_screen.dart';
 import 'package:driver/ui/intercity_screen/pacel_details_screen.dart';
@@ -39,21 +40,19 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
             backgroundColor: AppColors.background,
             body: Column(
               children: [
-                SizedBox(
-                  height: Responsive.width(8, context),
-                  width: Responsive.width(100, context),
-                ),
+                const SizedBox(height: 10),
                 Expanded(
                   child: Container(
-                    height: Responsive.height(100, context),
-                    width: Responsive.width(100, context),
+                    width: double.infinity,
                     decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.background,
-                        borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(25),
-                            topRight: Radius.circular(25))),
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(28),
+                        topRight: Radius.circular(28),
+                      ),
+                    ),
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 10),
+                      padding: const EdgeInsets.only(top: 4, left: 5, right: 5),
                       child: StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
                             .collection(CollectionName.ordersIntercity)
@@ -66,7 +65,16 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                         builder: (BuildContext context,
                             AsyncSnapshot<QuerySnapshot> snapshot) {
                           if (snapshot.hasError) {
-                            return Text('Something went wrong'.tr);
+                            return Center(
+                              child: Text(
+                                'Something went wrong'.tr,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  color: const Color(0xFF636E72),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            );
                           }
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
@@ -74,11 +82,17 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                           }
                           return snapshot.data!.docs.isEmpty
                               ? Center(
-                                  child: Text("No active ride found".tr),
+                                  child: Text(
+                                    "No active ride found".tr,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      color: const Color(0xFF636E72),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 )
                               : ListView.builder(
                                   itemCount: snapshot.data!.docs.length,
-                                  scrollDirection: Axis.vertical,
                                   shrinkWrap: true,
                                   itemBuilder: (context, index) {
                                     InterCityOrderModel orderModel =
@@ -127,37 +141,28 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                         }
                                       },
                                       child: Padding(
-                                        padding: const EdgeInsets.all(8.0),
+                                        padding: const EdgeInsets.all(5),
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            color: themeChange.getThem()
-                                                ? AppColors
-                                                    .darkContainerBackground
-                                                : AppColors.containerBackground,
+                                            color: AppColors.background,
                                             borderRadius:
                                                 const BorderRadius.all(
                                                     Radius.circular(10)),
-                                            border: Border.all(
-                                                color: themeChange.getThem()
-                                                    ? AppColors
-                                                        .darkContainerBorder
-                                                    : AppColors.containerBorder,
-                                                width: 0.5),
                                             boxShadow: themeChange.getThem()
                                                 ? null
                                                 : [
                                                     BoxShadow(
                                                       color: Colors.grey
-                                                          .withOpacity(0.5),
-                                                      blurRadius: 8,
-                                                      offset: const Offset(0,
-                                                          2), // changes position of shadow
+                                                          .withOpacity(0.3),
+                                                      blurRadius: 5,
+                                                      offset:
+                                                          const Offset(0, 2),
                                                     ),
                                                   ],
                                           ),
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(
-                                                vertical: 10, horizontal: 10),
+                                                vertical: 8, horizontal: 8),
                                             child: Column(
                                               children: [
                                                 UserView(
@@ -167,9 +172,20 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                   distanceType:
                                                       orderModel.distanceType,
                                                 ),
-                                                const SizedBox(
-                                                  height: 10,
+                                                const Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                      vertical: 5),
+                                                  child: Divider(),
                                                 ),
+                                                LocationView(
+                                                  sourceLocation: orderModel
+                                                      .sourceLocationName
+                                                      .toString(),
+                                                  destinationLocation: orderModel
+                                                      .destinationLocationName
+                                                      .toString(),
+                                                ),
+                                                const SizedBox(height: 10),
                                                 Row(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
@@ -195,29 +211,35 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                                 .done:
                                                               if (snapshot
                                                                   .hasError) {
-                                                                return Text(snapshot
-                                                                    .error
-                                                                    .toString());
+                                                                return Text(
+                                                                  snapshot.error
+                                                                      .toString(),
+                                                                  style: AppTypography
+                                                                      .boldLabel(
+                                                                          context),
+                                                                );
                                                               } else {
                                                                 DriverIdAcceptReject
                                                                     driverIdAcceptReject =
                                                                     snapshot
                                                                         .data!;
                                                                 return Text(
-                                                                    Constant.amountShow(
-                                                                        amount: driverIdAcceptReject
-                                                                            .offerAmount
-                                                                            .toString()),
-                                                                    style: GoogleFonts.poppins(
-                                                                        fontWeight:
-                                                                            FontWeight
-                                                                                .bold,
-                                                                        fontSize:
-                                                                            18));
+                                                                  Constant.amountShow(
+                                                                      amount: driverIdAcceptReject
+                                                                          .offerAmount
+                                                                          .toString()),
+                                                                  style: AppTypography
+                                                                      .boldHeaders(
+                                                                          context),
+                                                                );
                                                               }
                                                             default:
                                                               return Text(
-                                                                  'Error'.tr);
+                                                                'Error'.tr,
+                                                                style: AppTypography
+                                                                    .boldLabel(
+                                                                        context),
+                                                              );
                                                           }
                                                         }),
                                                     orderModel.intercityServiceId ==
@@ -226,34 +248,30 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                         : Text(
                                                             " For ${orderModel.numberOfPassenger} Person"
                                                                 .tr,
-                                                            style: GoogleFonts
-                                                                .poppins(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
-                                                                    fontSize:
-                                                                        18)),
+                                                            style: AppTypography
+                                                                .boldLabel(
+                                                                    context),
+                                                          ),
                                                   ],
                                                 ),
-                                                const SizedBox(
-                                                  height: 10,
-                                                ),
+                                                const SizedBox(height: 5),
                                                 Row(
                                                   children: [
                                                     Expanded(
                                                       child: Row(
                                                         children: [
                                                           Container(
-                                                            decoration: BoxDecoration(
-                                                                color: Colors
-                                                                    .grey
-                                                                    .withOpacity(
-                                                                        0.30),
-                                                                borderRadius:
-                                                                    const BorderRadius
-                                                                        .all(
-                                                                        Radius.circular(
-                                                                            5))),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: Colors.grey
+                                                                  .withOpacity(
+                                                                      0.3),
+                                                              borderRadius:
+                                                                  const BorderRadius
+                                                                      .all(
+                                                                      Radius.circular(
+                                                                          10)),
+                                                            ),
                                                             child: Padding(
                                                               padding:
                                                                   const EdgeInsets
@@ -261,26 +279,32 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                                       horizontal:
                                                                           10,
                                                                       vertical:
-                                                                          4),
-                                                              child: Text(orderModel
-                                                                  .paymentType
-                                                                  .toString()),
+                                                                          6),
+                                                              child: Text(
+                                                                orderModel
+                                                                    .paymentType
+                                                                    .toString(),
+                                                                style: AppTypography
+                                                                    .boldLabel(
+                                                                        context),
+                                                              ),
                                                             ),
                                                           ),
                                                           const SizedBox(
-                                                            width: 10,
-                                                          ),
+                                                              width: 10),
                                                           Container(
-                                                            decoration: BoxDecoration(
-                                                                color: AppColors
-                                                                    .primary
-                                                                    .withOpacity(
-                                                                        0.30),
-                                                                borderRadius:
-                                                                    const BorderRadius
-                                                                        .all(
-                                                                        Radius.circular(
-                                                                            5))),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: AppColors
+                                                                  .primary
+                                                                  .withOpacity(
+                                                                      0.3),
+                                                              borderRadius:
+                                                                  const BorderRadius
+                                                                      .all(
+                                                                      Radius.circular(
+                                                                          10)),
+                                                            ),
                                                             child: Padding(
                                                               padding:
                                                                   const EdgeInsets
@@ -288,12 +312,16 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                                       horizontal:
                                                                           10,
                                                                       vertical:
-                                                                          4),
-                                                              child: Text(Constant
-                                                                  .localizationName(
-                                                                      orderModel
-                                                                          .intercityService!
-                                                                          .name)),
+                                                                          6),
+                                                              child: Text(
+                                                                Constant.localizationName(
+                                                                    orderModel
+                                                                        .intercityService!
+                                                                        .name),
+                                                                style: AppTypography
+                                                                    .boldLabel(
+                                                                        context),
+                                                              ),
                                                             ),
                                                           ),
                                                         ],
@@ -304,36 +332,28 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                               .intercityServiceId ==
                                                           "647f350983ba2",
                                                       child: InkWell(
-                                                          onTap: () {
-                                                            Get.to(
-                                                                const ParcelDetailsScreen(),
-                                                                arguments: {
-                                                                  "orderModel":
-                                                                      orderModel,
-                                                                });
-                                                          },
-                                                          child: Text(
-                                                            "View details".tr,
-                                                            style: GoogleFonts
-                                                                .poppins(),
-                                                          )),
-                                                    )
+                                                        onTap: () {
+                                                          Get.to(
+                                                              const ParcelDetailsScreen(),
+                                                              arguments: {
+                                                                "orderModel":
+                                                                    orderModel,
+                                                              });
+                                                        },
+                                                        child: Text(
+                                                          "View details".tr,
+                                                          style: AppTypography
+                                                                  .boldLabel(
+                                                                      context)
+                                                              .copyWith(
+                                                                  color: AppColors
+                                                                      .primary),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ],
                                                 ),
-                                                const SizedBox(
-                                                  height: 10,
-                                                ),
-                                                LocationView(
-                                                  sourceLocation: orderModel
-                                                      .sourceLocationName
-                                                      .toString(),
-                                                  destinationLocation: orderModel
-                                                      .destinationLocationName
-                                                      .toString(),
-                                                ),
-                                                const SizedBox(
-                                                  height: 10,
-                                                ),
+                                                const SizedBox(height: 10),
                                                 Row(
                                                   children: [
                                                     Expanded(
@@ -342,14 +362,12 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                               Constant
                                                                   .rideInProgress
                                                           ? ButtonThem
-                                                              .buildBorderButton(
+                                                              .buildButton(
                                                               context,
                                                               title:
                                                                   "Complete Ride"
                                                                       .tr,
                                                               btnHeight: 44,
-                                                              iconVisibility:
-                                                                  false,
                                                               onPress:
                                                                   () async {
                                                                 orderModel
@@ -409,14 +427,12 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                               },
                                                             )
                                                           : ButtonThem
-                                                              .buildBorderButton(
+                                                              .buildButton(
                                                               context,
                                                               title:
                                                                   "Pickup Customer"
                                                                       .tr,
                                                               btnHeight: 44,
-                                                              iconVisibility:
-                                                                  false,
                                                               onPress:
                                                                   () async {
                                                                 showDialog(
@@ -431,9 +447,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                               },
                                                             ),
                                                     ),
-                                                    const SizedBox(
-                                                      width: 10,
-                                                    ),
+                                                    const SizedBox(width: 10),
                                                     Row(
                                                       children: [
                                                         InkWell(
@@ -475,32 +489,27 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                             ));
                                                           },
                                                           child: Container(
-                                                            height: 44,
-                                                            width: 44,
-                                                            decoration: BoxDecoration(
-                                                                color: themeChange
-                                                                        .getThem()
-                                                                    ? AppColors
-                                                                        .darkBackground
-                                                                    : AppColors
-                                                                        .darkBackground,
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            5)),
+                                                            height: 35,
+                                                            width: 35,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: AppColors
+                                                                  .primary,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
+                                                            ),
                                                             child: Icon(
-                                                                Icons.chat,
-                                                                color: themeChange
-                                                                        .getThem()
-                                                                    ? Colors
-                                                                        .black
-                                                                    : Colors
-                                                                        .white),
+                                                              Icons.chat,
+                                                              color: AppColors
+                                                                  .background,
+                                                              size: 20,
+                                                            ),
                                                           ),
                                                         ),
                                                         const SizedBox(
-                                                          width: 10,
-                                                        ),
+                                                            width: 10),
                                                         InkWell(
                                                           onTap: () async {
                                                             UserModel?
@@ -514,40 +523,37 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                                 "${customer!.countryCode}${customer.phoneNumber}");
                                                           },
                                                           child: Container(
-                                                            height: 44,
-                                                            width: 44,
-                                                            decoration: BoxDecoration(
-                                                                color: themeChange
-                                                                        .getThem()
-                                                                    ? AppColors
-                                                                        .darkBackground
-                                                                    : AppColors
-                                                                        .darkBackground,
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            5)),
+                                                            height: 35,
+                                                            width: 35,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: AppColors
+                                                                  .primary,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
+                                                            ),
                                                             child: Icon(
-                                                                Icons.call,
-                                                                color: themeChange
-                                                                        .getThem()
-                                                                    ? Colors
-                                                                        .black
-                                                                    : Colors
-                                                                        .white),
+                                                              Icons.call,
+                                                              color: AppColors
+                                                                  .background,
+                                                              size: 20,
+                                                            ),
                                                           ),
-                                                        )
+                                                        ),
                                                       ],
                                                     ),
                                                   ],
-                                                )
+                                                ),
                                               ],
                                             ),
                                           ),
                                         ),
                                       ),
                                     );
-                                  });
+                                  },
+                                );
                         },
                       ),
                     ),
@@ -564,19 +570,17 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
     final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0)), //this right here
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
-              height: 10,
+            Text(
+              "OTP verify from customer".tr,
+              style: AppTypography.boldHeaders(context),
             ),
-            Text("OTP verify from customer".tr,
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
             Padding(
               padding: const EdgeInsets.only(top: 20),
               child: PinCodeTextField(
@@ -614,51 +618,47 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                 onChanged: (value) {},
               ),
             ),
-            const SizedBox(
-              height: 10,
+            const SizedBox(height: 10),
+            ButtonThem.buildButton(
+              context,
+              title: "OTP verify".tr,
+              onPress: () async {
+                String inputOtp = controller.otpController.value.text;
+                String modelOtp = orderModel.otp.toString();
+
+                if (orderModel.otp.toString() ==
+                    controller.otpController.value.text) {
+                  Get.back();
+                  ShowToastDialog.showLoader("Please wait...".tr);
+                  orderModel.status = Constant.rideInProgress;
+
+                  await FireStoreUtils.getCustomer(orderModel.userId.toString())
+                      .then((value) async {
+                    if (value != null) {
+                      await SendNotification.sendOneNotification(
+                          token: value.fcmToken.toString(),
+                          title: 'Ride Started'.tr,
+                          body:
+                              'The ride has officially started. Please follow the designated route to the destination.'
+                                  .tr,
+                          payload: {});
+                    }
+                  });
+
+                  await FireStoreUtils.setInterCityOrder(orderModel)
+                      .then((value) {
+                    if (value == true) {
+                      ShowToastDialog.closeLoader();
+                      ShowToastDialog.showToast(
+                          "Customer pickup successfully".tr);
+                    }
+                  });
+                } else {
+                  ShowToastDialog.showToast("OTP Invalid".tr);
+                }
+              },
             ),
-            ButtonThem.buildButton(context, title: "OTP verify".tr,
-                onPress: () async {
-              String inputOtp = controller.otpController.value.text;
-
-              String modelOtp = orderModel.otp.toString();
-
-              print(
-                  "OTP Verification - Model OTP: '$modelOtp', Input OTP: '$inputOtp'");
-              if (orderModel.otp.toString() ==
-                  controller.otpController.value.text) {
-                Get.back();
-                ShowToastDialog.showLoader("Please wait...".tr);
-                orderModel.status = Constant.rideInProgress;
-
-                await FireStoreUtils.getCustomer(orderModel.userId.toString())
-                    .then((value) async {
-                  if (value != null) {
-                    await SendNotification.sendOneNotification(
-                        token: value.fcmToken.toString(),
-                        title: 'Ride Started'.tr,
-                        body:
-                            'The ride has officially started. Please follow the designated route to the destination.'
-                                .tr,
-                        payload: {});
-                  }
-                });
-
-                await FireStoreUtils.setInterCityOrder(orderModel)
-                    .then((value) {
-                  if (value == true) {
-                    ShowToastDialog.closeLoader();
-                    ShowToastDialog.showToast(
-                        "Customer pickup successfully".tr);
-                  }
-                });
-              } else {
-                ShowToastDialog.showToast("OTP Invalid".tr);
-              }
-            }),
-            const SizedBox(
-              height: 10,
-            ),
+            const SizedBox(height: 10),
           ],
         ),
       ),

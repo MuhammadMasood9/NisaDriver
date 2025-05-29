@@ -12,6 +12,7 @@ import 'package:driver/model/order_model.dart';
 import 'package:driver/model/user_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
@@ -145,8 +146,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                       controller.navigationZoom.value = position.zoom;
                       controller.navigationTilt.value = position.tilt;
                       controller.deviceBearing.value;
-                      // dev.log(
-                      //     'Device bearing: ${controller.deviceBearing.value} Map Bearing: ${position.bearing}');
+                      dev.log(
+                          'Device bearing: ${controller.deviceBearing.value} Map Bearing: ${position.bearing}');
                     },
                     onTap: (LatLng position) {
                       controller.onMapTap(position);
@@ -154,7 +155,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                   )),
               _buildStatusBar(context, controller),
               _buildOffRouteWarning(context, controller),
-              _buildNavigationCard(context, controller),
               _buildControlButtons(controller, controlButtonsBottom),
               _buildBottomPanel(context, controller, themeChange),
               _buildTrafficReportTrigger(controller, controlButtonsBottom),
@@ -229,19 +229,18 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                         ],
                       ),
                     )),
+                Obx(() => _buildInfoChip(
+                      icon: Icons.speed,
+                      text:
+                          "${controller.currentSpeed.value.toStringAsFixed(0)} km/h",
+                      color: controller.currentSpeed.value >
+                              (double.tryParse(controller.speedLimit.value) ??
+                                  50)
+                          ? Colors.red.withOpacity(0.9)
+                          : Colors.white.withOpacity(0.9),
+                    )),
                 Row(
                   children: [
-                    Obx(() => _buildInfoChip(
-                          icon: Icons.speed,
-                          text:
-                              "${controller.currentSpeed.value.toStringAsFixed(0)} km/h",
-                          color: controller.currentSpeed.value >
-                                  (double.tryParse(
-                                          controller.speedLimit.value) ??
-                                      50)
-                              ? Colors.red.withOpacity(0.9)
-                              : Colors.white.withOpacity(0.9),
-                        )),
                     const SizedBox(width: 8),
                     Obx(() => _buildInfoChip(
                           icon: Icons.traffic,
@@ -348,144 +347,100 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
 
   Widget _buildNavigationCard(
       BuildContext context, LiveTrackingController controller) {
-    return Positioned(
-      top: controller.isOffRoute.value
-          ? MediaQuery.of(context).padding.top + 140
-          : MediaQuery.of(context).padding.top + 50,
-      left: 16,
-      right: 16,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        child: Card(
-          elevation: 4,
-          shadowColor: Colors.black.withOpacity(0.2),
-          shape: RoundedRectangleBorder(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      child: Card(
+        shadowColor: Colors.black.withOpacity(0.2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  Colors.grey.shade50,
-                ],
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Obx(() => Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.primary,
-                                AppColors.primary.withOpacity(0.8),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            _getManeuverIcon(controller.currentManeuver.value),
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                        )),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Obx(() => Text(
-                                controller.navigationInstruction.value,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 10,
-                                  color: Colors.black87,
-                                  height: 1.2,
-                                ),
-                              )),
-                          Obx(() => controller.distanceToNextTurn.value > 0
-                              ? Column(
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.shade50,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        "in ${controller.distanceToNextTurn.value.toStringAsFixed(0)}m",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.blue.shade700,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : const SizedBox.shrink()),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                Obx(() => controller.nextTurnInstruction.value.isNotEmpty
-                    ? Column(
-                        children: [
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.grey.shade200,
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 18,
-                                  color: Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    "Then ${controller.nextTurnInstruction.value}",
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey.shade700,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
-                    : const SizedBox.shrink()),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Colors.grey.shade50,
               ],
             ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Obx(() => Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary,
+                              AppColors.primary.withOpacity(0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          _getManeuverIcon(controller.currentManeuver.value),
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      )),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Obx(() => Text(
+                              controller.navigationInstruction.value,
+                              style: AppTypography.smBoldLabel(context),
+                            )),
+                        Obx(() => controller.distanceToNextTurn.value > 0
+                            ? Column(
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      "in ${controller.distanceToNextTurn.value.toStringAsFixed(0)}m",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blue.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const SizedBox.shrink()),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Obx(() => controller.nextTurnInstruction.value.isNotEmpty
+                  ? Column(
+                      children: [
+                        const SizedBox(height: 10),
+                      ],
+                    )
+                  : const SizedBox.shrink()),
+            ],
           ),
         ),
       ),
@@ -574,7 +529,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              margin: const EdgeInsets.only(top: 8, bottom: 8),
               width: 36,
               height: 4,
               decoration: BoxDecoration(
@@ -582,6 +537,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
+            _buildNavigationCard(context, controller),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -591,11 +547,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                     children: [
                       Obx(() => Text(
                             controller.currentStep.value,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
+                            style: AppTypography.boldLabel(context),
                           )),
                       Obx(() => Container(
                             padding: const EdgeInsets.symmetric(
@@ -615,7 +567,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                           )),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Container(
                     height: 8,
                     decoration: BoxDecoration(
@@ -641,7 +593,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             const SizedBox(height: 10),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(15),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -683,7 +635,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                         child: const Icon(
                           Icons.person_rounded,
                           color: Colors.white,
-                          size: 24,
+                          size: 20,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -1294,11 +1246,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             Flexible(
               child: Text(
                 value,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                  color: Colors.black87,
-                ),
+                style: AppTypography.boldLabel(context),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1307,11 +1255,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
+          style: AppTypography.smBoldLabel(context)
+              .copyWith(color: AppColors.grey500),
         ),
       ],
     );

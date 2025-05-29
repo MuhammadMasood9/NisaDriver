@@ -41,14 +41,14 @@ class ButtonThem {
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,
-            style:AppTypography.buttonlight(context),
+            style: AppTypography.buttonlight(context),
           ),
         ),
       ),
     );
   }
 
-  static buildBorderButton(
+  static Widget buildBorderButton(
     BuildContext context, {
     required String title,
     double btnHeight = 35,
@@ -65,9 +65,26 @@ class ButtonThem {
 
     return Visibility(
       visible: isVisible,
-      child: SizedBox(
+      child: Container(
         width: Responsive.width(100, context) * btnWidthRatio,
         height: 35,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              offset: Offset(0, -2), // Top shadow
+              blurRadius: 2,
+              spreadRadius: 0.6,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              offset: Offset(0, 2), // Bottom shadow
+              blurRadius: 2,
+              spreadRadius: 0.6,
+            ),
+          ],
+        ),
         child: ElevatedButton(
           style: ButtonStyle(
             backgroundColor: MaterialStateProperty.all<Color>(
@@ -79,13 +96,10 @@ class ButtonThem {
             shape: MaterialStateProperty.all<RoundedRectangleBorder>(
               RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                side: BorderSide(
-                  color: themeChange.getThem()
-                      ? AppColors.darkBackground
-                      : AppColors.darkBackground,
-                ),
               ),
             ),
+            elevation: MaterialStateProperty.all<double>(
+                0), // Disable default elevation
           ),
           onPressed: onPress,
           child: Row(
@@ -140,7 +154,8 @@ class ButtonThem {
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,
-            style: AppTypography.buttonlight(context).copyWith(fontWeight: FontWeight.w600),
+            style: AppTypography.buttonlight(context)
+                .copyWith(fontWeight: FontWeight.w600),
           ),
         ),
       ),

@@ -72,8 +72,8 @@ class DashBoardController extends GetxController {
 
   void setDrawerList() {
     drawerItems.value = [
-      DrawerItem('City'.tr, "assets/icons/ic_city.svg"),
-      DrawerItem('OutStation'.tr, "assets/icons/ic_intercity.svg"),
+      DrawerItem('Rides'.tr, "assets/icons/ic_city.svg"),
+      DrawerItem('Parcels'.tr, "assets/icons/ic_intercity.svg"),
       DrawerItem('My Wallet'.tr, "assets/icons/ic_wallet.svg"),
       DrawerItem('Bank Details'.tr, "assets/icons/ic_profile.svg"),
       DrawerItem('Inbox'.tr, "assets/icons/ic_inbox.svg"),
