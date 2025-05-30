@@ -6,7 +6,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart'; // Added for AppTypography
 import 'package:driver/ui/auth_screen/login_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/Preferences.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +20,6 @@ class SettingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return GetBuilder<SettingController>(
         init: SettingController(),
         builder: (controller) {

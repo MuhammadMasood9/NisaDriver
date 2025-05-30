@@ -19,7 +19,6 @@ import 'package:driver/model/map_model.dart' as mapModels;
 import 'package:driver/model/order/location_lat_lng.dart';
 import 'package:driver/model/tax_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/Preferences.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -199,11 +198,11 @@ class Constant {
       firstDate: DateTime.now(),
       lastDate: DateTime(2200),
       builder: (context, child) {
-        final themeChange = Provider.of<DarkThemeProvider>(context);
+       
         return Theme(
           data: ThemeData.light().copyWith(
-            primaryColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-            colorScheme: ColorScheme.light(primary: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary),
+            primaryColor:  AppColors.primary,
+            colorScheme: ColorScheme.light(primary:  AppColors.primary),
             buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
           ),
           child: child!,
@@ -223,11 +222,10 @@ class Constant {
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
       builder: (context, child) {
-        final themeChange = Provider.of<DarkThemeProvider>(context);
         return Theme(
           data: ThemeData.light().copyWith(
-            primaryColor: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
-            colorScheme: ColorScheme.light(primary: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary),
+            primaryColor:  AppColors.primary,
+            colorScheme: ColorScheme.light(primary:  AppColors.primary),
             buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
           ),
           child: child!,

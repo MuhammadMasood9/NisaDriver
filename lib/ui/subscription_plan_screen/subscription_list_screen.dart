@@ -8,7 +8,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/network_image_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';

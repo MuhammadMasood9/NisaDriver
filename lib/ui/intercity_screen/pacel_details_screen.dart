@@ -4,7 +4,6 @@ import 'package:driver/controller/parcel_details_controller.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -264,12 +263,9 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return Obx(() {
       return Scaffold(
-        backgroundColor: themeChange.getThem()
-            ? AppColors.darkBackground
-            : AppColors.background,
+        backgroundColor: AppColors.background,
         appBar: _buildSimpleAppBar(context),
         body: controller.isLoading.value
             ? Constant.loader(context)
@@ -287,9 +283,9 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
                           spacing: 15,
                           children: [
                             _buildMapSection(context),
-                            _buildLocationTimeline(context, themeChange),
-                            _buildParcelInfo(context, themeChange),
-                            _buildImageGallery(context, themeChange),
+                            _buildLocationTimeline(context),
+                            _buildParcelInfo(context),
+                            _buildImageGallery(context),
                             const SizedBox(height: 24),
                           ],
                         ),
@@ -303,7 +299,6 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
   }
 
   PreferredSizeWidget _buildSimpleAppBar(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return PreferredSize(
       preferredSize: const Size.fromHeight(kToolbarHeight),
       child: AppBar(
@@ -367,7 +362,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
   }
 
   Widget _buildLocationTimeline(
-      BuildContext context, DarkThemeProvider themeChange) {
+      BuildContext context) {
     return _buildSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,9 +383,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: themeChange.getThem()
-                  ? AppColors.darkContainerBackground
-                  : Colors.white,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
@@ -419,7 +412,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
     );
   }
 
-  Widget _buildParcelInfo(BuildContext context, DarkThemeProvider themeChange) {
+  Widget _buildParcelInfo(BuildContext context) {
     return _buildSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,7 +426,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
             icon: Icons.confirmation_number_rounded,
             title: "Order ID".tr,
             value: controller.orderModel.value.id?.toString() ?? 'N/A',
-            themeChange: themeChange,
+            
           ),
         ],
       ),
@@ -444,7 +437,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
     required IconData icon,
     required String title,
     required String value,
-    required DarkThemeProvider themeChange,
+
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -481,7 +474,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
   }
 
   Widget _buildImageGallery(
-      BuildContext context, DarkThemeProvider themeChange) {
+      BuildContext context) {
     return _buildSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -518,9 +511,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
               ? Container(
                   height: 120,
                   decoration: BoxDecoration(
-                    color: themeChange.getThem()
-                        ? AppColors.darkContainerBackground
-                        : Colors.white,
+                    color:  Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
@@ -644,17 +635,12 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
   }
 
   Widget _buildSectionCard({required Widget child}) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: themeChange.getThem()
-            ? AppColors.darkContainerBackground
-            : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        gradient: themeChange.getThem()
-            ? null
-            : LinearGradient(
+        gradient:  LinearGradient(
                 colors: [Colors.white, Colors.grey[50]!],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

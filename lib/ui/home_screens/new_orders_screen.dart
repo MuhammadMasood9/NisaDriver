@@ -5,7 +5,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/home_screens/order_map_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
@@ -19,7 +18,6 @@ class NewOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return GetX<HomeController>(
         init: HomeController(),
         dispose: (state) {
@@ -69,11 +67,9 @@ class NewOrderScreen extends StatelessWidget {
                                   padding: const EdgeInsets.all(4.0),
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
+                                      color:  AppColors.containerBackground,
                                       borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                      boxShadow: themeChange.getThem()
-                                          ? null
-                                          : [
+                                      boxShadow: [
                                               BoxShadow(
                                                 color: Colors.grey.withOpacity(0.4),
                                                 blurRadius: 8,
@@ -109,7 +105,7 @@ class NewOrderScreen extends StatelessWidget {
                                                 child: Container(
                                                   width: Responsive.width(100, context),
                                                   decoration: BoxDecoration(
-                                                      color: themeChange.getThem() ? AppColors.darkGray : AppColors.gray, borderRadius: BorderRadius.all(Radius.circular(10))),
+                                                      color:  AppColors.gray, borderRadius: BorderRadius.all(Radius.circular(10))),
                                                   child: Padding(
                                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical:8),
                                                     child: Center(

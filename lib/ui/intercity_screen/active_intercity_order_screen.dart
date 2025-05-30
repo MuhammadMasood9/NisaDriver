@@ -15,7 +15,6 @@ import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/ui/home_screens/live_tracking_screen.dart';
 import 'package:driver/ui/intercity_screen/pacel_details_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/utils.dart';
 import 'package:driver/widget/location_view.dart';
@@ -31,8 +30,6 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return GetBuilder<ActiveInterCityOrderController>(
         init: ActiveInterCityOrderController(),
         builder: (controller) {
@@ -148,17 +145,14 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                             borderRadius:
                                                 const BorderRadius.all(
                                                     Radius.circular(10)),
-                                            boxShadow: themeChange.getThem()
-                                                ? null
-                                                : [
-                                                    BoxShadow(
-                                                      color: Colors.grey
-                                                          .withOpacity(0.3),
-                                                      blurRadius: 5,
-                                                      offset:
-                                                          const Offset(0, 2),
-                                                    ),
-                                                  ],
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.grey
+                                                    .withOpacity(0.3),
+                                                blurRadius: 5,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
                                           ),
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(
@@ -418,10 +412,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                                     ShowToastDialog.showToast(
                                                                         "Ride Complete successfully"
                                                                             .tr);
-                                                                    controller
-                                                                        .frightController
-                                                                        .selectedIndex
-                                                                        .value = 3;
+                                                                    Get.back();
                                                                   }
                                                                 });
                                                               },
@@ -567,8 +558,6 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
 
   otpDialog(BuildContext context, ActiveInterCityOrderController controller,
       InterCityOrderModel orderModel) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -590,24 +579,12 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                 pinTheme: PinTheme(
                   fieldHeight: 40,
                   fieldWidth: 40,
-                  activeColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  selectedColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  inactiveColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  activeFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
-                  inactiveFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
-                  selectedFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
+                  activeColor: AppColors.textFieldBorder,
+                  selectedColor: AppColors.textFieldBorder,
+                  inactiveColor: AppColors.textFieldBorder,
+                  activeFillColor: AppColors.textField,
+                  inactiveFillColor: AppColors.textField,
+                  selectedFillColor: AppColors.textField,
                   shape: PinCodeFieldShape.box,
                   borderRadius: BorderRadius.circular(10),
                 ),

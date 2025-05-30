@@ -32,46 +32,115 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class WalletController extends GetxController {
-  Rx<TextEditingController> withdrawalAmountController = TextEditingController().obs;
+  Rx<TextEditingController> withdrawalAmountController =
+      TextEditingController().obs;
   Rx<TextEditingController> noteController = TextEditingController().obs;
-
   Rx<TextEditingController> amountController = TextEditingController().obs;
   Rx<PaymentModel> paymentModel = PaymentModel().obs;
   Rx<DriverUserModel> driverUserModel = DriverUserModel().obs;
   Rx<BankDetailsModel> bankDetailsModel = BankDetailsModel().obs;
   RxString selectedPaymentMethod = "".obs;
-
+  var selectedDateRange = Rx<DateTimeRange?>(null);
+  var filteredTransactionList = <WalletTransactionModel>[].obs;
   RxBool isLoading = true.obs;
-  RxList transactionList = <WalletTransactionModel>[].obs;
+  RxList<WalletTransactionModel> transactionList =
+      <WalletTransactionModel>[].obs;
+  var startDate = Rx<DateTime?>(null);
+  var endDate = Rx<DateTime?>(null);
 
   @override
   void onInit() {
-    // TODO: implement onInit
     getPaymentData();
+    // Set default filter to last 30 days
+    startDate.value = DateTime.now().subtract(const Duration(days: 30));
+    endDate.value = DateTime.now();
+    _applyDateFilter();
     super.onInit();
   }
 
+  // Add these filter methods
+  void setStartDate(DateTime date) {
+    startDate.value = date;
+    _applyDateFilter();
+  }
+
+  void setEndDate(DateTime date) {
+    endDate.value = date;
+    _applyDateFilter();
+  }
+
+  void _applyDateFilter() {
+    if (startDate.value != null && endDate.value != null) {
+      filterTransactionsByDate(startDate.value!, endDate.value!);
+    } else if (startDate.value != null) {
+      // Filter from start date to now
+      filterTransactionsByDate(startDate.value!, DateTime.now());
+    } else if (endDate.value != null) {
+      // Filter from beginning to end date
+      filterTransactionsByDate(DateTime(2000), endDate.value!);
+    } else {
+      // No filter applied
+      filteredTransactionList.value = transactionList.toList();
+    }
+  }
+
+  void clearStartDateFilter() {
+    startDate.value = null;
+    filteredTransactionList.value = transactionList.toList();
+  }
+
+  void clearEndDateFilter() {
+    endDate.value = null;
+    filteredTransactionList.value = transactionList.toList();
+  }
+
+  void filterTransactionsByDate(DateTime start, DateTime end) {
+    // Normalize start and end dates to include full days
+    final startOfDay = DateTime(start.year, start.month, start.day);
+    final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+
+    selectedDateRange.value = DateTimeRange(start: startOfDay, end: endOfDay);
+
+    filteredTransactionList.value = transactionList.where((transaction) {
+      if (transaction.createdDate == null) return false;
+
+      final date = transaction.createdDate!.toDate();
+      // Ensure date is within the start and end range (inclusive)
+      return date
+              .isAfter(startOfDay.subtract(const Duration(milliseconds: 1))) &&
+          date.isBefore(endOfDay.add(const Duration(milliseconds: 1)));
+    }).toList();
+  }
+
+  void clearDateFilter() {
+    startDate.value = null;
+    endDate.value = null;
+    selectedDateRange.value = null;
+    filteredTransactionList.value = transactionList.toList();
+  }
+
   getPaymentData() async {
-    getTraction();
-    getUser();
+    await getTraction();
+    await getUser();
     await FireStoreUtils().getPayment().then((value) {
       if (value != null) {
         paymentModel.value = value;
-
-        Stripe.publishableKey = paymentModel.value.strip!.clientpublishableKey.toString();
+        Stripe.publishableKey =
+            paymentModel.value.strip!.clientpublishableKey.toString();
         Stripe.merchantIdentifier = 'GoRide';
         Stripe.instance.applySettings();
         setRef();
-     
       }
     });
-
+    filteredTransactionList.value =
+        transactionList.toList(); // Initialize filtered list
     isLoading.value = false;
     update();
   }
 
   getUser() async {
-    await FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()).then((value) {
+    await FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid())
+        .then((value) {
       if (value != null) {
         driverUserModel.value = value;
       }
@@ -103,9 +172,12 @@ class WalletController extends GetxController {
         userType: "driver",
         note: "Wallet Topup");
 
-    await FireStoreUtils.setWalletTransaction(transactionModel).then((value) async {
+    await FireStoreUtils.setWalletTransaction(transactionModel)
+        .then((value) async {
       if (value == true) {
-        await FireStoreUtils.updatedDriverWallet(amount: amountController.value.text).then((value) {
+        await FireStoreUtils.updatedDriverWallet(
+                amount: amountController.value.text)
+            .then((value) {
           getUser();
           getTraction();
         });
@@ -119,10 +191,12 @@ class WalletController extends GetxController {
   Future<void> stripeMakePayment({required String amount}) async {
     log(double.parse(amount).toStringAsFixed(0));
     try {
-      Map<String, dynamic>? paymentIntentData = await createStripeIntent(amount: amount);
+      Map<String, dynamic>? paymentIntentData =
+          await createStripeIntent(amount: amount);
       if (paymentIntentData!.containsKey("error")) {
         // Get.back();
-        ShowToastDialog.showToast("Something went wrong, please contact admin.");
+        ShowToastDialog.showToast(
+            "Something went wrong, please contact admin.");
       } else {
         await Stripe.instance.initPaymentSheet(
             paymentSheetParameters: SetupPaymentSheetParameters(
@@ -181,8 +255,13 @@ class WalletController extends GetxController {
       };
       log(paymentModel.value.strip!.stripeSecret.toString());
       var stripeSecret = paymentModel.value.strip!.stripeSecret;
-      var response = await http.post(Uri.parse('https://api.stripe.com/v1/payment_intents'),
-          body: body, headers: {'Authorization': 'Bearer $stripeSecret', 'Content-Type': 'application/x-www-form-urlencoded'});
+      var response = await http.post(
+          Uri.parse('https://api.stripe.com/v1/payment_intents'),
+          body: body,
+          headers: {
+            'Authorization': 'Bearer $stripeSecret',
+            'Content-Type': 'application/x-www-form-urlencoded'
+          });
 
       return jsonDecode(response.body);
     } catch (e) {
@@ -191,121 +270,10 @@ class WalletController extends GetxController {
   }
 
   //mercadoo
-  mercadoPagoMakePayment({required BuildContext context, required String amount}) async {
-    final headers = {
-      'Authorization': 'Bearer ${paymentModel.value.mercadoPago!.accessToken}',
-      'Content-Type': 'application/json',
-    };
-
-    final body = jsonEncode({
-      "items": [
-        {
-          "title": "Test",
-          "description": "Test Payment",
-          "quantity": 1,
-          "currency_id": "USD", // or your preferred currency
-          "unit_price": double.parse(amount),
-        }
-      ],
-      "payer": {"email": driverUserModel.value.email},
-      "back_urls": {
-        "failure": "${Constant.globalUrl}payment/failure",
-        "pending": "${Constant.globalUrl}payment/pending",
-        "success": "${Constant.globalUrl}payment/success",
-      },
-      "auto_return": "approved" // Automatically return after payment is approved
-    });
-
-    final response = await http.post(
-      Uri.parse("https://api.mercadopago.com/checkout/preferences"),
-      headers: headers,
-      body: body,
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-      Get.to(MercadoPagoScreen(initialURl: data['init_point']))!.then((value) {
-        if (value) {
-          ShowToastDialog.showToast("Payment Successful!!");
-          walletTopUp();
-        } else {
-          ShowToastDialog.showToast("Payment UnSuccessful!!");
-        }
-      });
-    } else {
-      ShowToastDialog.showToast("Something went wrong, please contact admin.");
-      print('Error creating preference: ${response.body}');
-      return null;
-    }
-  }
-
-  //paypal
-
-  paypalPaymentSheet(String amount, context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (BuildContext context) => UsePaypal(
-            sandboxMode: paymentModel.value.paypal!.isSandbox == true ? false : true,
-            clientId: paymentModel.value.paypal!.paypalClient ?? '',
-            secretKey: paymentModel.value.paypal!.paypalSecret ?? '',
-            returnURL: "com.parkme://paypalpay",
-            cancelURL: "com.parkme://paypalpay",
-            transactions: [
-              {
-                "amount": {
-                  "total": amount,
-                  "currency": "USD",
-                  "details": {"subtotal": amount}
-                },
-              }
-            ],
-            note: "Contact us for any questions on your order.",
-            onSuccess: (Map params) async {
-              walletTopUp();
-              ShowToastDialog.showToast("Payment Successful!!");
-            },
-            onError: (error) {
-              Get.back();
-              ShowToastDialog.showToast("Payment UnSuccessful!!");
-            },
-            onCancel: (params) {
-              Get.back();
-              ShowToastDialog.showToast("Payment UnSuccessful!!");
-            }),
-      ),
-    );
-  }
-
-  ///PayStack Payment Method
-  payStackPayment(String totalAmount) async {
-    await PayStackURLGen.payStackURLGen(
-            amount: (double.parse(totalAmount) * 100).toString(), currency: "NGN", secretKey: paymentModel.value.payStack!.secretKey.toString(), userModel: driverUserModel.value)
-        .then((value) async {
-      if (value != null && value.toString().isNotEmpty) {
-        PayStackUrlModel payStackModel = value;
-        Get.to(PayStackScreen(
-          secretKey: paymentModel.value.payStack!.secretKey.toString(),
-          callBackUrl: paymentModel.value.payStack!.callbackURL.toString(),
-          initialURl: payStackModel.data.authorizationUrl,
-          amount: totalAmount,
-          reference: payStackModel.data.reference,
-        ))!
-            .then((value) {
-          if (value) {
-            ShowToastDialog.showToast("Payment Successful!!");
-            walletTopUp();
-          } else {
-            ShowToastDialog.showToast("Payment UnSuccessful!!");
-          }
-        });
-      } else {
-        ShowToastDialog.showToast("Something went wrong, please contact admin.");
-      }
-    });
-  }
 
   //flutter wave Payment Method
-  flutterWaveInitiatePayment({required BuildContext context, required String amount}) async {
+  flutterWaveInitiatePayment(
+      {required BuildContext context, required String amount}) async {
     final url = Uri.parse('https://api.flutterwave.com/v3/payments');
     final headers = {
       'Authorization': 'Bearer ${paymentModel.value.flutterWave!.secretKey}',
@@ -320,7 +288,8 @@ class WalletController extends GetxController {
       "payment_options": "ussd, card, barter, payattitude",
       "customer": {
         "email": driverUserModel.value.email.toString(),
-        "phonenumber": driverUserModel.value.phoneNumber, // Add a real phone number
+        "phonenumber":
+            driverUserModel.value.phoneNumber, // Add a real phone number
         "name": driverUserModel.value.fullName!, // Add a real customer name
       },
       "customizations": {
@@ -333,7 +302,8 @@ class WalletController extends GetxController {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      Get.to(MercadoPagoScreen(initialURl: data['data']['link']))!.then((value) {
+      Get.to(MercadoPagoScreen(initialURl: data['data']['link']))!
+          .then((value) {
         if (value) {
           ShowToastDialog.showToast("Payment Successful!!");
           walletTopUp();
@@ -361,58 +331,12 @@ class WalletController extends GetxController {
     }
   }
 
-  // payFast
-  payFastPayment({required BuildContext context, required String amount}) {
-    PayStackURLGen.getPayHTML(payFastSettingData: paymentModel.value.payfast!, amount: amount.toString(), userModel: driverUserModel.value).then((String? value) async {
-      bool isDone = await Get.to(PayFastScreen(htmlData: value!, payFastSettingData: paymentModel.value.payfast!));
-      if (isDone) {
-        // Get.back();
-        ShowToastDialog.showToast("Payment successfully");
-        walletTopUp();
-      } else {
-        Get.back();
-        ShowToastDialog.showToast("Payment Failed");
-      }
-    });
-  }
-
-  ///Paytm payment function
-  getPaytmCheckSum(context, {required double amount}) async {
-    final String orderId = DateTime.now().millisecondsSinceEpoch.toString();
-    String getChecksum = "${Constant.globalUrl}payments/getpaytmchecksum";
-
-    final response = await http.post(
-        Uri.parse(
-          getChecksum,
-        ),
-        headers: {},
-        body: {
-          "mid": paymentModel.value.paytm!.paytmMID.toString(),
-          "order_id": orderId,
-          "key_secret": paymentModel.value.paytm!.merchantKey.toString(),
-        });
-
-    final data = jsonDecode(response.body);
-    await verifyCheckSum(checkSum: data["code"], amount: amount, orderId: orderId).then((value) {
-      initiatePayment(amount: amount, orderId: orderId).then((value) {
-        String callback = "";
-        if (paymentModel.value.paytm!.isSandbox == true) {
-          callback = "${callback}https://securegw-stage.paytm.in/theia/paytmCallback?ORDER_ID=$orderId";
-        } else {
-          callback = "${callback}https://securegw.paytm.in/theia/paytmCallback?ORDER_ID=$orderId";
-        }
-
-        if (value.head.version.isEmpty) {
-          ShowToastDialog.showToast("Payment Failed");
-        } else {
-          GetPaymentTxtTokenModel result = value;
-          startTransaction(context, txnTokenBy: result.body.txnToken, orderId: orderId, amount: amount, callBackURL: callback, isStaging: paymentModel.value.paytm!.isSandbox);
-        }
-      });
-    });
-  }
-
-  Future<void> startTransaction(context, {required String txnTokenBy, required orderId, required double amount, required callBackURL, required isStaging}) async {
+  Future<void> startTransaction(context,
+      {required String txnTokenBy,
+      required orderId,
+      required double amount,
+      required callBackURL,
+      required isStaging}) async {
     // try {
     //   var response = AllInOneSdk.startTransaction(
     //     paymentModel.value.paytm!.paytmMID.toString(),
@@ -448,134 +372,7 @@ class WalletController extends GetxController {
     // }
   }
 
-  Future verifyCheckSum({required String checkSum, required double amount, required orderId}) async {
-    String getChecksum = "${Constant.globalUrl}payments/validatechecksum";
-    final response = await http.post(
-        Uri.parse(
-          getChecksum,
-        ),
-        headers: {},
-        body: {
-          "mid": paymentModel.value.paytm!.paytmMID.toString(),
-          "order_id": orderId,
-          "key_secret": paymentModel.value.paytm!.merchantKey.toString(),
-          "checksum_value": checkSum,
-        });
-    final data = jsonDecode(response.body);
-    return data['status'];
-  }
-
-  Future<GetPaymentTxtTokenModel> initiatePayment({required double amount, required orderId}) async {
-    String initiateURL = "${Constant.globalUrl}payments/initiatepaytmpayment";
-    String callback = "";
-    if (paymentModel.value.paytm!.isSandbox == true) {
-      callback = "${callback}https://securegw-stage.paytm.in/theia/paytmCallback?ORDER_ID=$orderId";
-    } else {
-      callback = "${callback}https://securegw.paytm.in/theia/paytmCallback?ORDER_ID=$orderId";
-    }
-    final response = await http.post(Uri.parse(initiateURL), headers: {}, body: {
-      "mid": paymentModel.value.paytm!.paytmMID,
-      "order_id": orderId,
-      "key_secret": paymentModel.value.paytm!.merchantKey,
-      "amount": amount.toString(),
-      "currency": "INR",
-      "callback_url": callback,
-      "custId": FireStoreUtils.getCurrentUid(),
-      "issandbox": paymentModel.value.paytm!.isSandbox == true ? "1" : "2",
-    });
-    print(response.body);
-    final data = jsonDecode(response.body);
-    if (data["body"]["txnToken"] == null || data["body"]["txnToken"].toString().isEmpty) {
-      // Get.back();
-      ShowToastDialog.showToast("something went wrong, please contact admin.");
-    }
-    return GetPaymentTxtTokenModel.fromJson(data);
-  }
-
-
-
-  void openCheckout({required amount, required orderId}) async {
-    var options = {
-      'key': paymentModel.value.razorpay!.razorpayKey,
-      'amount': amount * 100,
-      'name': 'GoRide',
-      'order_id': orderId,
-      "currency": "INR",
-      'description': 'wallet Topup',
-      'retry': {'enabled': true, 'max_count': 1},
-      'send_sms_hash': true,
-      'prefill': {
-        'contact': driverUserModel.value.phoneNumber,
-        'email': driverUserModel.value.email,
-      },
-      'external': {
-        'wallets': ['paytm']
-      }
-    };
-
-    try {
- 
-    } catch (e) {
-      debugPrint('Error: $e');
-    }
-  }
-
-
-
   //XenditPayment
-  xenditPayment(context, amount) async {
-    await createXenditInvoice(amount: amount).then((model) {
-      ShowToastDialog.closeLoader();
-      if (model.id != null) {
-        Get.to(() => XenditScreen(
-                  initialURl: model.invoiceUrl ?? '',
-                  transId: model.id ?? '',
-                  apiKey: paymentModel.value.xendit!.apiKey!.toString() ?? "",
-                ))!
-            .then((value) {
-          if (value == true) {
-            ShowToastDialog.showToast("Payment Successful!!");
-            walletTopUp();
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Payment Unsuccessful!! \n"),
-              backgroundColor: Colors.red,
-            ));
-          }
-        });
-      }
-    });
-  }
-
-  Future<XenditModel> createXenditInvoice({required var amount}) async {
-    const url = 'https://api.xendit.co/v2/invoices';
-    var headers = {
-      'Content-Type': 'application/json',
-      'Authorization': generateBasicAuthHeader(paymentModel.value.xendit!.apiKey!.toString()),
-      // 'Cookie': '__cf_bm=yERkrx3xDITyFGiou0bbKY1bi7xEwovHNwxV1vCNbVc-1724155511-1.0.1.1-jekyYQmPCwY6vIJ524K0V6_CEw6O.dAwOmQnHtwmaXO_MfTrdnmZMka0KZvjukQgXu5B.K_6FJm47SGOPeWviQ',
-    };
-
-    final body = jsonEncode({
-      'external_id': Constant.getUuid(),
-      'amount': amount,
-      'payer_email': 'customer@domain.com',
-      'description': 'Test - VA Successful invoice payment',
-      'currency': 'IDR', //IDR, PHP, THB, VND, MYR
-    });
-
-    try {
-      final response = await http.post(Uri.parse(url), headers: headers, body: body);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        XenditModel model = XenditModel.fromJson(jsonDecode(response.body));
-        return model;
-      } else {
-        return XenditModel();
-      }
-    } catch (e) {
-      return XenditModel();
-    }
-  }
 
   String generateBasicAuthHeader(String apiKey) {
     String credentials = '$apiKey:';
@@ -589,112 +386,6 @@ class WalletController extends GetxController {
   static String orderId = '';
   static String amount = '';
 
-  orangeMakePayment({required String amount, required BuildContext context}) async {
-    reset();
-    var id = Constant.getUuid();
-    var paymentURL = await fetchToken(context: context, orderId: id, amount: amount, currency: 'USD');
-    ShowToastDialog.closeLoader();
-    if (paymentURL.toString() != '') {
-      Get.to(() => OrangeMoneyScreen(
-                initialURl: paymentURL,
-                accessToken: accessToken,
-                amount: amount,
-                orangePay: paymentModel.value.orangePay!,
-                orderId: orderId,
-                payToken: payToken,
-              ))!
-          .then((value) {
-        if (value == true) {
-          ShowToastDialog.showToast("Payment Successful!!");
-          walletTopUp();
-        }
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Payment Unsuccessful!! \n"),
-        backgroundColor: Colors.red,
-      ));
-    }
-  }
-
-  Future fetchToken({required String orderId, required String currency, required BuildContext context, required String amount}) async {
-    String apiUrl = 'https://api.orange.com/oauth/v3/token';
-    Map<String, String> requestBody = {
-      'grant_type': 'client_credentials',
-    };
-
-    var response = await http.post(Uri.parse(apiUrl),
-        headers: <String, String>{
-          'Authorization': "Basic ${paymentModel.value.orangePay!.auth!}",
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-        },
-        body: requestBody);
-
-    // Handle the response
-
-    if (response.statusCode == 200) {
-      Map<String, dynamic> responseData = jsonDecode(response.body);
-
-      accessToken = responseData['access_token'];
-      // ignore: use_build_context_synchronously
-      return await webpayment(context: context, amountData: amount, currency: currency, orderIdData: orderId);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          backgroundColor: Color(0xff635bff),
-          content: Text(
-            "Something went wrong, please contact admin.",
-            style: TextStyle(fontSize: 17),
-          )));
-
-      return '';
-    }
-  }
-
-  Future webpayment({required String orderIdData, required BuildContext context, required String currency, required String amountData}) async {
-    orderId = orderIdData;
-    amount = amountData;
-    String apiUrl = paymentModel.value.orangePay!.isSandbox! == true
-        ? 'https://api.orange.com/orange-money-webpay/dev/v1/webpayment'
-        : 'https://api.orange.com/orange-money-webpay/cm/v1/webpayment';
-    Map<String, String> requestBody = {
-      "merchant_key": paymentModel.value.orangePay!.merchantKey ?? '',
-      "currency": paymentModel.value.orangePay!.isSandbox == true ? "OUV" : currency,
-      "order_id": orderId,
-      "amount": amount,
-      "reference": 'Y-Note Test',
-      "lang": "en",
-      "return_url": paymentModel.value.orangePay!.returnUrl!.toString(),
-      "cancel_url": paymentModel.value.orangePay!.cancelUrl!.toString(),
-      "notif_url": paymentModel.value.orangePay!.notifUrl!.toString(),
-    };
-
-    var response = await http.post(
-      Uri.parse(apiUrl),
-      headers: <String, String>{'Authorization': 'Bearer $accessToken', 'Content-Type': 'application/json', 'Accept': 'application/json'},
-      body: json.encode(requestBody),
-    );
-
-    // Handle the response
-    if (response.statusCode == 201) {
-      Map<String, dynamic> responseData = jsonDecode(response.body);
-      if (responseData['message'] == 'OK') {
-        payToken = responseData['pay_token'];
-        return responseData['payment_url'];
-      } else {
-        return '';
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          backgroundColor: Color(0xff635bff),
-          content: Text(
-            "Something went wrong, please contact admin.",
-            style: TextStyle(fontSize: 17),
-          )));
-      return '';
-    }
-  }
-
   static reset() {
     accessToken = '';
     payToken = '';
@@ -703,52 +394,4 @@ class WalletController extends GetxController {
   }
 
   //Midtrans payment
-  midtransMakePayment({required String amount, required BuildContext context}) async {
-    await createPaymentLink(amount: amount).then((url) {
-      ShowToastDialog.closeLoader();
-      if (url != '') {
-        Get.to(() => MidtransScreen(
-                  initialURl: url,
-                ))!
-            .then((value) {
-          if (value == true) {
-            ShowToastDialog.showToast("Payment Successful!!");
-            walletTopUp();
-          } else {
-            ShowToastDialog.showToast("Payment Unsuccessful!!");
-          }
-        });
-      }
-    });
-  }
-
-  Future<String> createPaymentLink({required var amount}) async {
-    var ordersId = Constant.getUuid();
-    final url = Uri.parse(paymentModel.value.midtrans!.isSandbox == true ? 'https://api.sandbox.midtrans.com/v1/payment-links' : 'https://api.midtrans.com/v1/payment-links');
-
-    final response = await http.post(
-      url,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': generateBasicAuthHeader(paymentModel.value.midtrans!.serverKey!),
-      },
-      body: jsonEncode({
-        'transaction_details': {
-          'order_id': ordersId,
-          'gross_amount': double.parse(amount.toString()).toInt(),
-        },
-        'usage_limit': 2,
-        "callbacks": {"finish": "https://www.google.com?merchant_order_id=$ordersId"},
-      }),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final responseData = jsonDecode(response.body);
-      return responseData['payment_url'];
-    } else {
-      ShowToastDialog.showToast("something went wrong, please contact admin.");
-      return '';
-    }
-  }
 }

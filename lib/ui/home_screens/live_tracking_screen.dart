@@ -14,7 +14,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -59,7 +58,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenHeight < 700;
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     final double controlButtonsBottom = screenHeight * 0.45;
 
     return GetBuilder<LiveTrackingController>(
@@ -156,7 +154,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
               _buildStatusBar(context, controller),
               _buildOffRouteWarning(context, controller),
               _buildControlButtons(controller, controlButtonsBottom),
-              _buildBottomPanel(context, controller, themeChange),
+              _buildBottomPanel(context, controller),
               _buildTrafficReportTrigger(controller, controlButtonsBottom),
             ],
           ),
@@ -503,7 +501,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
   }
 
   Widget _buildBottomPanel(BuildContext context,
-      LiveTrackingController controller, DarkThemeProvider themeChange) {
+      LiveTrackingController controller) {
     return Positioned(
       left: 0,
       right: 0,
@@ -830,16 +828,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                               height: 34,
                               width: 44,
                               decoration: BoxDecoration(
-                                color: themeChange.getThem()
-                                    ? AppColors.darkBackground
-                                    : AppColors.darkBackground,
+                                color: AppColors.darkBackground,
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Icon(
                                 Icons.chat,
-                                color: themeChange.getThem()
-                                    ? Colors.black
-                                    : Colors.white,
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -857,16 +851,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                               height: 34,
                               width: 44,
                               decoration: BoxDecoration(
-                                color: themeChange.getThem()
-                                    ? AppColors.darkBackground
-                                    : AppColors.darkBackground,
+                                color:  AppColors.darkBackground,
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Icon(
                                 Icons.call,
-                                color: themeChange.getThem()
-                                    ? Colors.black
-                                    : Colors.white,
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -1006,7 +996,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
 
   Dialog _otpDialog(BuildContext context, LiveTrackingController controller,
       OrderModel orderModel, InterCityOrderModel interOrderModel) {
-    final themeChange = Provider.of<DarkThemeProvider>(context, listen: false);
 
     String currentOtp = ""; // Add this variable to store the current OTP
     bool isOtpComplete = false; // Track if OTP is complete
@@ -1033,24 +1022,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 pinTheme: PinTheme(
                   fieldHeight: 40,
                   fieldWidth: 40,
-                  activeColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  selectedColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  inactiveColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  activeFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
-                  inactiveFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
-                  selectedFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
+                  activeColor:  AppColors.textFieldBorder,
+                  selectedColor: AppColors.textFieldBorder,
+                  inactiveColor: AppColors.textFieldBorder,
+                  activeFillColor: AppColors.textField,
+                  inactiveFillColor:  AppColors.textField,
+                  selectedFillColor: AppColors.textField,
                   shape: PinCodeFieldShape.box,
                   borderRadius: BorderRadius.circular(5),
                 ),

@@ -7,7 +7,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/intercity_screen/pacel_details_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
@@ -21,7 +20,6 @@ class AcceptedIntercityOrders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -101,9 +99,7 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                       color: AppColors.background,
                                       borderRadius: const BorderRadius.all(
                                           Radius.circular(10)),
-                                      boxShadow: themeChange.getThem()
-                                          ? null
-                                          : [
+                                      boxShadow: [
                                               BoxShadow(
                                                 color: Colors.grey
                                                     .withOpacity(0.3),

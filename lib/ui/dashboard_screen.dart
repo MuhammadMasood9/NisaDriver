@@ -22,7 +22,7 @@ class DashBoardScreen extends StatelessWidget {
       init: DashBoardController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: const Color.fromARGB(0, 255, 228, 239),
+          backgroundColor: const Color.fromARGB(0, 255, 255, 255),
           appBar: AppBar(
             elevation: 0,
             backgroundColor: Colors.white,
@@ -144,6 +144,7 @@ class DashBoardScreen extends StatelessWidget {
     }
 
     return Drawer(
+      backgroundColor: AppColors.background,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -210,7 +211,6 @@ class DashBoardScreen extends StatelessWidget {
                                       style: AppTypography.boldLabel(context),
                                     ),
                                   ),
-                                  
                                 ],
                               ),
                             ],

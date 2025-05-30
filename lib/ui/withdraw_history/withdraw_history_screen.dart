@@ -3,7 +3,6 @@ import 'package:driver/model/withdraw_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -17,12 +16,9 @@ class WithDrawHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return Scaffold(
-      backgroundColor: themeChange.getThem()
-          ? AppColors.darkBackground
-          : AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: _buildSimpleAppBar(context),
       body: SafeArea(
         child: FutureBuilder<List<WithdrawModel>?>(
@@ -31,9 +27,9 @@ class WithDrawHistoryScreen extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeaderSection(context, themeChange),
+                _buildHeaderSection(context),
                 Expanded(
-                  child: _buildContent(context, snapshot, themeChange),
+                  child: _buildContent(context, snapshot),
                 ),
               ],
             );
@@ -60,7 +56,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
   }
 
   Widget _buildHeaderSection(
-      BuildContext context, DarkThemeProvider themeChange) {
+      BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -95,8 +91,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color:
-                        themeChange.getThem() ? Colors.white : Colors.black87,
+                    color:Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -105,8 +100,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
-                    color:
-                        themeChange.getThem() ? Colors.white70 : Colors.black54,
+                    color: Colors.black54,
                   ),
                 ),
               ],
@@ -120,7 +114,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
   Widget _buildContent(
       BuildContext context,
       AsyncSnapshot<List<WithdrawModel>?> snapshot,
-      DarkThemeProvider themeChange) {
+      ) {
     switch (snapshot.connectionState) {
       case ConnectionState.waiting:
         return _buildLoadingState(context);
@@ -129,8 +123,8 @@ class WithDrawHistoryScreen extends StatelessWidget {
           return _buildErrorState(context, snapshot.error.toString());
         } else {
           return snapshot.data!.isEmpty
-              ? _buildEmptyState(context, themeChange)
-              : _buildTransactionList(context, snapshot.data!, themeChange);
+              ? _buildEmptyState(context)
+              : _buildTransactionList(context, snapshot.data!);
         }
       default:
         return _buildErrorState(context, 'Error'.tr);
@@ -156,7 +150,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, DarkThemeProvider themeChange) {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -204,18 +198,18 @@ class WithDrawHistoryScreen extends StatelessWidget {
   }
 
   Widget _buildTransactionList(BuildContext context,
-      List<WithdrawModel> transactions, DarkThemeProvider themeChange) {
+      List<WithdrawModel> transactions ) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: transactions.length,
       itemBuilder: (context, index) {
-        return _buildTransactionCard(context, transactions[index], themeChange);
+        return _buildTransactionCard(context, transactions[index]);
       },
     );
   }
 
   Widget _buildTransactionCard(BuildContext context, WithdrawModel transaction,
-      DarkThemeProvider themeChange) {
+       ) {
     final isApproved = transaction.paymentStatus == "approved";
 
     return Container(

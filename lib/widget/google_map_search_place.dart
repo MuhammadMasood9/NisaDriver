@@ -3,7 +3,6 @@ import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/place_picker_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -81,7 +80,6 @@ class GoogleMapSearchPlacesApiState extends State<GoogleMapSearchPlacesApi> {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -92,13 +90,13 @@ class GoogleMapSearchPlacesApiState extends State<GoogleMapSearchPlacesApi> {
           },
           child: Icon(
             Icons.arrow_back,
-            color: themeChange.getThem() ? AppColors.lightGray : AppColors.lightGray,
+            color:  AppColors.lightGray,
           ),
         ),
         title: Text(
           'Search places',
           style: TextStyle(
-            color: themeChange.getThem() ? AppColors.lightGray : AppColors.lightGray,
+            color:  AppColors.lightGray,
             fontSize: 16,
           ),
         ),
@@ -114,32 +112,32 @@ class GoogleMapSearchPlacesApiState extends State<GoogleMapSearchPlacesApi> {
                 textCapitalization: TextCapitalization.sentences,
                 controller: _controller,
                 textAlign: TextAlign.start,
-                style: GoogleFonts.poppins(color: themeChange.getThem() ? Colors.white : Colors.black),
+                style: GoogleFonts.poppins(color:  Colors.black),
                 decoration: InputDecoration(
                     isDense: true,
                     filled: true,
-                    fillColor: themeChange.getThem() ? AppColors.darkTextField : AppColors.textField,
+                    fillColor:  AppColors.textField,
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     prefixIcon: const Icon(Icons.map),
                     disabledBorder: OutlineInputBorder(
                       borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                      borderSide: BorderSide(color: AppColors.textFieldBorder, width: 1),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                      borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                      borderSide: BorderSide(color: AppColors.textFieldBorder, width: 1),
                     ),
                     errorBorder: OutlineInputBorder(
                       borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                      borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                      borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
                     ),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.cancel),

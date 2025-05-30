@@ -14,7 +14,6 @@ class VehicleInformationController extends GetxController {
   Rx<TextEditingController> vehicleNumberController = TextEditingController().obs;
   Rx<TextEditingController> seatsController = TextEditingController().obs;
   Rx<TextEditingController> registrationDateController = TextEditingController().obs;
-  Rx<TextEditingController> driverRulesController = TextEditingController().obs;
   Rx<TextEditingController> zoneNameController = TextEditingController().obs;
   Rx<DateTime?> selectedDate = DateTime.now().obs;
 
@@ -24,42 +23,37 @@ class VehicleInformationController extends GetxController {
   List<String> carColorList = <String>['Red', 'Black', 'White', 'Blue', 'Green', 'Orange', 'Silver', 'Gray', 'Yellow', 'Brown', 'Gold', 'Beige', 'Purple'].obs;
   List<String> sheetList = <String>['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'].obs;
 
-  @override
-  void onInit() {
-    // TODO: implement onInit
-    getVehicleTye();
-    super.onInit();
-  }
-
   List<VehicleTypeModel> vehicleList = <VehicleTypeModel>[].obs;
   Rx<VehicleTypeModel> selectedVehicle = VehicleTypeModel().obs;
-  var colors = [
-    AppColors.serviceColor1,
-    AppColors.serviceColor2,
-    AppColors.serviceColor3,
-  ];
   Rx<DriverUserModel> driverModel = DriverUserModel().obs;
-  RxList<DriverRulesModel> driverRulesList = <DriverRulesModel>[].obs;
-  RxList<DriverRulesModel> selectedDriverRulesList = <DriverRulesModel>[].obs;
-
   RxList<ServiceModel> serviceList = <ServiceModel>[].obs;
   RxList<ZoneModel> zoneList = <ZoneModel>[].obs;
   RxList selectedZone = <String>[].obs;
-
   Rx<String?> selectedServiceId = "".obs;
   RxString zoneString = "".obs;
 
-  getVehicleTye() async {
+  @override
+  void onInit() {
+    getVehicleType();
+    super.onInit();
+  }
+
+  getVehicleType() async {
+    isLoading.value = true;
+
+    // Fetch services
     await FireStoreUtils.getService().then((value) {
       serviceList.value = value;
     });
 
+    // Fetch zones
     await FireStoreUtils.getZone().then((value) {
       if (value != null) {
         zoneList.value = value;
       }
     });
 
+    // Fetch driver profile
     await FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()).then((value) {
       driverModel.value = value!;
       if (driverModel.value.vehicleInformation != null) {
@@ -70,10 +64,10 @@ class VehicleInformationController extends GetxController {
         seatsController.value.text = driverModel.value.vehicleInformation!.seats ?? "2";
       }
 
-      if(driverModel.value.zoneIds != null){
+      if (driverModel.value.zoneIds != null) {
         for (var element in driverModel.value.zoneIds!) {
           List<ZoneModel> list = zoneList.where((p0) => p0.id == element).toList();
-          if(list.isNotEmpty){
+          if (list.isNotEmpty) {
             selectedZone.add(element);
             zoneString.value = "$zoneString${zoneString.isEmpty ? "" : ","} ${Constant.localizationName(list.first.name)}";
           }
@@ -81,11 +75,12 @@ class VehicleInformationController extends GetxController {
         zoneNameController.value.text = zoneString.value;
       }
 
+      if (driverModel.value.serviceId != null) {
+        selectedServiceId.value = driverModel.value.serviceId;
+      }
     });
 
-    if (driverModel.value.serviceId != null) {
-      selectedServiceId.value = driverModel.value.serviceId;
-    }
+    // Fetch vehicle types
     await FireStoreUtils.getVehicleType().then((value) {
       vehicleList = value!;
       if (driverModel.value.vehicleInformation != null) {
@@ -97,18 +92,6 @@ class VehicleInformationController extends GetxController {
       }
     });
 
-    await FireStoreUtils.getDriverRules().then((value) {
-      if (value != null) {
-        driverRulesList.value = value;
-        if (driverModel.value.vehicleInformation != null) {
-          if (driverModel.value.vehicleInformation!.driverRules != null) {
-            for (var element in driverModel.value.vehicleInformation!.driverRules!) {
-              selectedDriverRulesList.add(element);
-            }
-          }
-        }
-      }
-    });
     isLoading.value = false;
     update();
   }

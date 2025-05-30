@@ -1,5 +1,4 @@
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/utils.dart';
 import 'package:driver/widget/osm_map_search_place.dart';
 import 'package:flutter/material.dart';
@@ -112,7 +111,6 @@ class _LocationPickerState extends State<LocationPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Location Picker'),
@@ -203,7 +201,7 @@ class _LocationPickerState extends State<LocationPicker> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _setUserLocation,
-        child: Icon(Icons.my_location, color: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary),
+        child: Icon(Icons.my_location, color:  AppColors.primary),
       ),
     );
   }

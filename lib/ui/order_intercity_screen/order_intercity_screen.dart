@@ -14,7 +14,6 @@ import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/ui/order_intercity_screen/complete_intecity_order_screen.dart';
 import 'package:driver/ui/review/review_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
@@ -30,7 +29,6 @@ class OrderIntercityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     final PolylinePoints polylinePoints = PolylinePoints();
 
     return GetX<InterCityOrderController>(
@@ -93,7 +91,7 @@ class OrderIntercityScreen extends StatelessWidget {
                                     child: Padding(
                                       padding: const EdgeInsets.all(10.0),
                                       child: _buildSectionCard(
-                                        themeChange: themeChange,
+                                       
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -123,14 +121,12 @@ class OrderIntercityScreen extends StatelessWidget {
                                                   .toString(),
                                             ),
                                             const SizedBox(height: 10),
-                                            _buildStatusSection(
-                                                themeChange, orderModel),
+                                            _buildStatusSection( orderModel),
                                             const SizedBox(height: 10),
                                             _buildActionButtons(
                                                 context,
                                                 orderModel,
-                                                controller,
-                                                themeChange),
+                                                controller),
                                             const SizedBox(height: 10),
                                             Visibility(
                                               visible: controller.paymentModel
@@ -438,27 +434,20 @@ class OrderIntercityScreen extends StatelessWidget {
   }
 
   Widget _buildSectionCard({
-    required DarkThemeProvider themeChange,
     required Widget child,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: themeChange.getThem()
-            ? AppColors.darkContainerBackground
-            : Colors.white,
+        color:  Colors.white,
         borderRadius: BorderRadius.circular(16),
-        gradient: themeChange.getThem()
-            ? null
-            : LinearGradient(
+        gradient:  LinearGradient(
                 colors: [Colors.white, Colors.grey[50]!],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
         border: Border.all(
-          color: themeChange.getThem()
-              ? AppColors.darkContainerBorder
-              : AppColors.containerBorder,
+          color: AppColors.containerBorder,
           width: 0.5,
         ),
         boxShadow: [
@@ -475,10 +464,10 @@ class OrderIntercityScreen extends StatelessWidget {
   }
 
   Widget _buildStatusSection(
-      DarkThemeProvider themeChange, InterCityOrderModel orderModel) {
+    InterCityOrderModel orderModel) {
     return Container(
       decoration: BoxDecoration(
-        color: themeChange.getThem() ? AppColors.darkGray : AppColors.gray,
+        color:  AppColors.gray,
         borderRadius: const BorderRadius.all(Radius.circular(10)),
       ),
       child: Padding(
@@ -504,7 +493,7 @@ class OrderIntercityScreen extends StatelessWidget {
     BuildContext context,
     InterCityOrderModel orderModel,
     InterCityOrderController controller,
-    DarkThemeProvider themeChange,
+ 
   ) {
     return Row(
       children: [
@@ -549,14 +538,12 @@ class OrderIntercityScreen extends StatelessWidget {
                   height: 35,
                   width: 35,
                   decoration: BoxDecoration(
-                    color: themeChange.getThem()
-                        ? AppColors.primary
-                        : AppColors.primary,
+                    color:  AppColors.primary,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Icon(
                     Icons.chat,
-                    color: themeChange.getThem() ? Colors.black : Colors.white,
+                    color: Colors.white,
                     size: 20,
                   ),
                 ),
@@ -573,14 +560,12 @@ class OrderIntercityScreen extends StatelessWidget {
                   height: 35,
                   width: 35,
                   decoration: BoxDecoration(
-                    color: themeChange.getThem()
-                        ? AppColors.primary
-                        : AppColors.primary,
+                    color:  AppColors.primary,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Icon(
                     Icons.call,
-                    color: themeChange.getThem() ? Colors.black : Colors.white,
+                    color:  Colors.white,
                     size: 20,
                   ),
                 ),

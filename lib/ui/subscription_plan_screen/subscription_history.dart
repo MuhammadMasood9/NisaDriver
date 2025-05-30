@@ -2,7 +2,6 @@ import 'package:driver/constant/constant.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/network_image_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -16,7 +15,6 @@ class SubscriptionHistory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return GetX<SubscriptionHistoryController>(
       init: SubscriptionHistoryController(),
       builder: (controller) {
@@ -43,9 +41,9 @@ class SubscriptionHistory extends StatelessWidget {
                           ),
                         )
                       : controller.subscriptionHistoryList.isEmpty
-                          ? _buildEmptyState(context, themeChange)
+                          ? _buildEmptyState(context)
                           : _buildSubscriptionList(
-                              context, controller, themeChange),
+                              context, controller),
                 ),
               ),
             ],
@@ -55,7 +53,7 @@ class SubscriptionHistory extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, DarkThemeProvider themeChange) {
+  Widget _buildEmptyState(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
       child: Center(
@@ -66,17 +64,13 @@ class SubscriptionHistory extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: themeChange.getThem()
-                    ? AppColors.grey800
-                    : AppColors.grey100,
+                color: AppColors.grey100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.history_outlined,
                 size: 60,
-                color: themeChange.getThem()
-                    ? AppColors.grey400
-                    : AppColors.grey600,
+                color: AppColors.grey600,
               ),
             ),
             const SizedBox(height: 24),
@@ -85,9 +79,7 @@ class SubscriptionHistory extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: themeChange.getThem()
-                    ? AppColors.grey200
-                    : AppColors.grey800,
+                color:  AppColors.grey800,
               ),
             ),
             const SizedBox(height: 8),
@@ -96,9 +88,7 @@ class SubscriptionHistory extends StatelessWidget {
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: themeChange.getThem()
-                    ? AppColors.grey400
-                    : AppColors.grey600,
+                color:  AppColors.grey600,
               ),
             ),
           ],
@@ -108,7 +98,7 @@ class SubscriptionHistory extends StatelessWidget {
   }
 
   Widget _buildSubscriptionList(BuildContext context,
-      SubscriptionHistoryController controller, DarkThemeProvider themeChange) {
+      SubscriptionHistoryController controller) {
     return RefreshIndicator(
       onRefresh: () async {
         // Add refresh functionality here if needed
@@ -257,7 +247,6 @@ class SubscriptionHistory extends StatelessWidget {
                             ? "Unlimited"
                             : '${subscriptionHistoryModel.subscriptionPlan?.expiryDay ?? '0'} Days',
                         Icons.schedule_outlined,
-                        themeChange,
                         isActive: isActive,
                       ),
                       const SizedBox(height: 10),
@@ -265,7 +254,6 @@ class SubscriptionHistory extends StatelessWidget {
                         'Payment Type',
                         (subscriptionHistoryModel.paymentType ?? ''),
                         Icons.payment_outlined,
-                        themeChange,
                         isActive: isActive,
                       ),
                       const SizedBox(height: 10),
@@ -274,7 +262,6 @@ class SubscriptionHistory extends StatelessWidget {
                         Constant.timestampToDateTime(subscriptionHistoryModel
                             .subscriptionPlan!.createdAt!),
                         Icons.calendar_today_outlined,
-                        themeChange,
                         isActive: isActive,
                       ),
                       const SizedBox(height: 10),
@@ -285,7 +272,6 @@ class SubscriptionHistory extends StatelessWidget {
                             : Constant.timestampToDateTime(
                                 subscriptionHistoryModel.expiryDate!),
                         Icons.event_outlined,
-                        themeChange,
                         isActive: isActive,
                         isExpiry: true,
                       ),
@@ -301,7 +287,7 @@ class SubscriptionHistory extends StatelessWidget {
   }
 
   Widget _buildDetailRow(
-      String label, String value, IconData icon, DarkThemeProvider themeChange,
+      String label, String value, IconData icon,
       {bool isActive = false, bool isExpiry = false}) {
     return Row(
       children: [
@@ -309,8 +295,7 @@ class SubscriptionHistory extends StatelessWidget {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color:
-                themeChange.getThem() ? AppColors.grey800 : AppColors.grey100,
+            color: AppColors.grey100,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -318,9 +303,7 @@ class SubscriptionHistory extends StatelessWidget {
             size: 14,
             color: isActive
                 ? AppColors.primary
-                : (themeChange.getThem()
-                    ? AppColors.grey400
-                    : AppColors.grey600),
+                : ( AppColors.grey600),
           ),
         ),
         const SizedBox(width: 10),
@@ -332,9 +315,7 @@ class SubscriptionHistory extends StatelessWidget {
                 label,
                 style:AppTypography.label(Get.context!).copyWith( color: isActive
                       ? Colors.white.withOpacity(0.7)
-                      : (themeChange.getThem()
-                          ? AppColors.grey400
-                          : AppColors.grey600)),
+                      : ( AppColors.grey600)),
               ),
               const SizedBox(height: 2),
               Text(
@@ -343,9 +324,7 @@ class SubscriptionHistory extends StatelessWidget {
                       ? Colors.white
                       : (isExpiry && value != "Unlimited"
                           ? _getExpiryColor(value)
-                          : (themeChange.getThem()
-                              ? AppColors.grey50
-                              : AppColors.grey800)),
+                          : ( AppColors.grey800)),
                 ),
               ),
             ],

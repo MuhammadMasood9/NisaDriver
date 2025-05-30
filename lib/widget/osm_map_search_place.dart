@@ -1,6 +1,5 @@
 import 'package:driver/controller/osm_search_place_controller.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,7 +10,6 @@ class OsmSearchPlacesApi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return GetX(
         init: OsmSearchPlaceController(),
         builder: (controller) {
@@ -26,13 +24,13 @@ class OsmSearchPlacesApi extends StatelessWidget {
                 },
                 child: Icon(
                   Icons.arrow_back,
-                  color: themeChange.getThem() ? AppColors.lightGray : AppColors.lightGray,
+                  color:  AppColors.lightGray,
                 ),
               ),
               title: Text(
                 'Search places',
                 style: TextStyle(
-                  color: themeChange.getThem() ? AppColors.lightGray : AppColors.lightGray,
+                  color: AppColors.lightGray,
                   fontSize: 16,
                 ),
               ),
@@ -51,28 +49,28 @@ class OsmSearchPlacesApi extends StatelessWidget {
                       decoration: InputDecoration(
                           isDense: true,
                           filled: true,
-                          fillColor: themeChange.getThem() ? AppColors.darkTextField : AppColors.textField,
+                          fillColor:  AppColors.textField,
                           contentPadding: const EdgeInsets.symmetric(vertical: 12),
                           prefixIcon: const Icon(Icons.map),
                           disabledBorder: OutlineInputBorder(
                             borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
                           ),
                           errorBorder: OutlineInputBorder(
                             borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
                           ),
                           border: OutlineInputBorder(
                             borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : AppColors.textFieldBorder, width: 1),
+                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
                           ),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.cancel),

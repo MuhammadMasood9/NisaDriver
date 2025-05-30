@@ -6,7 +6,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/online_registration/details_upload_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,7 +16,6 @@ class OnlineRegistrationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GetBuilder<OnlineRegistrationController>(
         init: OnlineRegistrationController(),
@@ -226,13 +224,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                               height: 26,
                                                               decoration:
                                                                   BoxDecoration(
-                                                                color: themeChange
-                                                                        .getThem()
-                                                                    ? Colors
-                                                                        .white
-                                                                        .withOpacity(
-                                                                            0.1)
-                                                                    : Colors
+                                                                color:  Colors
                                                                         .grey
                                                                         .shade100,
                                                                 borderRadius:
@@ -244,13 +236,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                                 Icons
                                                                     .arrow_forward_ios_rounded,
                                                                 size: 16,
-                                                                color: themeChange
-                                                                        .getThem()
-                                                                    ? Colors
-                                                                        .white
-                                                                        .withOpacity(
-                                                                            0.7)
-                                                                    : Colors
+                                                                color: Colors
                                                                         .grey
                                                                         .shade600,
                                                               ),

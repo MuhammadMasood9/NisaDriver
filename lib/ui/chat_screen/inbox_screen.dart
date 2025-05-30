@@ -9,7 +9,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/firebase_pagination/src/firestore_pagination.dart';
 import 'package:driver/widget/firebase_pagination/src/models/view_type.dart';
@@ -125,7 +124,6 @@ class _InboxScreenState extends State<InboxScreen> {
   }
 
   Widget _buildChatItem(InboxModel inboxModel, BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return InkWell(
       onTap: () async {
         UserModel? customer =
@@ -148,6 +146,7 @@ class _InboxScreenState extends State<InboxScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
+            backgroundColor: AppColors.background,
             title:
                 Text("Delete Chat", style: AppTypography.boldHeaders(context)),
             content: Text("Are you sure you want to delete this chat?",
@@ -175,9 +174,7 @@ class _InboxScreenState extends State<InboxScreen> {
         padding: const EdgeInsets.all(6.0),
         child: Container(
           decoration: BoxDecoration(
-            color: themeChange.getThem()
-                ? AppColors.darkContainerBackground
-                : Colors.white,
+            color: Colors.white,
             borderRadius: const BorderRadius.all(Radius.circular(6)),
             boxShadow: [
               BoxShadow(
@@ -241,7 +238,6 @@ class _InboxScreenState extends State<InboxScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(

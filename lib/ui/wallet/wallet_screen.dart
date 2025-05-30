@@ -16,7 +16,6 @@ import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/order_intercity_screen/complete_intecity_order_screen.dart';
 import 'package:driver/ui/order_screen/complete_order_screen.dart';
 import 'package:driver/ui/withdraw_history/withdraw_history_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -25,14 +24,13 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:scroll_date_picker/scroll_date_picker.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return GetX<WalletController>(
       init: WalletController(),
       builder: (controller) {
@@ -42,10 +40,16 @@ class WalletScreen extends StatelessWidget {
               ? Constant.loader(context)
               : Column(
                   children: [
-                    _buildHeader(context, controller, themeChange),
+                    _buildHeader(context, controller),
+                    _buildModernDateFilter(context, controller),
+                    // Divider(
+                    //   color: AppColors.grey200,
+                    //   indent: 10,
+                    //   endIndent: 10,
+                    //   height: 1,
+                    // ),
                     Expanded(
-                      child: _buildTransactionList(
-                          context, controller, themeChange),
+                      child: _buildTransactionList(context, controller),
                     ),
                   ],
                 ),
@@ -69,8 +73,7 @@ class WalletScreen extends StatelessWidget {
                             .then((value) {
                           ShowToastDialog.closeLoader();
                           if (value == true) {
-                            withdrawAmountBottomSheet(
-                                context, controller, themeChange);
+                            withdrawAmountBottomSheet(context, controller);
                           } else {
                             ShowToastDialog.showToast(
                                 "Your bank details is not available.Please add bank details"
@@ -99,10 +102,409 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, WalletController controller,
-      DarkThemeProvider themeChange) {
+  Widget _buildModernDateFilter(
+      BuildContext context, WalletController controller) {
     return Container(
-      height: Responsive.width(65, context),
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+      decoration: BoxDecoration(
+
+          // borderRadius: BorderRadius.circular(20),
+          ),
+      child: Padding(
+        padding: const EdgeInsets.all(0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Obx(() => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: controller.startDate.value != null
+                                ? AppColors.primary.withOpacity(0.4)
+                                : AppColors.textFieldBorder.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () async {
+                            HapticFeedback.lightImpact();
+                            await showModalBottomSheet(
+                              context: context,
+                              builder: (context) => Container(
+                                color: AppColors.background,
+                                height: Responsive.width(85, context),
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Start Date",
+                                          style: AppTypography.headers(context),
+                                        ),
+                                        TextButton(
+                                            onPressed: () {
+                                              controller.clearStartDateFilter();
+                                              _showFilterFeedback(
+                                                  context, controller);
+                                            },
+                                            child: Text(
+                                              "Clear",
+                                              style: AppTypography.caption(
+                                                  context),
+                                            ))
+                                      ],
+                                    ),
+                                    Expanded(
+                                      child: ScrollDatePicker(
+                                        selectedDate:
+                                            controller.startDate.value ??
+                                                DateTime.now(),
+                                        locale: Locale('en'),
+                                        minimumDate: DateTime(2000),
+                                        maximumDate: controller.endDate.value ??
+                                            DateTime.now(),
+                                        onDateTimeChanged: (DateTime value) {
+                                          controller.setStartDate(value);
+                                          _showFilterFeedback(
+                                              context, controller);
+                                        },
+                                        options: DatePickerOptions(
+                                          backgroundColor: Colors.white,
+                                          itemExtent: 40,
+                                          diameterRatio: 1.5,
+                                        ),
+                                        indicator: Container(
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary
+                                                .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Row(
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: controller.startDate.value != null
+                                      ? AppColors.primary.withOpacity(0.2)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.calendar_today_rounded,
+                                  color: controller.startDate.value != null
+                                      ? AppColors.primary
+                                      : AppColors.darkBackground
+                                          .withOpacity(0.5),
+                                  size: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Start Date".tr,
+                                      style: AppTypography.smBoldLabel(context)
+                                          .copyWith(
+                                        color:
+                                            controller.startDate.value != null
+                                                ? AppColors.primary
+                                                : AppColors.darkBackground
+                                                    .withOpacity(0.5),
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      controller.startDate.value == null
+                                          ? "Select".tr
+                                          : DateFormat('dd MMM yyyy').format(
+                                              controller.startDate.value!),
+                                      style: AppTypography.caption(context)
+                                          .copyWith(
+                                        letterSpacing: -0.3,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Obx(() => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: controller.endDate.value != null
+                                ? AppColors.primary.withOpacity(0.4)
+                                : AppColors.textFieldBorder.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () async {
+                            HapticFeedback.lightImpact();
+                            await showModalBottomSheet(
+                              context: context,
+                              builder: (context) => Container(
+                                color: AppColors.background,
+                                height: Responsive.width(85, context),
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "End Date",
+                                          style: AppTypography.headers(context),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            controller.clearEndDateFilter();
+                                            _showFilterFeedback(
+                                                context, controller);
+                                          },
+                                          child: Text(
+                                            "Clear",
+                                            style:
+                                                AppTypography.caption(context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Expanded(
+                                      child: ScrollDatePicker(
+                                        selectedDate:
+                                            controller.endDate.value ??
+                                                DateTime.now(),
+                                        locale: Locale('en'),
+                                        minimumDate:
+                                            controller.startDate.value ??
+                                                DateTime(2000),
+                                        maximumDate: DateTime.now(),
+                                        onDateTimeChanged: (DateTime value) {
+                                          controller.setEndDate(value);
+                                          _showFilterFeedback(
+                                              context, controller);
+                                        },
+                                        options: DatePickerOptions(
+                                          backgroundColor: Colors.white,
+                                          itemExtent: 40,
+                                          diameterRatio: 1.5,
+                                        ),
+                                        indicator: Container(
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary
+                                                .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Row(
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: controller.endDate.value != null
+                                      ? AppColors.primary.withOpacity(0.2)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.calendar_today_rounded,
+                                  color: controller.endDate.value != null
+                                      ? AppColors.primary
+                                      : AppColors.darkBackground
+                                          .withOpacity(0.5),
+                                  size: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "End Date".tr,
+                                      style: AppTypography.smBoldLabel(context)
+                                          .copyWith(
+                                        color: controller.endDate.value != null
+                                            ? AppColors.primary
+                                            : AppColors.darkBackground
+                                                .withOpacity(0.5),
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      controller.endDate.value == null
+                                          ? "Select".tr
+                                          : DateFormat('dd MMM yyyy').format(
+                                              controller.endDate.value!),
+                                      style: AppTypography.caption(context)
+                                          .copyWith(
+                                        letterSpacing: -0.3,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )),
+                ), // const SizedBox(width: 8),
+                // Obx(() => AnimatedScale(
+                //       scale: (controller.startDate.value != null ||
+                //               controller.endDate.value != null)
+                //           ? 0.9
+                //           : 0.9,
+                //       duration: const Duration(milliseconds: 300),
+                //       curve: Curves.easeInOut,
+                //       child: AnimatedOpacity(
+                //         opacity: (controller.startDate.value != null ||
+                //                 controller.endDate.value != null)
+                //             ? 1.0
+                //             : 0.5,
+                //         duration: const Duration(milliseconds: 300),
+                //         child: InkWell(
+                //           onTap: (controller.startDate.value != null ||
+                //                   controller.endDate.value != null)
+                //               ? () {
+                //                   HapticFeedback.lightImpact();
+                //                   controller.clearDateFilter();
+                //                   ScaffoldMessenger.of(context).showSnackBar(
+                //                     SnackBar(
+                //                       content: Text(
+                //                         "Filter cleared".tr,
+                //                         style: GoogleFonts.poppins(
+                //                             fontWeight: FontWeight.w500),
+                //                       ),
+                //                       behavior: SnackBarBehavior.floating,
+                //                       shape: RoundedRectangleBorder(
+                //                           borderRadius:
+                //                               BorderRadius.circular(8)),
+                //                       duration: const Duration(seconds: 1),
+                //                     ),
+                //                   );
+                //                 }
+                //               : null,
+                //           borderRadius: BorderRadius.circular(0),
+                //           child: AnimatedContainer(
+                //             duration: const Duration(milliseconds: 300),
+                //             padding: const EdgeInsets.all(12),
+                //             decoration: BoxDecoration(
+                //               borderRadius: BorderRadius.circular(16),
+                //               border: Border.all(
+                //                 color: (controller.startDate.value != null ||
+                //                         controller.endDate.value != null)
+                //                     ? AppColors.primary.withOpacity(0.3)
+                //                     : Colors.grey.withOpacity(0.5),
+                //                 width: (controller.startDate.value != null ||
+                //                         controller.endDate.value != null)
+                //                     ? 1.5
+                //                     : 1,
+                //               ),
+                //             ),
+                //             child: Icon(
+                //               Icons.close_rounded,
+                //               color: (controller.startDate.value != null ||
+                //                       controller.endDate.value != null)
+                //                   ? AppColors.primary.withOpacity(0.9)
+                //                   : Colors.grey.shade500,
+                //               size: 22,
+                //             ),
+                //           ),
+                //         ),
+                //       ),
+                //     )),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Add this method to show filter feedback
+  void _showFilterFeedback(BuildContext context, WalletController controller) {
+    // Get filtered results count
+    int filteredCount = controller.filteredTransactionList.length;
+    int totalCount = controller.transactionList.length;
+
+    // Show snackbar with filter results
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(
+    //     content: Text(
+    //       "Showing $filteredCount of $totalCount transactions".tr,
+    //       style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+    //     ),
+    //     backgroundColor: AppColors.primary,
+    //     behavior: SnackBarBehavior.floating,
+    //     shape: RoundedRectangleBorder(
+    //       borderRadius: BorderRadius.circular(12),
+    //     ),
+    //     duration: const Duration(seconds: 2),
+    //     action: filteredCount < totalCount
+    //         ? SnackBarAction(
+    //             label: "Clear".tr,
+    //             textColor: Colors.white,
+    //             onPressed: () {
+    //               controller.clearDateFilter();
+    //             },
+    //           )
+    //         : null,
+    //   ),
+    // );
+  }
+
+  Widget _buildHeader(BuildContext context, WalletController controller) {
+    return Container(
+      height: Responsive.width(50, context),
+      width: Responsive.width(65, context),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
@@ -124,7 +526,29 @@ class WalletScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: 12),
+          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+            Container(
+              padding: EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.all(Radius.circular(10))),
+              margin: EdgeInsets.only(right: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.download,
+                    size: 10,
+                  ),
+                  Text(
+                    "Export",
+                    style: AppTypography.smBoldLabel(context),
+                  ),
+                ],
+              ),
+            ),
+          ]),
+          const SizedBox(height: 12),
           Text(
             "Wallet Balance".tr,
             style: AppTypography.boldHeaders(context)
@@ -147,7 +571,7 @@ class WalletScreen extends StatelessWidget {
               btnWidthRatio: 0.5,
               btnHeight: 50,
               onPress: () async {
-                paymentMethodDialog(context, controller, themeChange);
+                paymentMethodDialog(context, controller);
               },
             ),
           ),
@@ -156,13 +580,11 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTransactionList(BuildContext context,
-      WalletController controller, DarkThemeProvider themeChange) {
+  Widget _buildTransactionList(
+      BuildContext context, WalletController controller) {
     return Container(
       decoration: BoxDecoration(
-        color: themeChange.getThem()
-            ? AppColors.darkBackground
-            : AppColors.background,
+        color: AppColors.background,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -170,21 +592,43 @@ class WalletScreen extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: controller.transactionList.isEmpty
+        child: controller.filteredTransactionList.isEmpty
             ? Center(
-                child: Text(
-                  "No transactions found".tr,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    color: AppColors.darkBackground.withOpacity(0.6),
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 64,
+                      color: AppColors.darkBackground.withOpacity(0.3),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "No transactions found".tr,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.darkBackground.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      controller.selectedDateRange.value != null
+                          ? "Try selecting a different date range".tr
+                          : "Your transactions will appear here".tr,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: AppColors.darkBackground.withOpacity(0.4),
+                      ),
+                    ),
+                  ],
                 ),
               )
             : ListView.builder(
-                itemCount: controller.transactionList.length,
+                itemCount: controller.filteredTransactionList.length,
                 itemBuilder: (context, index) {
                   WalletTransactionModel walletTransactionModel =
-                      controller.transactionList[index];
+                      controller.filteredTransactionList[index];
                   return AnimatedOpacity(
                     opacity: 1.0,
                     duration: Duration(milliseconds: 300 + (index * 100)),
@@ -201,7 +645,7 @@ class WalletScreen extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: _buildTransactionCard(
-                            context, walletTransactionModel, themeChange),
+                            context, walletTransactionModel),
                       ),
                     ),
                   );
@@ -212,9 +656,7 @@ class WalletScreen extends StatelessWidget {
   }
 
   Widget _buildTransactionCard(
-      BuildContext context,
-      WalletTransactionModel walletTransactionModel,
-      DarkThemeProvider themeChange) {
+      BuildContext context, WalletTransactionModel walletTransactionModel) {
     return InkWell(
       onTap: () async {
         if (walletTransactionModel.orderType == "city") {
@@ -239,97 +681,177 @@ class WalletScreen extends StatelessWidget {
           });
         } else {
           showTransactionDetails(
-              context: context,
-              walletTransactionModel: walletTransactionModel,
-              themeChange: themeChange);
+              context: context, walletTransactionModel: walletTransactionModel);
         }
       },
       child: Container(
         decoration: BoxDecoration(
-          color: themeChange.getThem()
-              ? AppColors.darkContainerBackground
-              : Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 10,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGray,
-                  shape: BoxShape.circle,
-                ),
-                child: SvgPicture.asset(
-                  'assets/icons/ic_wallet.svg',
-                  width: 20,
-                  color: AppColors.darkBackground,
+        child: Stack(
+          children: [
+            // Badge positioned at top-left
+            if (walletTransactionModel.orderType == "city" ||
+                walletTransactionModel.orderType == "intercity")
+              Positioned(
+                top: 0,
+                left: 0,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: walletTransactionModel.orderType == "city"
+                          ? [
+                              AppColors.primary,
+                              AppColors.primary.withOpacity(0.8)
+                            ]
+                          : [Colors.orange, Colors.orange.withOpacity(0.8)],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(12),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (walletTransactionModel.orderType == "city"
+                                ? AppColors.primary
+                                : Colors.orange)
+                            .withOpacity(0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    walletTransactionModel.orderType == "city"
+                        ? "Ride"
+                        : "Parcel",
+                    style: AppTypography.smBoldLabel(context).copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Main content with proper padding to avoid badge overlap
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                8,
+                (walletTransactionModel.orderType == "city" ||
+                        walletTransactionModel.orderType == "intercity")
+                    ? 20
+                    : 20,
+                8,
+                8,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.darkBackground.withOpacity(0.1),
+                          AppColors.darkBackground.withOpacity(0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icons/ic_wallet.svg',
+                      width: 22,
+                      color: AppColors.darkBackground,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          Constant.dateFormatTimestamp(
-                              walletTransactionModel.createdDate),
-                          style: AppTypography.boldLabel(context),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              Constant.dateFormatTimestamp(
+                                  walletTransactionModel.createdDate),
+                              style: AppTypography.boldLabel(context),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 4),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                "${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? "-" : "+"}${Constant.amountShow(amount: walletTransactionModel.amount.toString().replaceAll("-", ""))}",
+                                style:
+                                    AppTypography.boldLabel(context).copyWith(
+                                  color: Constant.IsNegative(double.parse(
+                                          walletTransactionModel.amount
+                                              .toString()))
+                                      ? Colors.red
+                                      : Colors.green,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          "${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? "(-" : "+"}${Constant.amountShow(amount: walletTransactionModel.amount.toString().replaceAll("-", ""))}${Constant.IsNegative(double.parse(walletTransactionModel.amount.toString())) ? ")" : ""}",
-                          style: AppTypography.smBoldLabel(context).copyWith(
-                              color: Constant.IsNegative(double.parse(
-                                      walletTransactionModel.amount.toString()))
-                                  ? Colors.red
-                                  : Colors.green),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                walletTransactionModel.note.toString(),
+                                style: AppTypography.caption(context),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                walletTransactionModel.paymentType
+                                    .toString()
+                                    .toUpperCase(),
+                                style:
+                                    AppTypography.smBoldLabel(context).copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            walletTransactionModel.note.toString(),
-                            style: AppTypography.label(context).copyWith(
-                                color:
-                                    AppColors.darkBackground.withOpacity(0.6)),
-                          ),
-                        ),
-                        Text(
-                          walletTransactionModel.paymentType
-                              .toString()
-                              .toUpperCase(),
-                          style: AppTypography.boldLabel(context).copyWith(
-                              color: AppColors.primary.withOpacity(0.6)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void paymentMethodDialog(BuildContext context, WalletController controller,
-      DarkThemeProvider themeChange) {
+  void paymentMethodDialog(
+    BuildContext context,
+    WalletController controller,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -415,7 +937,6 @@ class WalletScreen extends StatelessWidget {
                                     controller.paymentModel.value.strip!.name
                                         .toString(),
                                     'assets/images/stripe.png',
-                                    themeChange,
                                   ),
                                 ),
                               ],
@@ -435,93 +956,6 @@ class WalletScreen extends StatelessWidget {
                                 controller.stripeMakePayment(
                                     amount:
                                         controller.amountController.value.text);
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller.paymentModel.value.paypal?.name) {
-                                controller.paypalPaymentSheet(
-                                    controller.amountController.value.text,
-                                    context1);
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller
-                                      .paymentModel.value.payStack?.name) {
-                                controller.payStackPayment(
-                                    controller.amountController.value.text);
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller
-                                      .paymentModel.value.mercadoPago?.name) {
-                                controller.mercadoPagoMakePayment(
-                                    context: context,
-                                    amount:
-                                        controller.amountController.value.text);
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller
-                                      .paymentModel.value.flutterWave?.name) {
-                                controller.flutterWaveInitiatePayment(
-                                    context: context,
-                                    amount:
-                                        controller.amountController.value.text);
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller.paymentModel.value.payfast?.name) {
-                                controller.payFastPayment(
-                                    context: context,
-                                    amount:
-                                        controller.amountController.value.text);
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller.paymentModel.value.paytm?.name) {
-                                controller.getPaytmCheckSum(context,
-                                    amount: double.parse(controller
-                                        .amountController.value.text));
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller
-                                      .paymentModel.value.razorpay?.name) {
-                                RazorPayController()
-                                    .createOrderRazorPay(
-                                  amount: int.parse(
-                                      controller.amountController.value.text),
-                                  razorpayModel:
-                                      controller.paymentModel.value.razorpay,
-                                )
-                                    .then((value) {
-                                  if (value == null) {
-                                    Get.back();
-                                    ShowToastDialog.showToast(
-                                        "Something went wrong, please contact admin."
-                                            .tr);
-                                  } else {
-                                    CreateRazorPayOrderModel result = value;
-                                    controller.openCheckout(
-                                        amount: controller
-                                            .amountController.value.text,
-                                        orderId: result.id);
-                                  }
-                                });
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller
-                                      .paymentModel.value.midtrans?.name) {
-                                controller.midtransMakePayment(
-                                    context: context,
-                                    amount:
-                                        controller.amountController.value.text);
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller
-                                      .paymentModel.value.orangePay?.name) {
-                                controller.orangeMakePayment(
-                                    context: context,
-                                    amount:
-                                        controller.amountController.value.text);
-                              } else if (controller
-                                      .selectedPaymentMethod.value ==
-                                  controller.paymentModel.value.xendit?.name) {
-                                controller.xenditPayment(context,
-                                    controller.amountController.value.text);
                               } else {
                                 ShowToastDialog.showToast(
                                     "Please select payment method".tr);
@@ -549,7 +983,6 @@ class WalletScreen extends StatelessWidget {
     WalletController controller,
     String paymentMethod,
     String imagePath,
-    DarkThemeProvider themeChange,
   ) {
     return InkWell(
       onTap: () {
@@ -617,7 +1050,6 @@ class WalletScreen extends StatelessWidget {
   void showTransactionDetails({
     required BuildContext context,
     required WalletTransactionModel walletTransactionModel,
-    required DarkThemeProvider themeChange,
   }) {
     showModalBottomSheet(
       context: context,
@@ -644,12 +1076,10 @@ class WalletScreen extends StatelessWidget {
                   title: "Transaction ID".tr,
                   value:
                       "#${walletTransactionModel.transactionId!.toUpperCase()}",
-                  themeChange: themeChange,
                 ),
                 const SizedBox(height: 12),
                 _buildDetailCard(
                   title: "Payment Details".tr,
-                  themeChange: themeChange,
                   children: [
                     Row(
                       children: [
@@ -705,14 +1135,11 @@ class WalletScreen extends StatelessWidget {
     required String title,
     String? value,
     List<Widget>? children,
-    required DarkThemeProvider themeChange,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: themeChange.getThem()
-            ? AppColors.darkContainerBackground
-            : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
@@ -750,8 +1177,8 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  void withdrawAmountBottomSheet(BuildContext context,
-      WalletController controller, DarkThemeProvider themeChange) {
+  void withdrawAmountBottomSheet(
+      BuildContext context, WalletController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -761,166 +1188,171 @@ class WalletScreen extends StatelessWidget {
       ),
       builder: (context) {
         return StatefulBuilder(builder: (context, setState) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Withdraw".tr,
-                    style: AppTypography.headers(context),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: themeChange.getThem()
-                          ? AppColors.darkContainerBackground
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+          return Container(
+            color: AppColors.background,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Withdraw".tr,
+                      style: AppTypography.headers(context),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                controller.bankDetailsModel.value.bankName
-                                    .toString(),
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 18,
-                                  color: AppColors.darkBackground,
-                                ),
-                              ),
-                              const Icon(
-                                Icons.account_balance,
-                                size: 40,
-                                color: AppColors.darkBackground,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            controller.bankDetailsModel.value.accountNumber
-                                .toString(),
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                              color: AppColors.darkBackground.withOpacity(0.7),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            controller.bankDetailsModel.value.holderName
-                                .toString(),
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                              color: AppColors.darkBackground,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            controller.bankDetailsModel.value.branchName
-                                .toString(),
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w400,
-                              fontSize: 14,
-                              color: AppColors.darkBackground.withOpacity(0.7),
-                            ),
-                          ),
-                          Text(
-                            controller.bankDetailsModel.value.otherInformation
-                                .toString(),
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w400,
-                              fontSize: 14,
-                              color: AppColors.darkBackground.withOpacity(0.7),
-                            ),
+                    const SizedBox(height: 10),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 5,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  controller.bankDetailsModel.value.bankName
+                                      .toString(),
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18,
+                                    color: AppColors.darkBackground,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.account_balance,
+                                  size: 40,
+                                  color: AppColors.darkBackground,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              controller.bankDetailsModel.value.accountNumber
+                                  .toString(),
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 16,
+                                color:
+                                    AppColors.darkBackground.withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              controller.bankDetailsModel.value.holderName
+                                  .toString(),
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 16,
+                                color: AppColors.darkBackground,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              controller.bankDetailsModel.value.branchName
+                                  .toString(),
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 14,
+                                color:
+                                    AppColors.darkBackground.withOpacity(0.7),
+                              ),
+                            ),
+                            Text(
+                              controller.bankDetailsModel.value.otherInformation
+                                  .toString(),
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 14,
+                                color:
+                                    AppColors.darkBackground.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    "Amount to Withdraw".tr,
-                    style: AppTypography.headers(context),
-                  ),
-                  const SizedBox(height: 10),
-                  TextFieldThem.buildTextFiled(
-                    context,
-                    hintText: 'Enter Amount'.tr,
-                    controller: controller.withdrawalAmountController.value,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextFieldThem.buildTextFiled(
-                    context,
-                    hintText: 'Notes'.tr,
-                    maxLine: 3,
-                    controller: controller.noteController.value,
-                  ),
-                  const SizedBox(height: 20),
-                  ButtonThem.buildButton(
-                    context,
-                    title: "Withdrawal".tr,
-                    onPress: () async {
-                      if (double.parse(controller
-                              .driverUserModel.value.walletAmount
-                              .toString()) <
-                          double.parse(controller
-                              .withdrawalAmountController.value.text)) {
-                        ShowToastDialog.showToast("Insufficient balance".tr);
-                      } else if (double.parse(
-                              Constant.minimumAmountToWithdrawal) >
-                          double.parse(controller
-                              .withdrawalAmountController.value.text)) {
-                        ShowToastDialog.showToast(
-                            "Withdraw amount must be greater or equal to ${Constant.amountShow(amount: Constant.minimumAmountToWithdrawal.toString())}"
-                                .tr);
-                      } else {
-                        ShowToastDialog.showLoader("Please wait".tr);
-                        WithdrawModel withdrawModel = WithdrawModel();
-                        withdrawModel.id = Constant.getUuid();
-                        withdrawModel.userId = FireStoreUtils.getCurrentUid();
-                        withdrawModel.paymentStatus = "pending";
-                        withdrawModel.amount =
-                            controller.withdrawalAmountController.value.text;
-                        withdrawModel.note =
-                            controller.noteController.value.text;
-                        withdrawModel.createdDate = Timestamp.now();
+                    const SizedBox(height: 20),
+                    Text(
+                      "Amount to Withdraw".tr,
+                      style: AppTypography.headers(context),
+                    ),
+                    const SizedBox(height: 10),
+                    TextFieldThem.buildTextFiled(
+                      context,
+                      hintText: 'Enter Amount'.tr,
+                      controller: controller.withdrawalAmountController.value,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextFieldThem.buildTextFiled(
+                      context,
+                      hintText: 'Notes'.tr,
+                      maxLine: 3,
+                      controller: controller.noteController.value,
+                    ),
+                    const SizedBox(height: 20),
+                    ButtonThem.buildButton(
+                      context,
+                      title: "Withdrawal".tr,
+                      onPress: () async {
+                        if (double.parse(controller
+                                .driverUserModel.value.walletAmount
+                                .toString()) <
+                            double.parse(controller
+                                .withdrawalAmountController.value.text)) {
+                          ShowToastDialog.showToast("Insufficient balance".tr);
+                        } else if (double.parse(
+                                Constant.minimumAmountToWithdrawal) >
+                            double.parse(controller
+                                .withdrawalAmountController.value.text)) {
+                          ShowToastDialog.showToast(
+                              "Withdraw amount must be greater or equal to ${Constant.amountShow(amount: Constant.minimumAmountToWithdrawal.toString())}"
+                                  .tr);
+                        } else {
+                          ShowToastDialog.showLoader("Please wait".tr);
+                          WithdrawModel withdrawModel = WithdrawModel();
+                          withdrawModel.id = Constant.getUuid();
+                          withdrawModel.userId = FireStoreUtils.getCurrentUid();
+                          withdrawModel.paymentStatus = "pending";
+                          withdrawModel.amount =
+                              controller.withdrawalAmountController.value.text;
+                          withdrawModel.note =
+                              controller.noteController.value.text;
+                          withdrawModel.createdDate = Timestamp.now();
 
-                        await FireStoreUtils.updatedDriverWallet(
-                            amount:
-                                "-${controller.withdrawalAmountController.value.text}");
+                          await FireStoreUtils.updatedDriverWallet(
+                              amount:
+                                  "-${controller.withdrawalAmountController.value.text}");
 
-                        await FireStoreUtils.setWithdrawRequest(withdrawModel)
-                            .then((value) {
-                          controller.getUser();
-                          ShowToastDialog.closeLoader();
-                          ShowToastDialog.showToast("Request sent to admin".tr);
-                          Get.back();
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                ],
+                          await FireStoreUtils.setWithdrawRequest(withdrawModel)
+                              .then((value) {
+                            controller.getUser();
+                            ShowToastDialog.closeLoader();
+                            ShowToastDialog.showToast(
+                                "Request sent to admin".tr);
+                            Get.back();
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           );

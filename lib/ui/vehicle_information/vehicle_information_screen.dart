@@ -5,16 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/vehicle_information_controller.dart';
+import 'package:driver/model/VehicleUpdateRequestModel.dart';
 import 'package:driver/model/driver_user_model.dart';
-import 'package:driver/model/service_model.dart';
 import 'package:driver/model/vehicle_type_model.dart';
 import 'package:driver/model/zone_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
-import 'package:driver/themes/text_field_them.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -27,18 +24,15 @@ class VehicleInformationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GetX<VehicleInformationController>(
       init: VehicleInformationController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: themeChange.getThem()
-              ? const Color(0xFF1A1A1A)
-              : const Color(0xFFF8F9FA),
+          backgroundColor: const Color(0xFFF8F9FA),
           body: controller.isLoading.value
               ? _buildLoader(context)
-              : _buildBody(context, controller, themeChange),
+              : _buildBody(context, controller),
         );
       },
     );
@@ -53,29 +47,16 @@ class VehicleInformationScreen extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Service Selection
-          _buildServiceSection(context, controller, themeChange),
+          _buildVehicleDetailsSection(context, controller),
           const SizedBox(height: 32),
-
-          // Vehicle Details
-          _buildVehicleDetailsSection(context, controller, themeChange),
+          _buildInfoCard(context),
           const SizedBox(height: 32),
-
-          // Driver Rules
-          _buildDriverRulesSection(context, controller, themeChange),
-          const SizedBox(height: 32),
-
-          // Info Message
-          _buildInfoCard(context, themeChange),
-          const SizedBox(height: 32),
-
-          // Save Button
           _buildSaveButton(context, controller),
           const SizedBox(height: 20),
         ],
@@ -83,139 +64,16 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildServiceSection(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Select Service'.tr,
-          style: AppTypography.headers(context),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 100,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: controller.serviceList.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              ServiceModel serviceModel = controller.serviceList[index];
-              return Obx(() {
-                bool isSelected =
-                    controller.selectedServiceId.value == serviceModel.id;
-                return _buildServiceCard(
-                    serviceModel, isSelected, controller, themeChange);
-              });
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildServiceCard(ServiceModel serviceModel, bool isSelected,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
-    return GestureDetector(
-      onTap: () {
-        if (controller.driverModel.value.serviceId == null) {
-          controller.selectedServiceId.value = serviceModel.id;
-        }
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 90,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary
-              : (themeChange.getThem()
-                  ? const Color(0xFF2A2A2A)
-                  : Colors.white),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.primary
-                : (themeChange.getThem()
-                    ? Colors.grey.withOpacity(0.2)
-                    : Colors.grey.withOpacity(0.1)),
-            width: isSelected ? 0 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(50)),
-              child: CachedNetworkImage(
-                imageUrl: serviceModel.image.toString(),
-                height: 32,
-                width: 32,
-                fit: BoxFit.contain,
-                placeholder: (context, url) => const SizedBox(
-                  height: 32,
-                  width: 32,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                errorWidget: (context, url, error) => Icon(
-                  Icons.error_outline,
-                  color: Colors.grey,
-                  size: 32,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              Constant.localizationTitle(serviceModel.title),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: isSelected
-                    ? Colors.white
-                    : (themeChange.getThem() ? Colors.white70 : Colors.black87),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildVehicleDetailsSection(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Vehicle Details'.tr,
-          style: AppTypography.headers(context),
-        ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color:
-                themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -231,18 +89,18 @@ class VehicleInformationScreen extends StatelessWidget {
                 controller: controller.vehicleNumberController.value,
                 label: 'Vehicle Number'.tr,
                 icon: Icons.confirmation_number_outlined,
-                themeChange: themeChange,
+              
               ),
               const SizedBox(height: 16),
-              _buildDateField(context, controller, themeChange),
+              _buildDateField(context, controller),
               const SizedBox(height: 16),
-              _buildVehicleTypeField(context, controller, themeChange),
+              _buildVehicleTypeField(context, controller),
               const SizedBox(height: 16),
-              _buildColorField(context, controller, themeChange),
+              _buildColorField(context, controller),
               const SizedBox(height: 16),
-              _buildSeatsField(context, controller, themeChange),
+              _buildSeatsField(context, controller),
               const SizedBox(height: 16),
-              _buildZoneField(context, controller, themeChange),
+              _buildZoneField(context, controller),
             ],
           ),
         ),
@@ -254,7 +112,6 @@ class VehicleInformationScreen extends StatelessWidget {
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    required DarkThemeProvider themeChange,
     bool enabled = true,
     VoidCallback? onTap,
   }) {
@@ -271,14 +128,10 @@ class VehicleInformationScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: themeChange.getThem()
-                  ? const Color(0xFF1A1A1A)
-                  : const Color(0xFFF8F9FA),
+              color:  const Color(0xFFF8F9FA),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: themeChange.getThem()
-                    ? Colors.grey.withOpacity(0.2)
-                    : Colors.grey.withOpacity(0.1),
+                color:  Colors.grey.withOpacity(0.1),
               ),
             ),
             child: TextFormField(
@@ -288,8 +141,7 @@ class VehicleInformationScreen extends StatelessWidget {
               decoration: InputDecoration(
                 prefixIcon: Icon(
                   icon,
-                  color:
-                      themeChange.getThem() ? Colors.white54 : Colors.black54,
+                  color: Colors.black54,
                   size: 20,
                 ),
                 border: InputBorder.none,
@@ -304,12 +156,11 @@ class VehicleInformationScreen extends StatelessWidget {
   }
 
   Widget _buildDateField(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller) {
     return _buildTextField(
       controller: controller.registrationDateController.value,
       label: 'Registration Date'.tr,
       icon: Icons.calendar_today_outlined,
-      themeChange: themeChange,
       enabled: false,
       onTap: () async {
         await Constant.selectDate(context).then((value) {
@@ -324,7 +175,7 @@ class VehicleInformationScreen extends StatelessWidget {
   }
 
   Widget _buildVehicleTypeField(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller) {
     return _buildTextField(
       controller: TextEditingController(
           text: controller.selectedVehicle.value.id == null
@@ -333,112 +184,45 @@ class VehicleInformationScreen extends StatelessWidget {
                   controller.selectedVehicle.value.name)),
       label: 'Vehicle Type'.tr,
       icon: Icons.directions_car_outlined,
-      themeChange: themeChange,
       enabled: false,
-      onTap: () => _showVehicleTypeSelector(context, controller, themeChange),
+      onTap: () => _showVehicleTypeSelector(context, controller),
     );
   }
 
   Widget _buildColorField(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller) {
     return _buildTextField(
       controller: TextEditingController(text: controller.selectedColor.value),
       label: 'Vehicle Color'.tr,
       icon: Icons.palette_outlined,
-      themeChange: themeChange,
       enabled: false,
-      onTap: () => _showColorSelector(context, controller, themeChange),
+      onTap: () => _showColorSelector(context, controller),
     );
   }
 
   Widget _buildSeatsField(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller ) {
     return _buildTextField(
       controller: controller.seatsController.value,
       label: 'Number of Seats'.tr,
       icon: Icons.event_seat_outlined,
-      themeChange: themeChange,
       enabled: false,
-      onTap: () => _showSeatsSelector(context, controller, themeChange),
+      onTap: () => _showSeatsSelector(context, controller),
     );
   }
 
   Widget _buildZoneField(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller ) {
     return _buildTextField(
       controller: controller.zoneNameController.value,
       label: 'Service Zone'.tr,
       icon: Icons.location_on_outlined,
-      themeChange: themeChange,
       enabled: false,
-      onTap: () => _showZoneSelector(context, controller, themeChange),
+      onTap: () => _showZoneSelector(context, controller),
     );
   }
 
-  Widget _buildDriverRulesSection(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Driver Rules'.tr,
-          style: AppTypography.headers(context),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color:
-                themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: controller.driverRulesList.map((item) {
-              bool isSelected = controller.selectedDriverRulesList
-                      .indexWhere((element) => element.id == item.id) !=
-                  -1;
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primary.withOpacity(0.08)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: CheckboxListTile(
-                  value: isSelected,
-                  onChanged: (value) {
-                    if (value == true) {
-                      controller.selectedDriverRulesList.add(item);
-                    } else {
-                      controller.selectedDriverRulesList
-                          .removeWhere((element) => element.id == item.id);
-                    }
-                  },
-                  activeColor: AppColors.primary,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                  title: Text(
-                    Constant.localizationName(item.name),
-                    style: AppTypography.label(context),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoCard(BuildContext context, DarkThemeProvider themeChange) {
+  Widget _buildInfoCard(BuildContext context ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -458,7 +242,7 @@ class VehicleInformationScreen extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              "You cannot change service type once selected. Contact administrator to change."
+              "Vehicle information is submitted for admin approval. You cannot submit another request until the pending one is processed."
                   .tr,
               style: AppTypography.label(context).copyWith(
                 color: Colors.amber.shade700,
@@ -475,7 +259,7 @@ class VehicleInformationScreen extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () => _handleSave(controller),
+        onPressed: () => _handleSave(context, controller),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.darkBackground,
           padding: const EdgeInsets.symmetric(vertical: 11),
@@ -492,48 +276,79 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _handleSave(VehicleInformationController controller) async {
+  Future<void> _handleSave(
+      BuildContext context, VehicleInformationController controller) async {
     ShowToastDialog.showLoader("Please wait".tr);
 
-    if (controller.selectedServiceId.value!.isEmpty) {
-      ShowToastDialog.showToast("Please select service".tr);
-    } else if (controller.vehicleNumberController.value.text.isEmpty) {
+    String driverId = FireStoreUtils.getCurrentUid();
+    QuerySnapshot pendingRequests = await FirebaseFirestore.instance
+        .collection('vehicle_requests')
+        .where('driverId', isEqualTo: driverId)
+        .where('status', isEqualTo: 'pending')
+        .get();
+
+    if (pendingRequests.docs.isNotEmpty) {
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast(
+          "You have a pending vehicle request. Please wait for admin approval."
+              .tr);
+      return;
+    }
+
+    if (controller.vehicleNumberController.value.text.isEmpty) {
+      ShowToastDialog.closeLoader();
       ShowToastDialog.showToast("Please enter Vehicle number".tr);
     } else if (controller.registrationDateController.value.text.isEmpty) {
+      ShowToastDialog.closeLoader();
       ShowToastDialog.showToast("Please select registration date".tr);
     } else if (controller.selectedVehicle.value.id == null ||
         controller.selectedVehicle.value.id!.isEmpty) {
-      ShowToastDialog.showToast("Please enter Vehicle type".tr);
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Please select Vehicle type".tr);
     } else if (controller.selectedColor.value.isEmpty) {
-      ShowToastDialog.showToast("Please enter Vehicle color".tr);
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Please select Vehicle color".tr);
     } else if (controller.seatsController.value.text.isEmpty) {
-      ShowToastDialog.showToast("Please enter seats".tr);
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Please select seats".tr);
     } else if (controller.selectedZone.isEmpty) {
+      ShowToastDialog.closeLoader();
       ShowToastDialog.showToast("Please select Zone".tr);
     } else {
-      if (controller.driverModel.value.serviceId == null) {
-        controller.driverModel.value.serviceId =
-            controller.selectedServiceId.value;
-        await FireStoreUtils.updateDriverUser(controller.driverModel.value);
-      }
-      controller.driverModel.value.zoneIds = controller.selectedZone;
-
-      controller.driverModel.value.vehicleInformation = VehicleInformation(
+      VehicleInformationRequest vehicleRequest = VehicleInformationRequest(
         registrationDate: Timestamp.fromDate(controller.selectedDate.value!),
         vehicleColor: controller.selectedColor.value,
         vehicleNumber: controller.vehicleNumberController.value.text,
         vehicleType: controller.selectedVehicle.value.name,
         vehicleTypeId: controller.selectedVehicle.value.id,
         seats: controller.seatsController.value.text,
-        driverRules: controller.selectedDriverRulesList,
+        driverId: driverId,
+        driverName: controller.driverModel.value.fullName,
+        status: "pending",
       );
 
-      await FireStoreUtils.updateDriverUser(controller.driverModel.value)
-          .then((value) {
+      await FirebaseFirestore.instance
+          .collection('vehicle_requests')
+          .doc()
+          .set(vehicleRequest.toJson())
+          .then((value) async {
+        // Update DriverUserModel with selected zones
+        await FirebaseFirestore.instance
+            .collection('drivers')
+            .doc(driverId)
+            .update({
+          'zoneIds': controller.selectedZone.toList().cast<String>(),
+        }).then((value) {
+          ShowToastDialog.closeLoader();
+          ShowToastDialog.showToast(
+              "Vehicle information and zones submitted for admin approval".tr);
+        }).catchError((error) {
+          ShowToastDialog.closeLoader();
+          ShowToastDialog.showToast("Error updating zones: $error".tr);
+        });
+      }).catchError((error) {
         ShowToastDialog.closeLoader();
-        if (value == true) {
-          ShowToastDialog.showToast("Information updated successfully".tr);
-        }
+        ShowToastDialog.showToast("Error submitting request: $error".tr);
       });
     }
   }
@@ -567,7 +382,7 @@ class VehicleInformationScreen extends StatelessWidget {
   }
 
   void _showVehicleTypeSelector(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -575,7 +390,7 @@ class VehicleInformationScreen extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color: themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+          color:  Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -583,7 +398,6 @@ class VehicleInformationScreen extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
               width: 40,
@@ -593,8 +407,6 @@ class VehicleInformationScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Header
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -604,8 +416,7 @@ class VehicleInformationScreen extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color:
-                          themeChange.getThem() ? Colors.white : Colors.black87,
+                      color: Colors.black87,
                     ),
                   ),
                   const Spacer(),
@@ -620,17 +431,13 @@ class VehicleInformationScreen extends StatelessWidget {
                       child: Icon(
                         Icons.close,
                         size: 18,
-                        color: themeChange.getThem()
-                            ? Colors.white
-                            : Colors.black87,
+                        color: Colors.black87,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-
-            // Vehicle Type List
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -667,9 +474,7 @@ class VehicleInformationScreen extends StatelessWidget {
                           Constant.localizationName(vehicleType.name),
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color: themeChange.getThem()
-                                ? Colors.white
-                                : Colors.black87,
+                            color:  Colors.black87,
                           ),
                         ),
                       ),
@@ -678,8 +483,6 @@ class VehicleInformationScreen extends StatelessWidget {
                 },
               ),
             ),
-
-            // Action Buttons
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -743,7 +546,7 @@ class VehicleInformationScreen extends StatelessWidget {
   }
 
   void _showColorSelector(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -751,7 +554,7 @@ class VehicleInformationScreen extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color: themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+          color:  Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -759,7 +562,6 @@ class VehicleInformationScreen extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
               width: 40,
@@ -769,8 +571,6 @@ class VehicleInformationScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Header
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -780,8 +580,7 @@ class VehicleInformationScreen extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color:
-                          themeChange.getThem() ? Colors.white : Colors.black87,
+                      color: Colors.black87,
                     ),
                   ),
                   const Spacer(),
@@ -796,17 +595,13 @@ class VehicleInformationScreen extends StatelessWidget {
                       child: Icon(
                         Icons.close,
                         size: 18,
-                        color: themeChange.getThem()
-                            ? Colors.white
-                            : Colors.black87,
+                        color: Colors.black87,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-
-            // Color List
             Expanded(
               child: Obx(() => ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -855,9 +650,7 @@ class VehicleInformationScreen extends StatelessWidget {
                                 color,
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
-                                  color: themeChange.getThem()
-                                      ? Colors.white
-                                      : Colors.black87,
+                                  color: Colors.black87,
                                 ),
                               ),
                             ],
@@ -867,8 +660,6 @@ class VehicleInformationScreen extends StatelessWidget {
                     },
                   )),
             ),
-
-            // Action Buttons
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -932,7 +723,7 @@ class VehicleInformationScreen extends StatelessWidget {
   }
 
   void _showSeatsSelector(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -940,7 +731,7 @@ class VehicleInformationScreen extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color: themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+          color:  Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -948,7 +739,6 @@ class VehicleInformationScreen extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
               width: 40,
@@ -958,8 +748,6 @@ class VehicleInformationScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Header
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -969,8 +757,7 @@ class VehicleInformationScreen extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color:
-                          themeChange.getThem() ? Colors.white : Colors.black87,
+                      color: Colors.black87,
                     ),
                   ),
                   const Spacer(),
@@ -985,17 +772,13 @@ class VehicleInformationScreen extends StatelessWidget {
                       child: Icon(
                         Icons.close,
                         size: 18,
-                        color: themeChange.getThem()
-                            ? Colors.white
-                            : Colors.black87,
+                        color: Colors.black87,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-
-            // Seats List
             Expanded(
               child: Obx(() => ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1032,9 +815,7 @@ class VehicleInformationScreen extends StatelessWidget {
                             '$seats Seats',
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: themeChange.getThem()
-                                  ? Colors.white
-                                  : Colors.black87,
+                              color:  Colors.black87,
                             ),
                           ),
                         ),
@@ -1042,8 +823,6 @@ class VehicleInformationScreen extends StatelessWidget {
                     },
                   )),
             ),
-
-            // Action Buttons
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -1106,7 +885,7 @@ class VehicleInformationScreen extends StatelessWidget {
   }
 
   void _showZoneSelector(BuildContext context,
-      VehicleInformationController controller, DarkThemeProvider themeChange) {
+      VehicleInformationController controller ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1114,7 +893,7 @@ class VehicleInformationScreen extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color: themeChange.getThem() ? const Color(0xFF2A2A2A) : Colors.white,
+          color:  Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -1122,7 +901,6 @@ class VehicleInformationScreen extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
               width: 40,
@@ -1132,8 +910,6 @@ class VehicleInformationScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Header
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -1143,8 +919,7 @@ class VehicleInformationScreen extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color:
-                          themeChange.getThem() ? Colors.white : Colors.black87,
+                      color: Colors.black87,
                     ),
                   ),
                   const Spacer(),
@@ -1159,26 +934,27 @@ class VehicleInformationScreen extends StatelessWidget {
                       child: Icon(
                         Icons.close,
                         size: 18,
-                        color: themeChange.getThem()
-                            ? Colors.white
-                            : Colors.black87,
+                        color: Colors.black87,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
+            // Debugging: Display selected zones for confirmation
 
-            // Zone List
             Expanded(
               child: controller.zoneList.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : Obx(() => ListView.builder(
+                        key: ValueKey(controller
+                            .selectedZone.length), // Force rebuild on change
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         itemCount: controller.zoneList.length,
                         itemBuilder: (context, index) {
-                          bool isSelected = controller.selectedZone
-                              .contains(controller.zoneList[index].id);
+                          final zone = controller.zoneList[index];
+                          final isSelected =
+                              controller.selectedZone.contains(zone.id);
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8),
@@ -1194,28 +970,31 @@ class VehicleInformationScreen extends StatelessWidget {
                               ),
                             ),
                             child: CheckboxListTile(
+                              key:
+                                  ValueKey(zone.id), // Unique key for each item
                               value: isSelected,
                               onChanged: (value) {
-                                if (controller.selectedZone
-                                    .contains(controller.zoneList[index].id)) {
-                                  controller.selectedZone
-                                      .remove(controller.zoneList[index].id);
+                                if (value == true) {
+                                  if (!controller.selectedZone
+                                      .contains(zone.id)) {
+                                    controller.selectedZone.add(zone.id);
+                                  }
                                 } else {
-                                  controller.selectedZone
-                                      .add(controller.zoneList[index].id);
+                                  controller.selectedZone.remove(zone.id);
                                 }
+                                print(
+                                    "Tapped zone: ${zone.id}, Selected: $value");
+                                print(
+                                    "Current selectedZone: ${controller.selectedZone}");
                               },
                               activeColor: AppColors.primary,
                               contentPadding:
                                   const EdgeInsets.symmetric(horizontal: 16),
                               title: Text(
-                                Constant.localizationName(
-                                    controller.zoneList[index].name),
+                                Constant.localizationName(zone.name),
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
-                                  color: themeChange.getThem()
-                                      ? Colors.white
-                                      : Colors.black87,
+                                  color: Colors.black87,
                                 ),
                               ),
                             ),
@@ -1223,8 +1002,6 @@ class VehicleInformationScreen extends StatelessWidget {
                         },
                       )),
             ),
-
-            // Action Buttons
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -1267,6 +1044,8 @@ class VehicleInformationScreen extends StatelessWidget {
                             }
                           }
                           controller.zoneNameController.value.text = nameValue;
+                          _updateDriverZones(
+                              controller.selectedZone.toList().cast<String>());
                           Navigator.pop(context);
                         }
                       },
@@ -1295,5 +1074,33 @@ class VehicleInformationScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _updateDriverZones(List<String> zoneIds) async {
+    try {
+      String driverId = FireStoreUtils.getCurrentUid();
+      DocumentReference driverRef =
+          FirebaseFirestore.instance.collection('drivers').doc(driverId);
+
+      // Check if the document exists
+      DocumentSnapshot driverSnapshot = await driverRef.get();
+      if (driverSnapshot.exists) {
+        // Document exists, perform update
+        await driverRef.update({
+          'zoneIds': zoneIds,
+        });
+        ShowToastDialog.showToast("Zones updated successfully".tr);
+      } else {
+        // Document doesn't exist, create it with zoneIds
+        await driverRef.set({
+          'id': driverId,
+          'zoneIds': zoneIds,
+          // Add other required fields for the driver document
+        }, SetOptions(merge: true));
+        ShowToastDialog.showToast("Driver profile created with zones".tr);
+      }
+    } catch (e) {
+      ShowToastDialog.showToast("Error updating zones: $e".tr);
+    }
   }
 }

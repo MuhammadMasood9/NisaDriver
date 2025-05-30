@@ -7,7 +7,6 @@ import 'package:driver/model/order/driverId_accept_reject.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
@@ -21,7 +20,6 @@ class AcceptedOrders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GetBuilder<AcceptedOrdersController>(
       init: AcceptedOrdersController(),
@@ -55,7 +53,7 @@ class AcceptedOrders extends StatelessWidget {
                     snapshot.data!.docs[index].data() as Map<String, dynamic>);
                 return OrderItemWithTimer(
                   orderModel: orderModel,
-                  themeChange: themeChange,
+                 
                   controller: controller,
                 );
               },
@@ -69,13 +67,13 @@ class AcceptedOrders extends StatelessWidget {
 
 class OrderItemWithTimer extends StatefulWidget {
   final OrderModel orderModel;
-  final DarkThemeProvider themeChange;
+
   final AcceptedOrdersController controller;
 
   const OrderItemWithTimer({
     Key? key,
     required this.orderModel,
-    required this.themeChange,
+   
     required this.controller,
   }) : super(key: key);
 
@@ -256,14 +254,10 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
               padding: const EdgeInsets.all(8.0),
               child: Container(
                 decoration: BoxDecoration(
-                  color: widget.themeChange.getThem()
-                      ? AppColors.darkContainerBackground
-                      : AppColors.containerBackground,
+                  color:  AppColors.containerBackground,
                   borderRadius: const BorderRadius.all(Radius.circular(10)),
                  
-                  boxShadow: widget.themeChange.getThem()
-                      ? null
-                      : [
+                  boxShadow:  [
                           BoxShadow(
                             color: Colors.grey.withOpacity(0.5),
                             blurRadius: 8,
@@ -336,13 +330,9 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Container(
         decoration: BoxDecoration(
-          color: widget.themeChange.getThem()
-              ? AppColors.darkContainerBackground
-              : AppColors.containerBackground,
+          color:  AppColors.containerBackground,
           borderRadius: const BorderRadius.all(Radius.circular(10)),
-          boxShadow: widget.themeChange.getThem()
-              ? null
-              : [
+          boxShadow:  [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.09),
                     blurRadius: 5,

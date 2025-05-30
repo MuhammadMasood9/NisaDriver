@@ -12,7 +12,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/ui/home_screens/live_tracking_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/utils.dart';
 import 'package:driver/widget/location_view.dart';
@@ -29,7 +28,6 @@ class ActiveOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GetBuilder<ActiveOrderController>(
       init: ActiveOrderController(),
@@ -65,19 +63,13 @@ class ActiveOrderScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(8.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: themeChange.getThem()
-                        ? AppColors.darkContainerBackground
-                        : AppColors.containerBackground,
+                    color: AppColors.containerBackground,
                     borderRadius: const BorderRadius.all(Radius.circular(10)),
                     border: Border.all(
-                      color: themeChange.getThem()
-                          ? AppColors.darkContainerBorder
-                          : AppColors.containerBorder,
+                      color: AppColors.containerBorder,
                       width: 0.5,
                     ),
-                    boxShadow: themeChange.getThem()
-                        ? null
-                        : [
+                    boxShadow:  [
                             BoxShadow(
                               color: Colors.grey.withOpacity(0.5),
                               blurRadius: 8,
@@ -195,9 +187,7 @@ class ActiveOrderScreen extends StatelessWidget {
                                     height: 35,
                                     width: 35,
                                     decoration: BoxDecoration(
-                                      color: themeChange.getThem()
-                                          ? AppColors.primary
-                                          : AppColors.primary,
+                                      color:  AppColors.primary,
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Icon(
@@ -220,9 +210,7 @@ class ActiveOrderScreen extends StatelessWidget {
                                     height: 35,
                                     width: 35,
                                     decoration: BoxDecoration(
-                                      color: themeChange.getThem()
-                                          ? AppColors.primary
-                                          : AppColors.primary,
+                                      color:  AppColors.primary,
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Icon(
@@ -372,7 +360,6 @@ class ActiveOrderScreen extends StatelessWidget {
 
   Dialog otpDialog(BuildContext context, ActiveOrderController controller,
       OrderModel orderModel) {
-    final themeChange = Provider.of<DarkThemeProvider>(context, listen: false);
     final TextEditingController otpController = TextEditingController();
     String otpValue = "";
 
@@ -398,24 +385,12 @@ class ActiveOrderScreen extends StatelessWidget {
                 pinTheme: PinTheme(
                   fieldHeight: 40,
                   fieldWidth: 40,
-                  activeColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  selectedColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  inactiveColor: themeChange.getThem()
-                      ? AppColors.darkTextFieldBorder
-                      : AppColors.textFieldBorder,
-                  activeFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
-                  inactiveFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
-                  selectedFillColor: themeChange.getThem()
-                      ? AppColors.darkTextField
-                      : AppColors.textField,
+                  activeColor: AppColors.textFieldBorder,
+                  selectedColor: AppColors.textFieldBorder,
+                  inactiveColor: AppColors.textFieldBorder,
+                  activeFillColor: AppColors.textField,
+                  inactiveFillColor: AppColors.textField,
+                  selectedFillColor: AppColors.textField,
                   shape: PinCodeFieldShape.box,
                   borderRadius: BorderRadius.circular(10),
                 ),

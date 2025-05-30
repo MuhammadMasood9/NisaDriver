@@ -1,7 +1,6 @@
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -21,8 +20,6 @@ class ButtonThem {
     required Function() onPress,
     bool isVisible = true,
   }) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return Visibility(
       visible: isVisible,
       child: SizedBox(
@@ -34,10 +31,7 @@ class ButtonThem {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(btnRadius),
           ),
-          color: bgColors ??
-              (themeChange.getThem()
-                  ? AppColors.darkBackground
-                  : AppColors.darkBackground),
+          color: bgColors ?? (AppColors.darkBackground),
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,
@@ -61,8 +55,6 @@ class ButtonThem {
     String iconAssetImage = '',
     Color? iconColor,
   }) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return Visibility(
       visible: isVisible,
       child: Container(
@@ -87,12 +79,8 @@ class ButtonThem {
         ),
         child: ElevatedButton(
           style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.all<Color>(
-                themeChange.getThem() ? Colors.transparent : Colors.white),
-            foregroundColor: MaterialStateProperty.all<Color>(
-                themeChange.getThem()
-                    ? AppColors.darkBackground
-                    : Colors.white),
+            backgroundColor: MaterialStateProperty.all<Color>(Colors.white),
+            foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
             shape: MaterialStateProperty.all<RoundedRectangleBorder>(
               RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
@@ -135,8 +123,6 @@ class ButtonThem {
     required Function() onPress,
     bool isVisible = true,
   }) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return Visibility(
       visible: isVisible,
       child: SizedBox(
@@ -146,16 +132,15 @@ class ButtonThem {
           height: 35,
           elevation: 0.5,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(10),
           ),
-          color: themeChange.getThem()
-              ? AppColors.darkModePrimary
-              : AppColors.primary,
+          color: AppColors.background,
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,
             style: AppTypography.buttonlight(context)
-                .copyWith(fontWeight: FontWeight.w600),
+                .copyWith(fontWeight: FontWeight.w600)
+                .copyWith(color: AppColors.primary),
           ),
         ),
       ),

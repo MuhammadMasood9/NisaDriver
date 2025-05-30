@@ -8,7 +8,6 @@ import 'package:driver/model/tax_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_order_view.dart';
 import 'package:flutter/material.dart';
@@ -284,7 +283,6 @@ class _CompleteIntercityOrderScreenState
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return GetX<CompleteInterCityOrderController>(
       builder: (controller) {
         return Scaffold(
@@ -301,9 +299,7 @@ class _CompleteIntercityOrderScreenState
               style: AppTypography.appTitle(context),
             ),
           ),
-          backgroundColor: themeChange.getThem()
-              ? AppColors.darkBackground
-              : AppColors.background,
+          backgroundColor: AppColors.background,
           body: controller.isLoading.value
               ? Constant.loader(context)
               : FadeTransition(
@@ -586,17 +582,12 @@ class _CompleteIntercityOrderScreenState
   }
 
   Widget _buildSectionCard({required Widget child}) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: themeChange.getThem()
-            ? AppColors.darkContainerBackground
-            : Colors.white,
+        color:  Colors.white,
         borderRadius: BorderRadius.circular(8),
-        gradient: themeChange.getThem()
-            ? null
-            : LinearGradient(
+        gradient: LinearGradient(
                 colors: [Colors.white, Colors.grey[50]!],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

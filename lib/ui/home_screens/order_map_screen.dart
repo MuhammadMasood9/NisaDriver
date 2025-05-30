@@ -8,7 +8,6 @@ import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/text_field_them.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
@@ -23,8 +22,6 @@ class OrderMapScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
     return GetBuilder<OrderMapController>(
       init: OrderMapController(),
       builder: (controller) {
@@ -106,14 +103,10 @@ class OrderMapScreen extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
-                    color: themeChange.getThem()
-                        ? AppColors.darkContainerBackground
-                        : AppColors.containerBackground,
+                    color:  AppColors.containerBackground,
                     borderRadius: const BorderRadius.all(Radius.circular(15)),
                     border: Border.all(
-                      color: themeChange.getThem()
-                          ? AppColors.darkContainerBorder
-                          : AppColors.containerBorder,
+                      color:  AppColors.containerBorder,
                       width: 0.5,
                     ),
                     boxShadow: [

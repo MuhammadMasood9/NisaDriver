@@ -185,10 +185,7 @@ class _EnhancedDateSelectorState extends State<EnhancedDateSelector>
                     child: Row(
                       children: [
                         Container(
-                          
-                          decoration: BoxDecoration(
-                           
-                          ),
+                          decoration: BoxDecoration(),
                           child: Icon(
                             Icons.calendar_today_rounded,
                             color: hasValue
@@ -282,6 +279,7 @@ class DetailsUploadScreen extends StatelessWidget {
                 ),
               ),
               child: AppBar(
+                surfaceTintColor: AppColors.background,
                 backgroundColor: Colors.transparent,
                 elevation: 0,
                 leading: Padding(
@@ -407,15 +405,16 @@ class DetailsUploadScreen extends StatelessWidget {
               children: [
                 Text(
                   isVerified ? "Document Verified".tr : "Upload Required".tr,
-                  style:AppTypography.boldLabel(Get.context!).copyWith( color: isVerified ? Colors.green : AppColors.primary),
-                   
+                  style: AppTypography.boldLabel(Get.context!).copyWith(
+                      color: isVerified ? Colors.green : AppColors.primary),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   isVerified
                       ? "Your document has been verified successfully".tr
                       : "Please upload all required documents".tr,
-                  style: AppTypography.label(Get.context!).copyWith( color: AppColors.grey500),
+                  style: AppTypography.label(Get.context!)
+                      .copyWith(color: AppColors.grey500),
                 ),
               ],
             ),
@@ -657,7 +656,10 @@ class DetailsUploadScreen extends StatelessWidget {
       height: 46,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.darkBackground, AppColors.darkBackground.withOpacity(0.9)],
+          colors: [
+            AppColors.darkBackground,
+            AppColors.darkBackground.withOpacity(0.9)
+          ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -716,7 +718,8 @@ class DetailsUploadScreen extends StatelessWidget {
                 controller.isLoading.value
                     ? "Uploading...".tr
                     : "Upload Document".tr,
-                style: AppTypography.appBar(context).copyWith(color: Colors.white),
+                style:
+                    AppTypography.appBar(context).copyWith(color: Colors.white),
               ),
             ],
           ),
@@ -879,7 +882,7 @@ class DetailsUploadScreen extends StatelessWidget {
         children: [
           Text(
             label,
-            style:AppTypography.boldLabel(context),
+            style: AppTypography.boldLabel(context),
           ),
           const SizedBox(height: 8),
           Container(
@@ -902,8 +905,6 @@ class DetailsUploadScreen extends StatelessWidget {
                   fontSize: 14,
                 ),
                 prefixIcon: Container(
-               
-                 
                   child: Icon(
                     icon,
                     color: AppColors.darkBackground,

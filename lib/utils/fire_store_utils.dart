@@ -53,39 +53,6 @@ class FireStoreUtils {
     return isLogin;
   }
 
-  static Future<VehicleUpdateRequestModel?> getVehicleUpdateRequest(
-      String driverId) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('vehicleUpdateRequests')
-          .where('driver_id', isEqualTo: driverId)
-          .where('status', isEqualTo: 'pending')
-          .limit(1)
-          .get();
-      if (snapshot.docs.isNotEmpty) {
-        return VehicleUpdateRequestModel.fromJson(snapshot.docs.first.data());
-      }
-      return null;
-    } catch (e) {
-      print('Error getting vehicle update request: $e');
-      return null;
-    }
-  }
-
-  static Future<bool> createVehicleUpdateRequest(
-      VehicleUpdateRequestModel request) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('vehicleUpdateRequests')
-          .doc(request.id)
-          .set(request.toJson());
-      return true;
-    } catch (e) {
-      print('Error creating vehicle update request: $e');
-      return false;
-    }
-  }
-
   getGoogleAPIKey() async {
     await fireStore
         .collection(CollectionName.settings)
@@ -1173,24 +1140,6 @@ class FireStoreUtils {
   }
 
   // Get all pending vehicle update requests (for admin)
-  static Future<List<VehicleUpdateRequestModel>>
-      getPendingVehicleUpdateRequests() async {
-    try {
-      QuerySnapshot snapshot = await fireStore
-          .collection(VEHICLE_UPDATE_REQUESTS)
-          .where('status', isEqualTo: 'pending')
-          .orderBy('requestDate', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => VehicleUpdateRequestModel.fromJson(
-              doc.data() as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      print("Error getting pending requests: $e");
-      return [];
-    }
-  }
 
   // Update vehicle update request status (for admin)
   static Future<bool> updateVehicleUpdateRequestStatus({
@@ -1238,21 +1187,6 @@ class FireStoreUtils {
     }
   }
 
-  // Update vehicle information
-  static Future<bool> updateVehicleInformation(
-      String driverId, VehicleInformation vehicleInfo) async {
-    try {
-      await fireStore.collection(DRIVERS).doc(driverId).update({
-        'vehicleInformation': vehicleInfo.toJson(),
-        'lastVehicleUpdate': Timestamp.now(),
-      });
-      return true;
-    } catch (e) {
-      print("Error updating vehicle information: $e");
-      return false;
-    }
-  }
-
   // Delete vehicle update request (optional - for cleanup)
   static Future<bool> deleteVehicleUpdateRequest(String requestId) async {
     try {
@@ -1264,26 +1198,6 @@ class FireStoreUtils {
     } catch (e) {
       print("Error deleting request: $e");
       return false;
-    }
-  }
-
-  // Get all requests by driver (for history)
-  static Future<List<VehicleUpdateRequestModel>> getDriverRequestHistory(
-      String driverId) async {
-    try {
-      QuerySnapshot snapshot = await fireStore
-          .collection(VEHICLE_UPDATE_REQUESTS)
-          .where('driverId', isEqualTo: driverId)
-          .orderBy('requestDate', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => VehicleUpdateRequestModel.fromJson(
-              doc.data() as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      print("Error getting driver request history: $e");
-      return [];
     }
   }
 }

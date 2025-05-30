@@ -14,7 +14,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/FullScreenImageViewer.dart';
 import 'package:driver/ui/chat_screen/FullScreenVideoViewer.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/firebase_pagination/src/firestore_pagination.dart';
 import 'package:driver/widget/firebase_pagination/src/models/view_type.dart';
@@ -319,13 +318,12 @@ class _ChatScreensState extends State<ChatScreens> {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
-        surfaceTintColor: themeChange.getThem() ? AppColors.darkBackground : Colors.white,
+        surfaceTintColor:  Colors.white,
         elevation: 0.2,
-        backgroundColor: themeChange.getThem() ? AppColors.darkBackground : Colors.white,
+        backgroundColor:  Colors.white,
         title: Row(
           children: [
             ClipOval(
@@ -365,7 +363,7 @@ class _ChatScreensState extends State<ChatScreens> {
                   style: GoogleFonts.poppins(
                     fontSize: 9,
                     fontWeight: FontWeight.w500,
-                    color: themeChange.getThem() ? Colors.grey[400] : Colors.grey[600],
+                    color:  Colors.grey[600],
                   ),
                 ),
               ],
@@ -376,11 +374,11 @@ class _ChatScreensState extends State<ChatScreens> {
           onTap: () => Get.back(),
           child: Icon(
             Icons.arrow_back,
-            color: themeChange.getThem() ? Colors.white : Colors.black,
+            color:  Colors.black,
           ),
         ),
       ),
-      backgroundColor: themeChange.getThem() ? AppColors.darkBackground : Colors.white,
+      backgroundColor:  Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -412,8 +410,8 @@ class _ChatScreensState extends State<ChatScreens> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: themeChange.getThem() ? Colors.grey[800] : Colors.grey.shade100,
-                  border: Border(top: BorderSide(color: themeChange.getThem() ? Colors.grey[700]! : Colors.grey.shade300)),
+                  color:  Colors.grey.shade100,
+                  border: Border(top: BorderSide(color:  Colors.grey.shade300)),
                 ),
                 child: Row(
                   children: [
@@ -435,7 +433,7 @@ class _ChatScreensState extends State<ChatScreens> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: themeChange.getThem() ? Colors.white70 : Colors.grey),
+                      icon: Icon(Icons.close, color:  Colors.grey),
                       onPressed: _cancelReply,
                     ),
                   ],
@@ -443,9 +441,9 @@ class _ChatScreensState extends State<ChatScreens> {
               ),
             Container(
               decoration: BoxDecoration(
-                color: themeChange.getThem() ? AppColors.darkTextField : Colors.grey.shade100,
+                color:  Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: themeChange.getThem() ? AppColors.darkTextFieldBorder : Colors.white, width: 1),
+                border: Border.all(color:  Colors.white, width: 1),
               ),
               margin: const EdgeInsets.all(8.0),
               child: Padding(
@@ -478,7 +476,7 @@ class _ChatScreensState extends State<ChatScreens> {
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.only(left: 10, top: 8),
                             filled: true,
-                            fillColor: themeChange.getThem() ? AppColors.darkTextField : Colors.grey.shade100,
+                            fillColor: Colors.grey.shade100,
                             disabledBorder: OutlineInputBorder(
                               borderRadius: const BorderRadius.all(Radius.circular(30)),
                               borderSide: BorderSide(color: Colors.transparent),
@@ -523,7 +521,7 @@ class _ChatScreensState extends State<ChatScreens> {
                             hintStyle: AppTypography.input(context).copyWith(color: Colors.grey[700]),
                           ),
                           style: GoogleFonts.poppins(
-                            color: themeChange.getThem() ? Colors.white : Colors.black,
+                            color:  Colors.black,
                           ),
                           onSubmitted: (value) async {
                             if (_messageController.text.isNotEmpty) {
@@ -557,7 +555,6 @@ class _ChatScreensState extends State<ChatScreens> {
   }
 
   Widget chatItemView(bool isMe, ConversationModel data) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GestureDetector(
       onTap: () {
@@ -573,15 +570,15 @@ class _ChatScreensState extends State<ChatScreens> {
                 margin: EdgeInsets.only(bottom: 4, left: isMe ? 50 : 0, right: isMe ? 0 : 50),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: themeChange.getThem() ? Colors.grey[800] : Colors.grey.shade200,
+                  color:  Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: themeChange.getThem() ? Colors.grey[700]! : Colors.grey.shade300),
+                  border: Border.all(color:  Colors.grey.shade300),
                 ),
                 child: Text(
                   data.repliedToMessageContent ?? '',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
-                    color: themeChange.getThem() ? Colors.white70 : Colors.black54,
+                    color:  Colors.black54,
                     fontStyle: FontStyle.italic,
                   ),
                   maxLines: 2,
@@ -597,7 +594,7 @@ class _ChatScreensState extends State<ChatScreens> {
                         if (data.messageType == "text")
                           Container(
                             decoration: BoxDecoration(
-                              color: themeChange.getThem() ? AppColors.darkModePrimary : AppColors.primary,
+                              color:  AppColors.primary,
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(10),
                                 topRight: Radius.circular(10),

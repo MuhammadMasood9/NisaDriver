@@ -9,7 +9,6 @@ import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/intercity_screen/pacel_details_screen.dart';
-import 'package:driver/utils/DarkThemeProvider.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
@@ -23,7 +22,6 @@ class NewOrderInterCityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GetX<IntercityController>(
         init: IntercityController()..getOrder(),
@@ -173,9 +171,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
                                               borderRadius:
                                                   const BorderRadius.all(
                                                       Radius.circular(10)),
-                                              boxShadow: themeChange.getThem()
-                                                  ? null
-                                                  : [
+                                              boxShadow: [
                                                       BoxShadow(
                                                         color: Colors.grey
                                                             .withOpacity(0.3),
@@ -346,10 +342,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
                                                         vertical: 14),
                                                     child: Container(
                                                       decoration: BoxDecoration(
-                                                        color: themeChange
-                                                                .getThem()
-                                                            ? AppColors.darkGray
-                                                            : AppColors.gray,
+                                                        color:  AppColors.gray,
                                                         borderRadius:
                                                             const BorderRadius
                                                                 .all(
@@ -402,10 +395,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
                                                       width: Responsive.width(
                                                           100, context),
                                                       decoration: BoxDecoration(
-                                                        color: themeChange
-                                                                .getThem()
-                                                            ? AppColors.darkGray
-                                                            : AppColors.gray,
+                                                        color:  AppColors.gray,
                                                         borderRadius:
                                                             const BorderRadius
                                                                 .all(
