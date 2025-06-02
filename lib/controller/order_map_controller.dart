@@ -129,7 +129,7 @@ class OrderMapController extends GetxController {
           orderModel.value.offerRate.toString();
       await addMarkerSetup(); // Ensure markers are set up first
       await getPolyline(); // Then call getPolyline
-      
+
       // Apply the same functionality as FloatingActionButton when page initializes
       // Add a small delay to ensure map is fully loaded
       await Future.delayed(const Duration(milliseconds: 500));
@@ -152,9 +152,6 @@ class OrderMapController extends GetxController {
   Future<void> getPolyline() async {
     if (orderModel.value.sourceLocationLAtLng != null &&
         orderModel.value.destinationLocationLAtLng != null) {
-      // Comment out movePosition() since we'll use animateToSourceLocation() instead
-      // await movePosition(); 
-      
       List<LatLng> polylineCoordinates = [];
       PolylineRequest polylineRequest = PolylineRequest(
         origin: PointLatLng(
@@ -169,24 +166,24 @@ class OrderMapController extends GetxController {
       );
 
       try {
-        PolylineResult result =
+        List<PolylineResult> results =
             await polylinePoints.getRouteBetweenCoordinates(
           googleApiKey: Constant.mapAPIKey,
           request: polylineRequest,
         );
 
-        // Check if the result has points
-        if (result.points.isNotEmpty) {
-          for (var point in result.points) {
+        // Process first result if available
+        if (results.isNotEmpty && results.first.points.isNotEmpty) {
+          for (var point in results.first.points) {
             polylineCoordinates.add(LatLng(point.latitude, point.longitude));
           }
         } else {
           ShowToastDialog.showToast(
-              "Failed to fetch route: ${result.errorMessage ?? 'No points found'}"
-                  .tr);
+              "Failed to fetch route: No points found".tr);
         }
       } catch (e) {
         ShowToastDialog.showToast("Error fetching route: $e".tr);
+        print("Error Fetch $e");
       }
 
       _addPolyLine(polylineCoordinates);
@@ -206,9 +203,9 @@ class OrderMapController extends GetxController {
         "Destination",
         destinationIcon,
       );
-      markers.refresh(); // Force reactive update for markers
-      polyLines.refresh(); // Force reactive update for polylines
-      update(); // Trigger GetX UI rebuild
+      markers.refresh();
+      polyLines.refresh();
+      update();
     }
   }
 
