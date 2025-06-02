@@ -89,29 +89,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                     onMapCreated: (GoogleMapController mapController) async {
                       controller.mapController = mapController;
 
-                      String mapStyle = '''[
-      {
-        "featureType": "road",
-        "elementType": "labels",
-        "stylers": [
-          {
-            "visibility": "off"
-          }
-        ]
-      },
-      {
-        "featureType": "transit",
-        "elementType": "labels",
-        "stylers": [
-          {
-            "visibility": "off"
-          }
-        ]
-      }
-    ]''';
+                      // String mapStyle = ;?
 
                       try {
-                        await mapController.setMapStyle(mapStyle);
+                        await mapController.setMapStyle(_mapStyle);
                       } catch (e) {
                         print('Error applying map style: $e');
                       }
@@ -950,9 +931,11 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             isActive: controller.trafficLevel.value > 0,
             onPressed: () {
               showDialog(
+                
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
+                    backgroundColor: AppColors.background,
                     title: Text("Report Traffic".tr),
                     content: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -1001,6 +984,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     bool isOtpComplete = false; // Track if OTP is complete
 
     return Dialog(
+      backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.0)),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10),

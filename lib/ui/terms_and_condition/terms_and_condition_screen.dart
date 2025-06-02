@@ -53,6 +53,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
       backgroundColor: isDarkMode ? AppColors.darkBackground : Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Get.back(),

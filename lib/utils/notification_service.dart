@@ -116,7 +116,7 @@ class NotificationService {
       AndroidNotificationChannel channel = const AndroidNotificationChannel(
         '0',
         'goRide-driver',
-        description: 'Show GoRide Notification',
+        description: 'Show NisaRide Notification',
         importance: Importance.max,
       );
       AndroidNotificationDetails notificationDetails =

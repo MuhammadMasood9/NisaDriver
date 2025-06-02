@@ -127,7 +127,7 @@ class WalletController extends GetxController {
         paymentModel.value = value;
         Stripe.publishableKey =
             paymentModel.value.strip!.clientpublishableKey.toString();
-        Stripe.merchantIdentifier = 'GoRide';
+        Stripe.merchantIdentifier = 'NisaRide';
         Stripe.instance.applySettings();
         setRef();
       }
@@ -213,7 +213,7 @@ class WalletController extends GetxController {
                     primary: AppColors.primary,
                   ),
                 ),
-                merchantDisplayName: 'GoRide'));
+                merchantDisplayName: 'NisaRide'));
         displayStripePaymentSheet(amount: amount);
       }
     } catch (e, s) {

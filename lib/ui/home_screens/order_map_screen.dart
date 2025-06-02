@@ -44,7 +44,7 @@ class OrderMapScreen extends StatelessWidget {
           body: Stack(
             children: [
               GoogleMap(
-                myLocationEnabled: true,
+                myLocationEnabled: false,
                 myLocationButtonEnabled: false,
                 mapType: MapType.normal,
                 zoomControlsEnabled: false,
@@ -74,27 +74,10 @@ class OrderMapScreen extends StatelessWidget {
                 right: 20,
                 child: FloatingActionButton(
                   backgroundColor: AppColors.primary,
-                  onPressed: () async {
-                    final GoogleMapController? mapController =
-                        await controller.mapController.future;
-                    mapController?.animateCamera(
-                      CameraUpdate.newCameraPosition(
-                        CameraPosition(
-                          zoom: 15,
-                          target: LatLng(
-                            controller.orderModel.value.sourceLocationLAtLng
-                                    ?.latitude ??
-                                Constant.currentLocation?.latitude ??
-                                45.521563,
-                            controller.orderModel.value.sourceLocationLAtLng
-                                    ?.longitude ??
-                                Constant.currentLocation?.longitude ??
-                                -122.677433,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                    onPressed: () async {
+      // Use the same method that's called during initialization
+      await controller.animateToSourceLocation();
+    },
                   child: const Icon(Icons.my_location, color: Colors.white),
                 ),
               ),

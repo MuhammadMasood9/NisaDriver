@@ -424,19 +424,20 @@ class DetailsUploadScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDocumentNumberSection(
-      BuildContext context, DetailsUploadController controller) {
-    return _buildModernTextField(
-      context,
-      label: "Document Details".tr,
-      hint:
-          "Enter ${Constant.localizationTitle(controller.documentModel.value.title)} Number"
-              .tr,
-      controller: controller.documentNumberController.value,
-      icon: Icons.document_scanner,
-      enabled: false,
-    );
-  }
+ Widget _buildDocumentNumberSection(
+    BuildContext context, DetailsUploadController controller) {
+  // Enable input only when document is not verified
+  bool isEnabled = controller.documents.value.verified != true;
+  
+  return _buildModernTextField(
+    context,
+    label: "Document Details".tr,
+    hint: "Enter ${Constant.localizationTitle(controller.documentModel.value.title)} Number".tr,
+    controller: controller.documentNumberController.value,
+    icon: Icons.document_scanner,
+    enabled: isEnabled, // Now conditional based on verification status
+  );
+}
 
   Widget _buildExpiryDateSection(
       BuildContext context, DetailsUploadController controller) {

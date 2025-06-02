@@ -68,7 +68,9 @@ class DetailsUploadController extends GetxController {
     try {
       XFile? image = await _imagePicker.pickImage(source: source);
       if (image == null) return;
-      Get.back();
+      
+      // REMOVED Get.back() - this was causing the navigation back to previous screen
+      // Get.back(); // <-- This line was the problem!
 
       if (type == "front") {
         frontImage.value = image.path;
@@ -79,7 +81,6 @@ class DetailsUploadController extends GetxController {
       ShowToastDialog.showToast("Failed to Pick : \n $e");
     }
   }
-
 
   uploadDocument() async {
     String frontImageFileName = File(frontImage.value).path.split('/').last;

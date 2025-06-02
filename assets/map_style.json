@@ -1,4 +1,5 @@
-[  {
+[
+  {
     "featureType": "administrative",
     "elementType": "geometry.fill",
     "stylers": [
@@ -98,10 +99,10 @@
   },
   {
     "featureType": "poi",
-    "elementType": "labels.text.fill",
+    "elementType": "labels.text",
     "stylers": [
       {
-        "color": "#588ca4"
+        "visibility": "off"
       }
     ]
   },
@@ -158,10 +159,10 @@
   },
   {
     "featureType": "road",
-    "elementType": "labels.text.fill",
+    "elementType": "labels.text",
     "stylers": [
       {
-        "color": "#41626b"
+        "visibility": "off"
       }
     ]
   },

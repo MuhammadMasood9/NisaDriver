@@ -2,6 +2,7 @@ import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/home_intercity_controller.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
+import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -24,13 +25,73 @@ class HomeIntercityScreen extends StatelessWidget {
             ? _buildDisabledScreen(context, controller)
             : _buildMainScreen(context, controller);
       },
+      
+              
     );
   }
 
+ Widget _buildWalletWarningBanner(
+      BuildContext context, HomeIntercityController controller) {
+    return     double.parse(
+                        controller.driverModel.value.walletAmount?.toString() ??
+                            '0.0') >=
+                    double.parse(Constant.minimumDepositToRideAccept ?? '0.0')
+                ? const SizedBox(height: 16)
+                : Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFE74C3C),
+                          const Color(0xFFE74C3C).withOpacity(0.8),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFE74C3C).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "You need a minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} in your wallet to accept orders and place bids."
+                                .tr,
+                            style: AppTypography.boldLabel(context).copyWith(color: Colors.white,height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+           
+  }
   Widget _buildDisabledScreen(
       BuildContext context, HomeIntercityController controller) {
+          print(controller.driverModel.value.walletAmount?.toString());
+          print(controller.selectedService.value.intercityType);
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: SafeArea(
         child: Column(
           children: [
@@ -212,105 +273,51 @@ class HomeIntercityScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMainScreen(
-      BuildContext context, HomeIntercityController controller) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: controller.isLoading.value
-          ? Constant.loader(context)
-          : SafeArea(
-              child: Column(
-                children: [
-                  // Wallet Warning Banner
-                  double.parse(controller.driverModel.value.walletAmount
-                                  ?.toString() ??
-                              '0.0') >=
-                          double.parse(
-                              Constant.minimumDepositToRideAccept ?? '0.0')
-                      ? const SizedBox(height: 16)
-                      : Container(
+ Widget _buildMainScreen(BuildContext context, HomeIntercityController controller) {
+  final double walletAmount = double.parse(controller.driverModel.value.walletAmount?.toString() ?? '0.0');
+  final double minimumDeposit = double.parse(Constant.minimumDepositToRideAccept ?? '0.0');
+
+  return Scaffold(
+           backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+          body: controller.isLoading.value
+              ? Constant.loader(context)
+              :
+               walletAmount < minimumDeposit
+      ? _buildWalletWarningBanner(context, controller)
+      :
+               SafeArea(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: Container(
                           width: double.infinity,
-                          margin: const EdgeInsets.all(16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFFE74C3C),
-                                const Color(0xFFE74C3C).withOpacity(0.8),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(28),
+                              topRight: Radius.circular(28),
                             ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFE74C3C).withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.account_balance_wallet_rounded,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  "You need a minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} in your wallet to accept orders and place bids."
-                                      .tr,
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(28),
+                              topRight: Radius.circular(28),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
+                              child: controller.widgetOptions.elementAt(controller.selectedIndex.value),
+                            ),
                           ),
                         ),
-                  // Main Content
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(28),
-                          topRight: Radius.circular(28),
-                        ),
                       ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(28),
-                          topRight: Radius.circular(28),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                              top: 4, left: 10, right: 10),
-                          child: controller.widgetOptions
-                              .elementAt(controller.selectedIndex.value),
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-      bottomNavigationBar: _buildResponsiveBottomNav(context, controller),
-    );
-  }
+                ),
+          bottomNavigationBar: _buildResponsiveBottomNav(context, controller),
+        );
+}
+
 
   Widget _buildResponsiveBottomNav(
       BuildContext context, HomeIntercityController controller) {

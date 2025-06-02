@@ -41,7 +41,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'GoRide'.tr,
+      title: 'NisaRide'.tr,
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
         CountryLocalizations.delegate,

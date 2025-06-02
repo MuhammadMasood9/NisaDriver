@@ -76,12 +76,7 @@ class HomeScreen extends StatelessWidget {
                                     child: Text(
                                       "You need a minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} in your wallet to accept orders and place bids."
                                           .tr,
-                                      style: GoogleFonts.poppins(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        height: 1.4,
-                                      ),
+                                      style:  AppTypography.boldLabel(context).copyWith(color: Colors.white,height: 1.4),
                                     ),
                                   ),
                                 ],

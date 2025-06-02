@@ -43,9 +43,9 @@ class SubscriptionListScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 0),
+          const SizedBox(height: 10),
           _buildHeader(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 12),
           _buildPlansList(controller),
           const SizedBox(height: 40),
         ],

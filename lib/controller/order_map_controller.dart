@@ -38,6 +38,26 @@ class OrderMapController extends GetxController {
     super.onClose();
   }
 
+  // New method to animate camera to source location (same as FloatingActionButton functionality)
+  Future<void> animateToSourceLocation() async {
+    final GoogleMapController? controller = await mapController.future;
+    controller?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          zoom: 15,
+          target: LatLng(
+            orderModel.value.sourceLocationLAtLng?.latitude ??
+                Constant.currentLocation?.latitude ??
+                45.521563,
+            orderModel.value.sourceLocationLAtLng?.longitude ??
+                Constant.currentLocation?.longitude ??
+                -122.677433,
+          ),
+        ),
+      ),
+    );
+  }
+
   acceptOrder() async {
     if (double.parse(driverModel.value.walletAmount.toString()) >=
         double.parse(Constant.minimumDepositToRideAccept)) {
@@ -109,6 +129,11 @@ class OrderMapController extends GetxController {
           orderModel.value.offerRate.toString();
       await addMarkerSetup(); // Ensure markers are set up first
       await getPolyline(); // Then call getPolyline
+      
+      // Apply the same functionality as FloatingActionButton when page initializes
+      // Add a small delay to ensure map is fully loaded
+      await Future.delayed(const Duration(milliseconds: 500));
+      await animateToSourceLocation();
     }
 
     FireStoreUtils.fireStore
@@ -127,7 +152,9 @@ class OrderMapController extends GetxController {
   Future<void> getPolyline() async {
     if (orderModel.value.sourceLocationLAtLng != null &&
         orderModel.value.destinationLocationLAtLng != null) {
-      await movePosition(); // Ensure movePosition is awaited
+      // Comment out movePosition() since we'll use animateToSourceLocation() instead
+      // await movePosition(); 
+      
       List<LatLng> polylineCoordinates = [];
       PolylineRequest polylineRequest = PolylineRequest(
         origin: PointLatLng(
@@ -142,12 +169,11 @@ class OrderMapController extends GetxController {
       );
 
       try {
-        List<PolylineResult> results =
+        PolylineResult result =
             await polylinePoints.getRouteBetweenCoordinates(
           googleApiKey: Constant.mapAPIKey,
           request: polylineRequest,
         );
-        PolylineResult result = results.first;
 
         // Check if the result has points
         if (result.points.isNotEmpty) {

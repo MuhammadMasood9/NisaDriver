@@ -76,7 +76,7 @@ class DashBoardScreen extends StatelessWidget {
             child: ListBody(
               children: [
                 Text(
-                    'To start earning with GoRide you need to fill in your personal information'
+                    'To start earning with NisaRide you need to fill in your personal information'
                         .tr),
               ],
             ),

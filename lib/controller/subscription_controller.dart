@@ -73,7 +73,7 @@ class SubscriptionController extends GetxController {
         paymentModel.value = value;
 
         Stripe.publishableKey = paymentModel.value.strip!.clientpublishableKey.toString();
-        Stripe.merchantIdentifier = 'GoRide';
+        Stripe.merchantIdentifier = 'NisaRide';
         Stripe.instance.applySettings();
         setRef();
       }
@@ -184,7 +184,7 @@ class SubscriptionController extends GetxController {
                     primary: AppColors.primary,
                   ),
                 ),
-                merchantDisplayName: 'GoRide'));
+                merchantDisplayName: 'NisaRide'));
         displayStripePaymentSheet(amount: amount);
       }
     } catch (e, s) {
@@ -543,7 +543,7 @@ class SubscriptionController extends GetxController {
     var options = {
       'key': paymentModel.value.razorpay!.razorpayKey,
       'amount': amount * 100,
-      'name': 'GoRide',
+      'name': 'NisaRide',
       'order_id': orderId,
       "currency": "INR",
       'description': 'wallet Topup',

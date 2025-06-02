@@ -1,5 +1,6 @@
 import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/online_registration_controller.dart';
+import 'package:driver/controller/details_upload_controller.dart';
 import 'package:driver/model/document_model.dart';
 import 'package:driver/model/driver_document_model.dart';
 import 'package:driver/themes/app_colors.dart';
@@ -112,8 +113,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                                                 color: Colors.transparent,
                                                 child: InkWell(
                                                   onTap: () {
-                                                    Get.to(
-                                                        const DetailsUploadScreen(),
+                                                    Get.to(() => const DetailsUploadScreen(),
                                                         arguments: {
                                                           'documentModel':
                                                               documentModel

@@ -209,11 +209,10 @@ class _CompleteIntercityOrderScreenState
         mode: TravelMode.driving,
       );
 
-      PolylineResult result = (await polylinePoints.getRouteBetweenCoordinates(
+      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
         request: request,
         googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      ))
-          .first;
+      );
 
       if (result.points.isNotEmpty) {
         polylineCoordinates = result.points

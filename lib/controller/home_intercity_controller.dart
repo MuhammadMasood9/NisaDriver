@@ -37,15 +37,15 @@ class HomeIntercityController extends GetxController {
       isLoading.value = false;
     });
 
-    if (driverModel.value.serviceId != null) {
+   
       await FireStoreUtils.getService().then((value) {
         value.forEach((element) {
-          if (element.id == driverModel.value.serviceId) {
+         
             selectedService.value = element;
-          }
+          
         });
       });
-    }
+    
   }
 
   RxInt isActiveValue = 0.obs;

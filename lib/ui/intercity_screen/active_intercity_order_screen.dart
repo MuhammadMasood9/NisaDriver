@@ -560,6 +560,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
       InterCityOrderModel orderModel) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      backgroundColor: AppColors.background,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
         child: Column(

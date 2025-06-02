@@ -346,8 +346,7 @@ class OrderScreen extends StatelessWidget {
           (await PolylinePoints().getRouteBetweenCoordinates(
         request: request,
         googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      ))
-              .first;
+      ));
 
       // Check if the result has points
       if (result.points.isNotEmpty) {
