@@ -115,12 +115,10 @@ class OrderScreen extends StatelessWidget {
                                                   .toString(),
                                             ),
                                             const SizedBox(height: 10),
-                                            _buildStatusSection( orderModel),
+                                            _buildStatusSection(orderModel),
                                             const SizedBox(height: 10),
-                                            _buildActionButtons(
-                                                context,
-                                                orderModel,
-                                                controller),
+                                            _buildActionButtons(context,
+                                                orderModel, controller),
                                             const SizedBox(height: 10),
 
                                             Visibility(
@@ -341,16 +339,16 @@ class OrderScreen extends StatelessWidget {
         mode: TravelMode.driving,
       );
 
-      // Fixed: getRouteBetweenCoordinates returns a single PolylineResult, not a List
-      PolylineResult result =
-          (await PolylinePoints().getRouteBetweenCoordinates(
+      // Fix: getRouteBetweenCoordinates returns List<PolylineResult>
+      List<PolylineResult> results =
+          await PolylinePoints().getRouteBetweenCoordinates(
         request: request,
         googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      ));
+      );
 
-      // Check if the result has points
-      if (result.points.isNotEmpty) {
-        polylineCoordinates = result.points
+      // Process first result if available
+      if (results.isNotEmpty && results.first.points.isNotEmpty) {
+        polylineCoordinates = results.first.points
             .map((point) => LatLng(point.latitude, point.longitude))
             .toList();
       }
@@ -436,10 +434,10 @@ class OrderScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
-                colors: [Colors.white, Colors.grey[50]!],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+          colors: [Colors.white, Colors.grey[50]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(
           color: AppColors.containerBorder,
           width: 0.5,
@@ -457,7 +455,7 @@ class OrderScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusSection(  OrderModel orderModel) {
+  Widget _buildStatusSection(OrderModel orderModel) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.gray,
@@ -530,7 +528,7 @@ class OrderScreen extends StatelessWidget {
                   height: 35,
                   width: 35,
                   decoration: BoxDecoration(
-                    color:  AppColors.primary,
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Icon(
@@ -557,7 +555,7 @@ class OrderScreen extends StatelessWidget {
                   ),
                   child: Icon(
                     Icons.call,
-                    color:  Colors.white,
+                    color: Colors.white,
                     size: 20,
                   ),
                 ),
