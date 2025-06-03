@@ -24,7 +24,6 @@ class VehicleInformationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return GetX<VehicleInformationController>(
       init: VehicleInformationController(),
       builder: (controller) {
@@ -46,8 +45,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context,
-      VehicleInformationController controller) {
+  Widget _buildBody(
+      BuildContext context, VehicleInformationController controller) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -64,8 +63,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVehicleDetailsSection(BuildContext context,
-      VehicleInformationController controller) {
+  Widget _buildVehicleDetailsSection(
+      BuildContext context, VehicleInformationController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -89,7 +88,6 @@ class VehicleInformationScreen extends StatelessWidget {
                 controller: controller.vehicleNumberController.value,
                 label: 'Vehicle Number'.tr,
                 icon: Icons.confirmation_number_outlined,
-              
               ),
               const SizedBox(height: 16),
               _buildDateField(context, controller),
@@ -128,10 +126,10 @@ class VehicleInformationScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color:  const Color(0xFFF8F9FA),
+              color: const Color(0xFFF8F9FA),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color:  Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withOpacity(0.1),
               ),
             ),
             child: TextFormField(
@@ -155,8 +153,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDateField(BuildContext context,
-      VehicleInformationController controller) {
+  Widget _buildDateField(
+      BuildContext context, VehicleInformationController controller) {
     return _buildTextField(
       controller: controller.registrationDateController.value,
       label: 'Registration Date'.tr,
@@ -174,8 +172,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVehicleTypeField(BuildContext context,
-      VehicleInformationController controller) {
+  Widget _buildVehicleTypeField(
+      BuildContext context, VehicleInformationController controller) {
     return _buildTextField(
       controller: TextEditingController(
           text: controller.selectedVehicle.value.id == null
@@ -189,8 +187,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildColorField(BuildContext context,
-      VehicleInformationController controller) {
+  Widget _buildColorField(
+      BuildContext context, VehicleInformationController controller) {
     return _buildTextField(
       controller: TextEditingController(text: controller.selectedColor.value),
       label: 'Vehicle Color'.tr,
@@ -200,8 +198,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSeatsField(BuildContext context,
-      VehicleInformationController controller ) {
+  Widget _buildSeatsField(
+      BuildContext context, VehicleInformationController controller) {
     return _buildTextField(
       controller: controller.seatsController.value,
       label: 'Number of Seats'.tr,
@@ -211,8 +209,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildZoneField(BuildContext context,
-      VehicleInformationController controller ) {
+  Widget _buildZoneField(
+      BuildContext context, VehicleInformationController controller) {
     return _buildTextField(
       controller: controller.zoneNameController.value,
       label: 'Service Zone'.tr,
@@ -222,7 +220,7 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(BuildContext context ) {
+  Widget _buildInfoCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -280,7 +278,13 @@ class VehicleInformationScreen extends StatelessWidget {
       BuildContext context, VehicleInformationController controller) async {
     ShowToastDialog.showLoader("Please wait".tr);
 
-    String driverId = FireStoreUtils.getCurrentUid();
+    String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null) {
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("User not authenticated".tr);
+      return;
+    }
+
     QuerySnapshot pendingRequests = await FirebaseFirestore.instance
         .collection('vehicle_requests')
         .where('driverId', isEqualTo: driverId)
@@ -381,8 +385,8 @@ class VehicleInformationScreen extends StatelessWidget {
     }
   }
 
-  void _showVehicleTypeSelector(BuildContext context,
-      VehicleInformationController controller ) {
+  void _showVehicleTypeSelector(
+      BuildContext context, VehicleInformationController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -390,7 +394,7 @@ class VehicleInformationScreen extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color:  Colors.white,
+          color: Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -474,7 +478,7 @@ class VehicleInformationScreen extends StatelessWidget {
                           Constant.localizationName(vehicleType.name),
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color:  Colors.black87,
+                            color: Colors.black87,
                           ),
                         ),
                       ),
@@ -545,8 +549,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  void _showColorSelector(BuildContext context,
-      VehicleInformationController controller) {
+  void _showColorSelector(
+      BuildContext context, VehicleInformationController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -554,7 +558,7 @@ class VehicleInformationScreen extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color:  Colors.white,
+          color: Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -722,8 +726,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  void _showSeatsSelector(BuildContext context,
-      VehicleInformationController controller ) {
+  void _showSeatsSelector(
+      BuildContext context, VehicleInformationController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -731,7 +735,7 @@ class VehicleInformationScreen extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color:  Colors.white,
+          color: Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -815,7 +819,7 @@ class VehicleInformationScreen extends StatelessWidget {
                             '$seats Seats',
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color:  Colors.black87,
+                              color: Colors.black87,
                             ),
                           ),
                         ),
@@ -884,8 +888,8 @@ class VehicleInformationScreen extends StatelessWidget {
     );
   }
 
-  void _showZoneSelector(BuildContext context,
-      VehicleInformationController controller ) {
+  void _showZoneSelector(
+      BuildContext context, VehicleInformationController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -893,7 +897,7 @@ class VehicleInformationScreen extends StatelessWidget {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color:  Colors.white,
+          color: Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -1078,7 +1082,11 @@ class VehicleInformationScreen extends StatelessWidget {
 
   Future<void> _updateDriverZones(List<String> zoneIds) async {
     try {
-      String driverId = FireStoreUtils.getCurrentUid();
+      String? driverId = FireStoreUtils.getCurrentUid();
+      if (driverId == null) {
+        ShowToastDialog.showToast("User not authenticated".tr);
+        return;
+      }
       DocumentReference driverRef =
           FirebaseFirestore.instance.collection('drivers').doc(driverId);
 

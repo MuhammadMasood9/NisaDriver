@@ -348,10 +348,10 @@ class OrderIntercityScreen extends StatelessWidget {
         mode: TravelMode.driving,
       );
 
-      PolylineResult result = await PolylinePoints().getRouteBetweenCoordinates(
+      PolylineResult result = (await PolylinePoints().getRouteBetweenCoordinates(
         request: request,
         googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      );
+      )) as PolylineResult;
 
       if (result.points.isNotEmpty) {
         polylineCoordinates = result.points

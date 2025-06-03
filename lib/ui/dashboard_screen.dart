@@ -150,8 +150,10 @@ class DashBoardScreen extends StatelessWidget {
         children: [
           DrawerHeader(
             child: FutureBuilder<DriverUserModel?>(
-              future: FireStoreUtils.getDriverProfile(
-                  FireStoreUtils.getCurrentUid()),
+              future: FireStoreUtils.getCurrentUid() != null
+                  ? FireStoreUtils.getDriverProfile(
+                      FireStoreUtils.getCurrentUid()!)
+                  : Future.value(null),
               builder: (context, snapshot) {
                 switch (snapshot.connectionState) {
                   case ConnectionState.waiting:

@@ -155,13 +155,15 @@ class FireStoreUtils {
     });
   }
 
-  static String getCurrentUid() {
-    return FirebaseAuth.instance.currentUser!.uid;
+  static String? getCurrentUid() {
+    return FirebaseAuth.instance.currentUser?.uid;
   }
 
   static Future<bool> hasActiveRide() async {
     try {
-      String driverId = getCurrentUid();
+      String? driverId = getCurrentUid();
+      if (driverId == null) return false;
+
       QuerySnapshot query = await FirebaseFirestore.instance
           .collection(CollectionName.orders)
           .where('acceptedDriverId', arrayContains: driverId)
@@ -741,7 +743,10 @@ class FireStoreUtils {
 
   static Future<bool?> updatedDriverWallet({required String amount}) async {
     bool isAdded = false;
-    await getDriverProfile(FireStoreUtils.getCurrentUid()).then((value) async {
+    String? driverId = getCurrentUid();
+    if (driverId == null) return false;
+
+    await getDriverProfile(driverId).then((value) async {
       if (value != null) {
         DriverUserModel userModel = value;
         userModel.walletAmount =

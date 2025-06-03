@@ -13,7 +13,12 @@ import 'package:get/get.dart';
 
 class HomeIntercityController extends GetxController {
   RxInt selectedIndex = 0.obs;
-  List<Widget> widgetOptions = <Widget>[const NewOrderInterCityScreen(), const AcceptedIntercityOrders(), const ActiveIntercityOrderScreen(),const OrderIntercityScreen()];
+  List<Widget> widgetOptions = <Widget>[
+    const NewOrderInterCityScreen(),
+    const AcceptedIntercityOrders(),
+    const ActiveIntercityOrderScreen(),
+    const OrderIntercityScreen()
+  ];
 
   void onItemTapped(int index) {
     selectedIndex.value = index;
@@ -32,20 +37,22 @@ class HomeIntercityController extends GetxController {
   RxBool isLoading = true.obs;
 
   getDriver() async {
-    await FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()).then((value) {
+    String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null) {
+      isLoading.value = false;
+      return;
+    }
+
+    await FireStoreUtils.getDriverProfile(driverId).then((value) {
       driverModel.value = value!;
       isLoading.value = false;
     });
 
-   
-      await FireStoreUtils.getService().then((value) {
-        value.forEach((element) {
-         
-            selectedService.value = element;
-          
-        });
+    await FireStoreUtils.getService().then((value) {
+      value.forEach((element) {
+        selectedService.value = element;
       });
-    
+    });
   }
 
   RxInt isActiveValue = 0.obs;
@@ -55,10 +62,11 @@ class HomeIntercityController extends GetxController {
         .collection(CollectionName.ordersIntercity)
         .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
         .where('intercityServiceId', isNotEqualTo: "Kn2VEnPI3ikF58uK8YqY")
-        .where('status', whereIn: [Constant.rideInProgress, Constant.rideActive])
+        .where('status',
+            whereIn: [Constant.rideInProgress, Constant.rideActive])
         .snapshots()
         .listen((event) {
-      isActiveValue.value = event.size;
-    });
+          isActiveValue.value = event.size;
+        });
   }
 }

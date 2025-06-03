@@ -11,17 +11,49 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 class VehicleInformationController extends GetxController {
-  Rx<TextEditingController> vehicleNumberController = TextEditingController().obs;
+  Rx<TextEditingController> vehicleNumberController =
+      TextEditingController().obs;
   Rx<TextEditingController> seatsController = TextEditingController().obs;
-  Rx<TextEditingController> registrationDateController = TextEditingController().obs;
+  Rx<TextEditingController> registrationDateController =
+      TextEditingController().obs;
   Rx<TextEditingController> zoneNameController = TextEditingController().obs;
   Rx<DateTime?> selectedDate = DateTime.now().obs;
 
   RxBool isLoading = true.obs;
 
   Rx<String> selectedColor = "".obs;
-  List<String> carColorList = <String>['Red', 'Black', 'White', 'Blue', 'Green', 'Orange', 'Silver', 'Gray', 'Yellow', 'Brown', 'Gold', 'Beige', 'Purple'].obs;
-  List<String> sheetList = <String>['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'].obs;
+  List<String> carColorList = <String>[
+    'Red',
+    'Black',
+    'White',
+    'Blue',
+    'Green',
+    'Orange',
+    'Silver',
+    'Gray',
+    'Yellow',
+    'Brown',
+    'Gold',
+    'Beige',
+    'Purple'
+  ].obs;
+  List<String> sheetList = <String>[
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    '11',
+    '12',
+    '13',
+    '14',
+    '15'
+  ].obs;
 
   List<VehicleTypeModel> vehicleList = <VehicleTypeModel>[].obs;
   Rx<VehicleTypeModel> selectedVehicle = VehicleTypeModel().obs;
@@ -54,38 +86,49 @@ class VehicleInformationController extends GetxController {
     });
 
     // Fetch driver profile
-    await FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()).then((value) {
-      driverModel.value = value!;
-      if (driverModel.value.vehicleInformation != null) {
-        vehicleNumberController.value.text = driverModel.value.vehicleInformation!.vehicleNumber.toString();
-        selectedDate.value = driverModel.value.vehicleInformation!.registrationDate!.toDate();
-        registrationDateController.value.text = DateFormat("dd-MM-yyyy").format(selectedDate.value!);
-        selectedColor.value = driverModel.value.vehicleInformation!.vehicleColor.toString();
-        seatsController.value.text = driverModel.value.vehicleInformation!.seats ?? "2";
-      }
-
-      if (driverModel.value.zoneIds != null) {
-        for (var element in driverModel.value.zoneIds!) {
-          List<ZoneModel> list = zoneList.where((p0) => p0.id == element).toList();
-          if (list.isNotEmpty) {
-            selectedZone.add(element);
-            zoneString.value = "$zoneString${zoneString.isEmpty ? "" : ","} ${Constant.localizationName(list.first.name)}";
-          }
+    String? currentUid = FireStoreUtils.getCurrentUid();
+    if (currentUid != null) {
+      await FireStoreUtils.getDriverProfile(currentUid).then((value) {
+        driverModel.value = value!;
+        if (driverModel.value.vehicleInformation != null) {
+          vehicleNumberController.value.text =
+              driverModel.value.vehicleInformation!.vehicleNumber.toString();
+          selectedDate.value =
+              driverModel.value.vehicleInformation!.registrationDate!.toDate();
+          registrationDateController.value.text =
+              DateFormat("dd-MM-yyyy").format(selectedDate.value!);
+          selectedColor.value =
+              driverModel.value.vehicleInformation!.vehicleColor.toString();
+          seatsController.value.text =
+              driverModel.value.vehicleInformation!.seats ?? "2";
         }
-        zoneNameController.value.text = zoneString.value;
-      }
 
-      if (driverModel.value.serviceId != null) {
-        selectedServiceId.value = driverModel.value.serviceId;
-      }
-    });
+        if (driverModel.value.zoneIds != null) {
+          for (var element in driverModel.value.zoneIds!) {
+            List<ZoneModel> list =
+                zoneList.where((p0) => p0.id == element).toList();
+            if (list.isNotEmpty) {
+              selectedZone.add(element);
+              zoneString.value =
+                  "$zoneString${zoneString.isEmpty ? "" : ","} ${Constant.localizationName(list.first.name)}";
+            }
+          }
+          zoneNameController.value.text = zoneString.value;
+        }
+
+        if (driverModel.value.serviceId != null) {
+          selectedServiceId.value = driverModel.value.serviceId;
+        }
+      });
+    }
 
     // Fetch vehicle types
     await FireStoreUtils.getVehicleType().then((value) {
       vehicleList = value!;
       if (driverModel.value.vehicleInformation != null) {
         for (var element in vehicleList) {
-          if (element.id == driverModel.value.vehicleInformation!.vehicleTypeId) {
+          if (element.id ==
+              driverModel.value.vehicleInformation!.vehicleTypeId) {
             selectedVehicle.value = element;
           }
         }

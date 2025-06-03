@@ -205,10 +205,10 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
         mode: TravelMode.driving,
       );
 
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+      PolylineResult result = (await polylinePoints.getRouteBetweenCoordinates(
         request: request,
         googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      );
+      )) as PolylineResult;
 
       if (result.points.isNotEmpty) {
         polylineCoordinates = result.points

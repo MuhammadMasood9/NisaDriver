@@ -23,15 +23,21 @@ class ProfileController extends GetxController {
   }
 
   getData() async {
-    await FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()).then((value) {
+    String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null) {
+      isLoading.value = false;
+      return;
+    }
+    await FireStoreUtils.getDriverProfile(driverId).then((value) {
       if (value != null) {
         driverModel.value = value;
 
-        phoneNumberController.value.text = driverModel.value.phoneNumber.toString();
+        phoneNumberController.value.text =
+            driverModel.value.phoneNumber.toString();
         countryCode.value = driverModel.value.countryCode.toString();
         emailController.value.text = driverModel.value.email.toString();
         fullNameController.value.text = driverModel.value.fullName.toString();
-        profileImage.value = driverModel.value.profilePic?? '';
+        profileImage.value = driverModel.value.profilePic ?? '';
         isLoading.value = false;
       }
     });
@@ -50,5 +56,4 @@ class ProfileController extends GetxController {
       ShowToastDialog.showToast("Failed to Pick : \n $e");
     }
   }
-
 }

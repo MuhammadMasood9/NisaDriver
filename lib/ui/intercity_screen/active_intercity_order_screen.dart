@@ -191,7 +191,8 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                                                                 orderModel.id
                                                                     .toString(),
                                                                 FireStoreUtils
-                                                                    .getCurrentUid()),
+                                                                        .getCurrentUid() ??
+                                                                    ''),
                                                         builder: (context,
                                                             snapshot) {
                                                           switch (snapshot

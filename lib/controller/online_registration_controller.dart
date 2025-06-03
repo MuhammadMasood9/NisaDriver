@@ -23,7 +23,7 @@ class OnlineRegistrationController extends GetxController {
     });
 
     await FireStoreUtils.getDocumentOfDriver().then((value) {
-      if(value != null){
+      if (value != null) {
         driverDocumentList.value = value.documents!;
       }
     });

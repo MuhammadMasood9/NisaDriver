@@ -20,7 +20,6 @@ class AcceptedOrders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return GetBuilder<AcceptedOrdersController>(
       init: AcceptedOrdersController(),
       dispose: (state) {
@@ -53,7 +52,6 @@ class AcceptedOrders extends StatelessWidget {
                     snapshot.data!.docs[index].data() as Map<String, dynamic>);
                 return OrderItemWithTimer(
                   orderModel: orderModel,
-                 
                   controller: controller,
                 );
               },
@@ -73,7 +71,6 @@ class OrderItemWithTimer extends StatefulWidget {
   const OrderItemWithTimer({
     Key? key,
     required this.orderModel,
-   
     required this.controller,
   }) : super(key: key);
 
@@ -97,19 +94,23 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
   }
 
   Future<void> _loadDriverData() async {
-    _driverIdAcceptReject = await FireStoreUtils.getAcceptedOrders(
-      widget.orderModel.id.toString(),
-      FireStoreUtils.getCurrentUid(),
-    );
-    if (mounted) {
-      setState(() {});
+    String? currentUid = FireStoreUtils.getCurrentUid();
+    if (currentUid != null) {
+      _driverIdAcceptReject = await FireStoreUtils.getAcceptedOrders(
+        widget.orderModel.id.toString(),
+        currentUid,
+      );
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
   Future<void> _initializeTimer() async {
-    String driverId = FireStoreUtils.getCurrentUid();
+    String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null) return;
     String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
-    
+
     try {
       // Check if timer start time exists in Firestore
       DocumentSnapshot timerDoc = await FirebaseFirestore.instance
@@ -119,13 +120,15 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
 
       if (timerDoc.exists) {
         // Timer already exists, calculate remaining time
-        Map<String, dynamic> timerData = timerDoc.data() as Map<String, dynamic>;
+        Map<String, dynamic> timerData =
+            timerDoc.data() as Map<String, dynamic>;
         Timestamp startTimestamp = timerData['startTime'];
         _timerStartTime = startTimestamp.toDate();
-        
-        int elapsedSeconds = DateTime.now().difference(_timerStartTime!).inSeconds;
+
+        int elapsedSeconds =
+            DateTime.now().difference(_timerStartTime!).inSeconds;
         int remaining = TIMER_DURATION - elapsedSeconds;
-        
+
         if (remaining <= 0) {
           // Timer already expired
           _isExpired.value = true;
@@ -148,7 +151,7 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
         });
         _remainingSeconds.value = TIMER_DURATION;
       }
-      
+
       _startTimer();
     } catch (e) {
       print('Error initializing timer: $e');
@@ -172,9 +175,10 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
   }
 
   Future<void> _handleExpiredTimer() async {
-    String driverId = FireStoreUtils.getCurrentUid();
+    String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null) return;
     String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
-    
+
     try {
       // Clean up timer document
       await FirebaseFirestore.instance
@@ -221,9 +225,10 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
   }
 
   Future<void> _cancelTimer() async {
-    String driverId = FireStoreUtils.getCurrentUid();
+    String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null) return;
     String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
-    
+
     try {
       // Clean up timer document
       await FirebaseFirestore.instance
@@ -233,7 +238,7 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     } catch (e) {
       print('Error cleaning up timer: $e');
     }
-    
+
     _timer?.cancel();
     _isExpired.value = true;
     _handleExpiredTimer();
@@ -254,16 +259,15 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
               padding: const EdgeInsets.all(8.0),
               child: Container(
                 decoration: BoxDecoration(
-                  color:  AppColors.containerBackground,
+                  color: AppColors.containerBackground,
                   borderRadius: const BorderRadius.all(Radius.circular(10)),
-                 
-                  boxShadow:  [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.5),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
@@ -305,7 +309,12 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                                       backgroundColor: AppColors.primary,
                                       foregroundColor: Colors.white,
                                     ),
-                                    child: Text('Cancel'.tr,style: AppTypography.boldLabel(context).copyWith(color: AppColors.background),),
+                                    child: Text(
+                                      'Cancel'.tr,
+                                      style: AppTypography.boldLabel(context)
+                                          .copyWith(
+                                              color: AppColors.background),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -330,15 +339,15 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Container(
         decoration: BoxDecoration(
-          color:  AppColors.containerBackground,
+          color: AppColors.containerBackground,
           borderRadius: const BorderRadius.all(Radius.circular(10)),
-          boxShadow:  [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.09),
-                    blurRadius: 5,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.09),
+              blurRadius: 5,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(8.0),

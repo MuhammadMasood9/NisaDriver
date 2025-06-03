@@ -18,7 +18,12 @@ import 'package:location/location.dart';
 
 class HomeController extends GetxController {
   RxInt selectedIndex = 0.obs;
-  List<Widget> widgetOptions = <Widget>[const NewOrderScreen(), const AcceptedOrders(), const ActiveOrderScreen(),const OrderScreen()];
+  List<Widget> widgetOptions = <Widget>[
+    const NewOrderScreen(),
+    const AcceptedOrders(),
+    const ActiveOrderScreen(),
+    const OrderScreen()
+  ];
   DashBoardController dashboardController = Get.put(DashBoardController());
 
   void onItemTapped(int index) {
@@ -37,8 +42,11 @@ class HomeController extends GetxController {
   RxBool isLoading = true.obs;
 
   getDriver() async {
-
-    FireStoreUtils.fireStore.collection(CollectionName.driverUsers).doc(FireStoreUtils.getCurrentUid()).snapshots().listen((event) {
+    FireStoreUtils.fireStore
+        .collection(CollectionName.driverUsers)
+        .doc(FireStoreUtils.getCurrentUid())
+        .snapshots()
+        .listen((event) {
       if (event.exists) {
         driverModel.value = DriverUserModel.fromJson(event.data()!);
       }
@@ -52,10 +60,11 @@ class HomeController extends GetxController {
     FirebaseFirestore.instance
         .collection(CollectionName.orders)
         .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
-        .where('status', whereIn: [Constant.rideInProgress, Constant.rideActive])
+        .where('status',
+            whereIn: [Constant.rideInProgress, Constant.rideActive])
         .snapshots()
         .listen((event) {
-      isActiveValue.value = event.size;
+          isActiveValue.value = event.size;
         });
   }
 
@@ -65,41 +74,67 @@ class HomeController extends GetxController {
     PermissionStatus permissionStatus = await location.hasPermission();
     if (permissionStatus == PermissionStatus.granted) {
       location.enableBackgroundMode(enable: true);
-      location.changeSettings(accuracy: LocationAccuracy.high, distanceFilter: double.parse(Constant.driverLocationUpdate.toString()),interval: 2000);
+      location.changeSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter:
+              double.parse(Constant.driverLocationUpdate.toString()),
+          interval: 2000);
       location.onLocationChanged.listen((locationData) {
-        Constant.currentLocation = LocationLatLng(latitude: locationData.latitude, longitude: locationData.longitude);
-        FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()).then((value) {
-          DriverUserModel driverUserModel = value!;
-          if (driverUserModel.isOnline == true) {
-            driverUserModel.location = LocationLatLng(latitude: locationData.latitude, longitude: locationData.longitude);
-            GeoFirePoint position = Geoflutterfire().point(latitude: locationData.latitude!, longitude: locationData.longitude!);
+        Constant.currentLocation = LocationLatLng(
+            latitude: locationData.latitude, longitude: locationData.longitude);
+        String? driverId = FireStoreUtils.getCurrentUid();
+        if (driverId != null) {
+          FireStoreUtils.getDriverProfile(driverId).then((value) {
+            DriverUserModel driverUserModel = value!;
+            if (driverUserModel.isOnline == true) {
+              driverUserModel.location = LocationLatLng(
+                  latitude: locationData.latitude,
+                  longitude: locationData.longitude);
+              GeoFirePoint position = Geoflutterfire().point(
+                  latitude: locationData.latitude!,
+                  longitude: locationData.longitude!);
 
-            driverUserModel.position = Positions(geoPoint: position.geoPoint, geohash: position.hash);
-            driverUserModel.rotation = locationData.heading;
-            FireStoreUtils.updateDriverUser(driverUserModel);
-          }
-        });
+              driverUserModel.position = Positions(
+                  geoPoint: position.geoPoint, geohash: position.hash);
+              driverUserModel.rotation = locationData.heading;
+              FireStoreUtils.updateDriverUser(driverUserModel);
+            }
+          });
+        }
       });
     } else {
       location.requestPermission().then((permissionStatus) {
         if (permissionStatus == PermissionStatus.granted) {
           location.enableBackgroundMode(enable: true);
-          location.changeSettings(accuracy: LocationAccuracy.high, distanceFilter: double.parse(Constant.driverLocationUpdate.toString()),interval: 2000);
+          location.changeSettings(
+              accuracy: LocationAccuracy.high,
+              distanceFilter:
+                  double.parse(Constant.driverLocationUpdate.toString()),
+              interval: 2000);
           location.onLocationChanged.listen((locationData) async {
-            Constant.currentLocation = LocationLatLng(latitude: locationData.latitude, longitude: locationData.longitude);
+            Constant.currentLocation = LocationLatLng(
+                latitude: locationData.latitude,
+                longitude: locationData.longitude);
+            String? driverId = FireStoreUtils.getCurrentUid();
+            if (driverId != null) {
+              FireStoreUtils.getDriverProfile(driverId).then((value) {
+                DriverUserModel driverUserModel = value!;
+                if (driverUserModel.isOnline == true) {
+                  driverUserModel.location = LocationLatLng(
+                      latitude: locationData.latitude,
+                      longitude: locationData.longitude);
+                  driverUserModel.rotation = locationData.heading;
+                  GeoFirePoint position = Geoflutterfire().point(
+                      latitude: locationData.latitude!,
+                      longitude: locationData.longitude!);
 
-            FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()).then((value) {
-              DriverUserModel driverUserModel = value!;
-              if (driverUserModel.isOnline == true) {
-                driverUserModel.location = LocationLatLng(latitude: locationData.latitude, longitude: locationData.longitude);
-                driverUserModel.rotation = locationData.heading;
-                GeoFirePoint position = Geoflutterfire().point(latitude: locationData.latitude!, longitude: locationData.longitude!);
+                  driverUserModel.position = Positions(
+                      geoPoint: position.geoPoint, geohash: position.hash);
 
-                driverUserModel.position = Positions(geoPoint: position.geoPoint, geohash: position.hash);
-
-                FireStoreUtils.updateDriverUser(driverUserModel);
-              }
-            });
+                  FireStoreUtils.updateDriverUser(driverUserModel);
+                }
+              });
+            }
           });
         }
       });
@@ -107,5 +142,4 @@ class HomeController extends GetxController {
     isLoading.value = false;
     update();
   }
-
 }

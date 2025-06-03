@@ -20,7 +20,6 @@ class AcceptedIntercityOrders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
@@ -100,13 +99,12 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                       borderRadius: const BorderRadius.all(
                                           Radius.circular(10)),
                                       boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.grey
-                                                    .withOpacity(0.3),
-                                                blurRadius: 5,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.3),
+                                          blurRadius: 5,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
@@ -145,7 +143,8 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                                           orderModel.id
                                                               .toString(),
                                                           FireStoreUtils
-                                                              .getCurrentUid()),
+                                                                  .getCurrentUid() ??
+                                                              ''),
                                                   builder: (context, snapshot) {
                                                     switch (snapshot
                                                         .connectionState) {

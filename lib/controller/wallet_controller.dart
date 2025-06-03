@@ -139,18 +139,20 @@ class WalletController extends GetxController {
   }
 
   getUser() async {
-    await FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid())
-        .then((value) {
-      if (value != null) {
-        driverUserModel.value = value;
-      }
-    });
+    String? currentUid = FireStoreUtils.getCurrentUid();
+    if (currentUid != null) {
+      await FireStoreUtils.getDriverProfile(currentUid).then((value) {
+        if (value != null) {
+          driverUserModel.value = value;
+        }
+      });
 
-    await FireStoreUtils.getBankDetails().then((value) {
-      if (value != null) {
-        bankDetailsModel.value = value;
-      }
-    });
+      await FireStoreUtils.getBankDetails().then((value) {
+        if (value != null) {
+          bankDetailsModel.value = value;
+        }
+      });
+    }
   }
 
   getTraction() async {

@@ -18,6 +18,7 @@ class DriverUserModel {
   String? serviceId;
   String? fcmToken;
   String? email;
+  String? password; // Added password field
   VehicleInformation? vehicleInformation;
   String? reviewsCount;
   String? reviewsSum;
@@ -32,32 +33,32 @@ class DriverUserModel {
   Timestamp? subscriptionExpiryDate;
   SubscriptionPlanModel? subscriptionPlan;
 
-
-  DriverUserModel(
-      {this.phoneNumber,
-      this.loginType,
-      this.countryCode,
-      this.profilePic,
-      this.documentVerification,
-      this.fullName,
-      this.isOnline,
-      this.id,
-      this.serviceId,
-      this.fcmToken,
-      this.email,
-      this.location,
-      this.vehicleInformation,
-      this.reviewsCount,
-      this.reviewsSum,
-      this.rotation,
-      this.position,
-      this.walletAmount,
-      this.createdAt,
-      this.zoneIds,
-      this.subscriptionTotalOrders,
-      this.subscriptionPlanId,
-        this.subscriptionExpiryDate,
-        this.subscriptionPlan});
+  DriverUserModel({
+    this.phoneNumber,
+    this.loginType,
+    this.countryCode,
+    this.profilePic,
+    this.documentVerification,
+    this.fullName,
+    this.isOnline,
+    this.id,
+    this.serviceId,
+    this.fcmToken,
+    this.email,
+    this.password, // Added to constructor
+    this.vehicleInformation,
+    this.reviewsCount,
+    this.reviewsSum,
+    this.rotation,
+    this.position,
+    this.walletAmount,
+    this.createdAt,
+    this.zoneIds,
+    this.subscriptionTotalOrders,
+    this.subscriptionPlanId,
+    this.subscriptionExpiryDate,
+    this.subscriptionPlan,
+  });
 
   DriverUserModel.fromJson(Map<String, dynamic> json) {
     phoneNumber = json['phoneNumber'];
@@ -71,7 +72,10 @@ class DriverUserModel {
     serviceId = json['serviceId'];
     fcmToken = json['fcmToken'];
     email = json['email'];
-    vehicleInformation = json['vehicleInformation'] != null ? VehicleInformation.fromJson(json['vehicleInformation']) : null;
+    password = json['password']; // Added to deserializer
+    vehicleInformation = json['vehicleInformation'] != null
+        ? VehicleInformation.fromJson(json['vehicleInformation'])
+        : null;
     reviewsCount = json['reviewsCount'] ?? '0.0';
     reviewsSum = json['reviewsSum'] ?? '0.0';
     rotation = json['rotation'];
@@ -83,8 +87,9 @@ class DriverUserModel {
     subscriptionTotalOrders = json['subscriptionTotalOrders'];
     subscriptionPlanId = json['subscriptionPlanId'];
     subscriptionExpiryDate = json['subscriptionExpiryDate'];
-    subscriptionPlan = json['subscription_plan'] != null ? SubscriptionPlanModel.fromJson(json['subscription_plan']) : null;
-
+    subscriptionPlan = json['subscription_plan'] != null
+        ? SubscriptionPlanModel.fromJson(json['subscription_plan'])
+        : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -100,6 +105,7 @@ class DriverUserModel {
     data['serviceId'] = serviceId;
     data['fcmToken'] = fcmToken;
     data['email'] = email;
+    data['password'] = password; // Added to serializer
     data['rotation'] = rotation;
     data['createdAt'] = createdAt;
     if (vehicleInformation != null) {
@@ -132,7 +138,15 @@ class VehicleInformation {
   String? seats;
   List<DriverRulesModel>? driverRules;
 
-  VehicleInformation({this.vehicleType, this.vehicleTypeId, this.registrationDate, this.vehicleColor, this.vehicleNumber, this.seats, this.driverRules});
+  VehicleInformation({
+    this.vehicleType,
+    this.vehicleTypeId,
+    this.registrationDate,
+    this.vehicleColor,
+    this.vehicleNumber,
+    this.seats,
+    this.driverRules,
+  });
 
   VehicleInformation.fromJson(Map<String, dynamic> json) {
     if (json['vehicleType'] != null) {
