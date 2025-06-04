@@ -5,7 +5,6 @@ import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/ui/auth_screen/login_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/ui/on_boarding_screen.dart';
-import 'package:driver/ui/subscription_plan_screen/subscription_list_screen.dart';
 import 'package:driver/utils/Preferences.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,7 +24,9 @@ class SplashController extends GetxController {
     } else {
       bool isLogin = await FireStoreUtils.isLogin();
       if (isLogin == true) {
-        await FireStoreUtils.getDriverProfile(FirebaseAuth.instance.currentUser!.uid).then(
+        await FireStoreUtils.getDriverProfile(
+                FirebaseAuth.instance.currentUser!.uid)
+            .then(
           (value) {
             if (value != null) {
               DriverUserModel userModel = value;
@@ -38,17 +39,21 @@ class SplashController extends GetxController {
                     isPlanExpire = true;
                   }
                 } else {
-                  DateTime expiryDate = userModel.subscriptionExpiryDate!.toDate();
+                  DateTime expiryDate =
+                      userModel.subscriptionExpiryDate!.toDate();
                   isPlanExpire = expiryDate.isBefore(DateTime.now());
                 }
               } else {
                 isPlanExpire = true;
               }
-              if (userModel.subscriptionPlanId == null || isPlanExpire == true) {
-                if (Constant.adminCommission?.isEnabled == false && Constant.isSubscriptionModelApplied == false) {
+              if (userModel.subscriptionPlanId == null ||
+                  isPlanExpire == true) {
+                if (Constant.adminCommission?.isEnabled == false &&
+                    Constant.isSubscriptionModelApplied == false) {
                   Get.offAll(const DashBoardScreen());
                 } else {
-                  Get.offAll(const SubscriptionListScreen(), arguments: {"isShow": true});
+                  Get.offAll(const DashBoardScreen(),
+                      arguments: {"isShow": true});
                 }
               } else {
                 Get.offAll(const DashBoardScreen());

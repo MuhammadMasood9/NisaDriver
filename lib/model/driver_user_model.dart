@@ -18,6 +18,7 @@ class DriverUserModel {
   String? serviceId;
   String? fcmToken;
   String? email;
+
   String? password; // Added password field
   VehicleInformation? vehicleInformation;
   String? reviewsCount;
@@ -32,6 +33,7 @@ class DriverUserModel {
   String? subscriptionPlanId;
   Timestamp? subscriptionExpiryDate;
   SubscriptionPlanModel? subscriptionPlan;
+  bool? profileVerify;
 
   DriverUserModel({
     this.phoneNumber,
@@ -58,6 +60,7 @@ class DriverUserModel {
     this.subscriptionPlanId,
     this.subscriptionExpiryDate,
     this.subscriptionPlan,
+    this.profileVerify = false,
   });
 
   DriverUserModel.fromJson(Map<String, dynamic> json) {
@@ -80,8 +83,11 @@ class DriverUserModel {
     reviewsSum = json['reviewsSum'] ?? '0.0';
     rotation = json['rotation'];
     walletAmount = json['walletAmount'] ?? "0.0";
-    location = json['location'] != null ? LocationLatLng.fromJson(json['location']) : null;
-    position = json['position'] != null ? Positions.fromJson(json['position']) : null;
+    location = json['location'] != null
+        ? LocationLatLng.fromJson(json['location'])
+        : null;
+    position =
+        json['position'] != null ? Positions.fromJson(json['position']) : null;
     createdAt = json['createdAt'];
     zoneIds = json['zoneIds'];
     subscriptionTotalOrders = json['subscriptionTotalOrders'];
@@ -90,6 +96,7 @@ class DriverUserModel {
     subscriptionPlan = json['subscription_plan'] != null
         ? SubscriptionPlanModel.fromJson(json['subscription_plan'])
         : null;
+    profileVerify = json['profileVerify'] ?? false;
   }
 
   Map<String, dynamic> toJson() {
@@ -105,6 +112,7 @@ class DriverUserModel {
     data['serviceId'] = serviceId;
     data['fcmToken'] = fcmToken;
     data['email'] = email;
+
     data['password'] = password; // Added to serializer
     data['rotation'] = rotation;
     data['createdAt'] = createdAt;
@@ -125,6 +133,7 @@ class DriverUserModel {
     data['subscriptionPlanId'] = subscriptionPlanId;
     data['subscriptionExpiryDate'] = subscriptionExpiryDate;
     data['subscription_plan'] = subscriptionPlan?.toJson();
+    data['profileVerify'] = profileVerify; // Added to serializer
     return data;
   }
 }

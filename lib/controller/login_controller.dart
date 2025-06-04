@@ -8,7 +8,6 @@ import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/ui/auth_screen/information_screen.dart';
 import 'package:driver/ui/auth_screen/otp_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
-import 'package:driver/ui/subscription_plan_screen/subscription_list_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/notification_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -36,7 +35,8 @@ class LoginController extends GetxController {
         debugPrint("FirebaseAuthException--->${e.message}");
         ShowToastDialog.closeLoader();
         if (e.code == 'invalid-phone-number') {
-          ShowToastDialog.showToast("The provided phone number is not valid.".tr);
+          ShowToastDialog.showToast(
+              "The provided phone number is not valid.".tr);
         } else {
           ShowToastDialog.showToast(e.message ?? "An error occurred".tr);
         }
@@ -103,20 +103,22 @@ class LoginController extends GetxController {
                         isPlanExpire = true;
                       }
                     } else {
-                      DateTime expiryDate = userModel.subscriptionExpiryDate!.toDate();
+                      DateTime expiryDate =
+                          userModel.subscriptionExpiryDate!.toDate();
                       isPlanExpire = expiryDate.isBefore(DateTime.now());
                     }
                   } else {
                     isPlanExpire = true;
                   }
-                  if (userModel.subscriptionPlanId == null || isPlanExpire == true) {
+                  if (userModel.subscriptionPlanId == null ||
+                      isPlanExpire == true) {
                     if (Constant.adminCommission?.isEnabled == false &&
                         Constant.isSubscriptionModelApplied == false) {
                       ShowToastDialog.closeLoader();
                       Get.offAll(const DashBoardScreen());
                     } else {
                       ShowToastDialog.closeLoader();
-                      Get.offAll(const SubscriptionListScreen(),
+                      Get.offAll(const DashBoardScreen(),
                           arguments: {"isShow": true});
                     }
                   } else {
@@ -165,22 +167,31 @@ class LoginController extends GetxController {
   }
 
   Future<UserCredential?> signInWithGoogle() async {
-    await GoogleSignIn().signOut();
+    await GoogleSignIn().signOut(); // Ensure no previous session
     try {
+      print("Starting Google Sign-In...");
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        print("Google Sign-In canceled by user");
+        return null;
+      }
 
-      final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+      print("Authenticating Google credentials...");
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth?.accessToken,
-        idToken: googleAuth?.idToken,
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
+      print("Signing in with Firebase...");
       return await FirebaseAuth.instance.signInWithCredential(credential);
     } catch (e) {
-      debugPrint(e.toString());
+      print("Error in Google Sign-In: ${e.toString()}");
+      debugPrint("Detailed error: $e");
+      return null;
     }
-    return null;
   }
 
   Future<Map<String, dynamic>?> signInWithApple() async {
@@ -224,11 +235,11 @@ class LoginController extends GetxController {
   }
 
   @override
-void onInit() {
-  super.onInit();
-  debugPrint("FormKey initialized: ${formKey.value != null}");
-  if (formKey.value == null) {
-    formKey.value = GlobalKey<FormState>();
+  void onInit() {
+    super.onInit();
+    debugPrint("FormKey initialized: ${formKey.value != null}");
+    if (formKey.value == null) {
+      formKey.value = GlobalKey<FormState>();
+    }
   }
-}
 }

@@ -351,11 +351,7 @@ class FireStoreUtils {
 
   static Future<List<ServiceModel>> getService() async {
     List<ServiceModel> serviceList = [];
-    await fireStore
-        .collection(CollectionName.service)
-        .where('enable', isEqualTo: true)
-        .get()
-        .then((value) {
+    await fireStore.collection(CollectionName.service).get().then((value) {
       for (var element in value.docs) {
         ServiceModel documentModel = ServiceModel.fromJson(element.data());
         serviceList.add(documentModel);

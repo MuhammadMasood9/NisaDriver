@@ -13,7 +13,20 @@
           "package_name": "com.driver.customer"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "502667330549-r5a7s0nkr8mhbp971ceq0v4ukfu995a7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.driver.customer",
+            "certificate_hash": "fd140027e6e78bf4e7436d045048709644f5f7a6"
+          }
+        },
+        {
+          "client_id": "502667330549-ih1rs7nuv21gl8530hh7pfb7np2bo0gr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCm-oaCXij2d0tqvfJEGlC_wfz0ZbbIjag"
@@ -21,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "502667330549-ih1rs7nuv21gl8530hh7pfb7np2bo0gr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     },
@@ -32,7 +50,20 @@
           "package_name": "com.goride.driver"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "502667330549-0c7mkvfnfed67na4lcki6io8e93r95or.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.goride.driver",
+            "certificate_hash": "fd140027e6e78bf4e7436d045048709644f5f7a6"
+          }
+        },
+        {
+          "client_id": "502667330549-ih1rs7nuv21gl8530hh7pfb7np2bo0gr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCm-oaCXij2d0tqvfJEGlC_wfz0ZbbIjag"
@@ -40,7 +71,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "502667330549-ih1rs7nuv21gl8530hh7pfb7np2bo0gr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

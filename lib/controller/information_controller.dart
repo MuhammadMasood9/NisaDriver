@@ -16,7 +16,6 @@ import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/auth_screen/information_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
-import 'package:driver/ui/subscription_plan_screen/subscription_list_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/notification_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,8 +36,8 @@ class InformationController extends GetxController {
   Rx<TextEditingController> phoneNumberController = TextEditingController().obs;
   RxString countryCode = "+1".obs;
   RxString loginType = Constant.emailLoginType.obs;
-  // Driver User Model
   Rx<DriverUserModel> userModel = DriverUserModel().obs;
+  RxString userImage = "".obs;
 
   // Service Selection
   RxList<ServiceModel> serviceList = <ServiceModel>[].obs;
@@ -114,6 +113,17 @@ class InformationController extends GetxController {
     super.onInit();
   }
 
+  Future<void> pickUserImage({required ImageSource source}) async {
+    try {
+      XFile? image = await _imagePicker.pickImage(source: source);
+      if (image != null) {
+        userImage.value = image.path;
+      }
+    } catch (e) {
+      ShowToastDialog.showToast("Failed to pick image: $e".tr);
+    }
+  }
+
   Future<void> getInitialData() async {
     isLoading.value = true;
     serviceList.value = await FireStoreUtils.getService();
@@ -145,22 +155,21 @@ class InformationController extends GetxController {
     }
 
     currentDocument.value = documentModel;
-    currentDocuments.value = documents;
-    documentNumberController.value.text = documents.documentNumber ?? '';
-    // Only set images if they are empty to preserve locally selected images
-    if (frontImage.value.isEmpty) frontImage.value = documents.frontImage ?? '';
-    if (backImage.value.isEmpty) backImage.value = documents.backImage ?? '';
-    if (documents.expireAt != null) {
-      selectedDocumentDate.value = documents.expireAt!.toDate();
+    // Load existing document from registrationDocuments if available
+    currentDocuments.value =
+        registrationDocuments[documentModel.id!] ?? documents;
+    documentNumberController.value.text =
+        currentDocuments.value.documentNumber ?? '';
+    frontImage.value = currentDocuments.value.frontImage ?? '';
+    backImage.value = currentDocuments.value.backImage ?? '';
+    if (currentDocuments.value.expireAt != null) {
+      selectedDocumentDate.value = currentDocuments.value.expireAt!.toDate();
       expireAtController.value.text =
           DateFormat("dd-MM-yyyy").format(selectedDocumentDate.value!);
     } else {
       selectedDocumentDate.value = null;
       expireAtController.value.text = '';
     }
-
-    // Update registrationDocuments with current data
-    registrationDocuments[documentModel.id!] = currentDocuments.value;
 
     showModalBottomSheet(
       context: context,
@@ -197,19 +206,21 @@ class InformationController extends GetxController {
                   style: AppTypography.appBar(context),
                 ),
                 const SizedBox(height: 24),
-                _buildProgressIndicator(context, documentModel, documents),
+                _buildProgressIndicator(
+                    context, documentModel, currentDocuments.value),
                 const SizedBox(height: 24),
                 _buildDocumentNumberSection(context),
                 if (currentDocument.value.expireAt == true)
                   _buildExpiryDateSection(context),
                 if (currentDocument.value.frontSide == true)
-                  _buildImageUploadSection(context, "Front Side",
-                      frontImage.value, "front", Icons.credit_card),
+                  Obx(() => _buildImageUploadSection(context, "Front Side",
+                      frontImage.value, "front", Icons.credit_card)),
                 if (currentDocument.value.backSide == true)
-                  _buildImageUploadSection(context, "Back Side",
-                      backImage.value, "back", Icons.flip_to_back),
+                  Obx(() => _buildImageUploadSection(context, "Back Side",
+                      backImage.value, "back", Icons.flip_to_back)),
                 const SizedBox(height: 32),
-                if (!(documents.verified ?? false)) _buildActionButton(context),
+                if (!(currentDocuments.value.verified ?? false))
+                  _buildActionButton(context),
                 const SizedBox(height: 20),
               ],
             ),
@@ -699,6 +710,15 @@ class InformationController extends GetxController {
       if (currentDocument.value.id != null) {
         registrationDocuments[currentDocument.value.id!] =
             currentDocuments.value;
+        // Update driverDocumentList to reflect the change
+        final index = driverDocumentList
+            .indexWhere((doc) => doc.documentId == currentDocument.value.id);
+        if (index != -1) {
+          driverDocumentList[index] = currentDocuments.value;
+        } else {
+          driverDocumentList.add(currentDocuments.value);
+        }
+        driverDocumentList.refresh();
       }
     } catch (e) {
       ShowToastDialog.showToast("Failed to Pick: $e".tr);
@@ -720,20 +740,68 @@ class InformationController extends GetxController {
     }
 
     if (currentDocument.value.id != null) {
-      registrationDocuments[currentDocument.value.id!] = currentDocuments.value;
-      driverDocumentList.add(currentDocuments.value);
+      registrationDocuments[currentDocument.value.id!] =
+          Documents.fromJson(currentDocuments.value.toJson());
+      // Update or add to driverDocumentList
+      final index = driverDocumentList
+          .indexWhere((doc) => doc.documentId == currentDocument.value.id);
+      if (index != -1) {
+        driverDocumentList[index] =
+            Documents.fromJson(currentDocuments.value.toJson());
+      } else {
+        driverDocumentList
+            .add(Documents.fromJson(currentDocuments.value.toJson()));
+      }
+      driverDocumentList.refresh();
     }
+
     ShowToastDialog.closeLoader();
     ShowToastDialog.showToast("Document saved locally".tr);
-    frontImage.value = '';
-    backImage.value = '';
-    documentNumberController.value.clear();
-    expireAtController.value.clear();
-    selectedDocumentDate.value = null;
     Get.back();
   }
 
   Future<bool> uploadDocuments(String driverId) async {
+    for (var doc in registrationDocuments.values) {
+      if (doc.documentId == null) continue;
+
+      String frontImageFileName = doc.frontImage?.isNotEmpty ?? false
+          ? File(doc.frontImage!).path.split('/').last
+          : '';
+      String backImageFileName = doc.backImage?.isNotEmpty ?? false
+          ? File(doc.backImage!).path.split('/').last
+          : '';
+
+      if (doc.frontImage?.isNotEmpty ??
+          false && !Constant().hasValidUrl(doc.frontImage!)) {
+        doc.frontImage = await Constant.uploadUserImageToFireStorage(
+            File(doc.frontImage!),
+            "driverDocument/$driverId",
+            frontImageFileName);
+      }
+
+      if (doc.backImage?.isNotEmpty ??
+          false && !Constant().hasValidUrl(doc.backImage!)) {
+        doc.backImage = await Constant.uploadUserImageToFireStorage(
+            File(doc.backImage!),
+            "driverDocument/$driverId",
+            backImageFileName);
+      }
+
+      bool success = await FireStoreUtils.uploadDriverDocument(doc);
+      if (!success) return false;
+    }
+    return true;
+  }
+
+  Future<bool> uploadUserDocuments(String driverId) async {
+    if (userImage.value.isNotEmpty &&
+        !Constant().hasValidUrl(userImage.value)) {
+      String fileName = userImage.value.split('/').last;
+      userImage.value = await Constant.uploadUserImageToFireStorage(
+          File(userImage.value), "driverProfile/$driverId", fileName);
+      userModel.value.profilePic = userImage.value;
+    }
+
     for (var doc in registrationDocuments.values) {
       if (doc.documentId == null) continue;
 
@@ -802,6 +870,10 @@ class InformationController extends GetxController {
           ShowToastDialog.showToast("Please enter phone number".tr);
           return;
         }
+        if (userImage.value.isEmpty) {
+          ShowToastDialog.showToast("Please upload your profile image".tr);
+          return;
+        }
         currentStep.value++;
         break;
       case 2:
@@ -832,7 +904,6 @@ class InformationController extends GetxController {
         currentStep.value++;
         break;
       case 3:
-        // Validate all required documents
         bool allRequiredUploaded = true;
         for (var doc in documentList) {
           if (doc.enable == true && doc.id != null) {
@@ -868,6 +939,7 @@ class InformationController extends GetxController {
             ..email = emailController.value.text
             ..password = passwordController.value.text
             ..countryCode = countryCode.value
+            ..profilePic = userImage.value
             ..phoneNumber = phoneNumberController.value.text
             ..documentVerification = false
             ..isOnline = false
@@ -887,7 +959,6 @@ class InformationController extends GetxController {
           final token = await NotificationService.getToken();
           userModel.value.fcmToken = token;
 
-          // Upload documents to Firestore
           bool documentsUploaded = await uploadDocuments(driverId);
           if (!documentsUploaded) {
             ShowToastDialog.closeLoader();
@@ -908,7 +979,7 @@ class InformationController extends GetxController {
                   !Constant.isSubscriptionModelApplied) {
                 Get.offAll(() => const DashBoardScreen());
               } else {
-                Get.offAll(() => const SubscriptionListScreen(),
+                Get.offAll(() => const DashBoardScreen(),
                     arguments: {"isShow": true});
               }
             } else {

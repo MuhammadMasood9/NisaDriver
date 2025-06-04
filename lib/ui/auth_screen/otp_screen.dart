@@ -9,7 +9,6 @@ import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/auth_screen/information_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
-import 'package:driver/ui/subscription_plan_screen/subscription_list_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -75,7 +74,6 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-
     return GetX<OtpController>(
         init: OtpController(),
         builder: (controller) {
@@ -223,7 +221,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                     inactiveColor: Colors.grey[300]!,
                                     activeFillColor: Colors.white,
                                     inactiveFillColor: const Color(0xFFF8F9FA),
-                                    selectedFillColor:  Colors.white,
+                                    selectedFillColor: Colors.white,
                                     shape: PinCodeFieldShape.box,
                                     borderRadius: BorderRadius.circular(16),
                                   ),
@@ -397,7 +395,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                                               const DashBoardScreen());
                                                         } else {
                                                           Get.offAll(
-                                                              const SubscriptionListScreen(),
+                                                              const DashBoardScreen(),
                                                               arguments: {
                                                                 "isShow": true
                                                               });
@@ -457,7 +455,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color:  Colors.amber.withOpacity(0.05),
+                                  color: Colors.amber.withOpacity(0.05),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: Colors.amber.withOpacity(0.2),

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:driver/constant/constant.dart';
@@ -15,7 +17,6 @@ import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/text_field_them.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/dashboard_screen.dart';
-import 'package:driver/ui/subscription_plan_screen/subscription_list_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/notification_service.dart';
 import 'package:flutter/material.dart';
@@ -66,7 +67,7 @@ class EnhancedDateSelector extends StatelessWidget {
           children: [
             Text(
               label,
-              style: AppTypography.boldLabel(context),
+              style: AppTypography.boldLabel(Get.context!),
             ),
             if (isRequired)
               Text(
@@ -205,76 +206,253 @@ class InformationScreen extends StatelessWidget {
           backgroundColor: AppColors.background,
           body: controller.isLoading.value
               ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Image.asset(
-                          "assets/images/login_image.png",
-                          width: Responsive.width(100, context),
-                        ),
-                        Text(
-                          controller.currentStep.value == 0
-                              ? "Select Service".tr
-                              : controller.currentStep.value == 1
-                                  ? "Personal Information".tr
-                                  : controller.currentStep.value == 2
-                                      ? "Vehicle Information".tr
-                                      : "Document Verification".tr,
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Text(
-                          controller.currentStep.value == 0
-                              ? "Choose your service type".tr
-                              : controller.currentStep.value == 1
-                                  ? "Enter your personal details".tr
-                                  : controller.currentStep.value == 2
-                                      ? "Provide vehicle details".tr
-                                      : "Upload required documents".tr,
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        _buildStepContent(context, controller),
-                        const SizedBox(height: 20),
-                        Row(
+              : SafeArea(
+                  child: Column(
+                    children: [
+                      _buildTabBar(context, controller),
+                      Expanded(
+                        child: Stack(
                           children: [
-                            if (controller.currentStep.value > 0)
-                              Expanded(
-                                child: ButtonThem.buildButton(
-                                  context,
-                                  title: "Back".tr,
-                                  onPress: () {
-                                    controller.currentStep.value--;
-                                  },
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(28),
+                                  topRight: Radius.circular(28),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, -2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(28),
+                                  topRight: Radius.circular(28),
+                                ),
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      SizedBox(
+                                        height: Responsive.height(1, context),
+                                      ),
+                                      Text(
+                                        controller.currentStep.value == 0
+                                            ? "Select Service".tr
+                                            : controller.currentStep.value == 1
+                                                ? "Personal Information".tr
+                                                : controller.currentStep
+                                                            .value ==
+                                                        2
+                                                    ? "Vehicle Information".tr
+                                                    : "Document Verification"
+                                                        .tr,
+                                        style:
+                                            AppTypography.boldHeaders(context),
+                                      ),
+                                      SizedBox(
+                                        height: Responsive.height(1, context),
+                                      ),
+                                      Text(
+                                        controller.currentStep.value == 0
+                                            ? "Choose your service type".tr
+                                            : controller.currentStep.value == 1
+                                                ? "Enter your personal details"
+                                                    .tr
+                                                : controller.currentStep
+                                                            .value ==
+                                                        2
+                                                    ? "Provide vehicle details"
+                                                        .tr
+                                                    : "Upload required documents"
+                                                        .tr,
+                                        style: AppTypography.caption(context),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _buildStepContent(context, controller),
+                                      const SizedBox(
+                                          height: 80), // Space for buttons
+                                    ],
+                                  ),
                                 ),
                               ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: ButtonThem.buildButton(
-                                context,
-                                title: controller.currentStep.value == 3
-                                    ? "Submit".tr
-                                    : "Next".tr,
-                                onPress: () {
-                                  controller.handleNext(context);
-                                },
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, -2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    if (controller.currentStep.value > 0)
+                                      Expanded(
+                                        child: ButtonThem.buildButton(
+                                          context,
+                                          title: "Back".tr,
+                                          onPress: () {
+                                            controller.currentStep.value--;
+                                          },
+                                        ),
+                                      ),
+                                    if (controller.currentStep.value > 0)
+                                      const SizedBox(width: 10),
+                                    Expanded(
+                                      child: ButtonThem.buildButton(
+                                        context,
+                                        title: controller.currentStep.value == 3
+                                            ? "Submit".tr
+                                            : "Next".tr,
+                                        onPress: () {
+                                          controller.handleNext(context);
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
         );
       },
+    );
+  }
+
+  Widget _buildTabBar(BuildContext context, InformationController controller) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Progress Bar (background layer)
+          Positioned(
+            left: 20,
+            right: 20,
+            top: 30,
+            child: Container(
+              width: double.infinity,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: (controller.currentStep.value + 1) / 4,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Tabs (foreground layer)
+          Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildTabItem(
+                    context,
+                    controller,
+                    controller.currentStep.value >= 0,
+                    Icons.list_alt_rounded,
+                    'Service',
+                    0,
+                  ),
+                  _buildTabItem(
+                    context,
+                    controller,
+                    controller.currentStep.value >= 1,
+                    Icons.person_outline_rounded,
+                    'Personal',
+                    1,
+                  ),
+                  _buildTabItem(
+                    context,
+                    controller,
+                    controller.currentStep.value >= 2,
+                    Icons.directions_car_outlined,
+                    'Vehicle',
+                    2,
+                  ),
+                  _buildTabItem(
+                    context,
+                    controller,
+                    controller.currentStep.value >= 3,
+                    Icons.document_scanner_outlined,
+                    'Documents',
+                    3,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20), // Space to avoid overlap
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabItem(
+    BuildContext context,
+    InformationController controller,
+    bool isActive,
+    IconData icon,
+    String label,
+    int index,
+  ) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => controller.currentStep.value = index,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(50),
+                color: isActive ? AppColors.primary : Colors.grey[50],
+              ),
+              child: Icon(
+                icon,
+                color: isActive ? AppColors.background : Colors.grey[600],
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: AppTypography.smBoldLabel(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -296,76 +474,503 @@ class InformationScreen extends StatelessWidget {
 
   Widget _buildServiceTypeStep(
       BuildContext context, InformationController controller) {
-    return Column(
-      children: controller.serviceList.map((service) {
-        return RadioListTile<String>(
-          value: service.id!,
-          groupValue: controller.selectedServiceId.value,
-          onChanged: (value) {
-            controller.selectedServiceId.value = value!;
-          },
-          title: Text(
-            service.title?.first.title ?? service.id!,
-            style: GoogleFonts.poppins(fontSize: 16),
-          ),
+    // Select the first service by default when the list is loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.serviceList.isNotEmpty &&
+          (controller.selectedServiceId.value == null ||
+              controller.selectedServiceId.value!.isEmpty)) {
+        final firstService = controller.serviceList.firstWhere(
+          (service) => service.enable ?? false,
+          orElse: () => controller.serviceList.first,
         );
-      }).toList(),
-    );
+        if (firstService.id != null) {
+          controller.selectedServiceId.value = firstService.id!;
+        }
+      }
+    });
+
+    return Obx(() => Column(
+          children: controller.serviceList.map((service) {
+            final bool isEnabled = service.enable ?? false;
+            return GestureDetector(
+              onTap: isEnabled
+                  ? () {
+                      controller.selectedServiceId.value = service.id!;
+                    }
+                  : () {
+                      ShowToastDialog.showToast(
+                          "This service is coming soon".tr);
+                    },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: controller.selectedServiceId.value == service.id
+                        ? AppColors.primary
+                        : Colors.grey.shade300,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    if (service.image != null && service.image!.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedNetworkImage(
+                          imageUrl: service.image!,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2)),
+                          errorWidget: (context, url, error) => const Icon(
+                            Icons.error,
+                            color: Colors.red,
+                            size: 30,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.directions_car,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
+                      ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            service.title?.first.title ?? service.id!,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isEnabled
+                                  ? AppColors.darkBackground
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isEnabled)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          "Coming Soon".tr,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      )
+                    else if (controller.selectedServiceId.value == service.id)
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ));
   }
 
   Widget _buildPersonalInfoStep(
       BuildContext context, InformationController controller) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFieldThem.buildTextFiled(
-          context,
-          hintText: 'Full name'.tr,
-          controller: controller.fullNameController.value,
+        // Profile Image Upload Section
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Text(
+              'Profile Image'.tr,
+              style: AppTypography.caption(Get.context!)
+                  .copyWith(color: AppColors.grey500),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => _showImageSourceSelector(context, controller),
+              child: Obx(() => Container(
+                    height: Responsive.height(15, context),
+                    width: Responsive.width(30, context),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border:
+                          Border.all(color: Colors.grey.shade200, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: controller.userImage.value.isEmpty
+                        ? _buildImagePlaceholder(
+                            context, "Tap to upload photo".tr)
+                        : _buildImagePreview(
+                            context, controller.userImage.value),
+                  )),
+            ),
+            if (controller.userImage.value.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  "Profile image is required".tr,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.red[700],
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: 10),
-        TextFieldThem.buildTextFiled(
-          context,
-          hintText: 'Email'.tr,
-          controller: controller.emailController.value,
-        ),
-        const SizedBox(height: 10),
-        TextFieldThem.buildTextFiled(
-          context,
-          hintText: 'Password'.tr,
-          controller: controller.passwordController.value,
-          // obscureText: true,
-        ),
-        const SizedBox(height: 10),
-        TextFormField(
-          validator: (value) =>
-              value != null && value.isNotEmpty ? null : 'Required',
-          keyboardType: TextInputType.number,
-          controller: controller.phoneNumberController.value,
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: AppColors.textField,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            prefixIcon: CountryCodePicker(
-              onChanged: (value) {
-                controller.countryCode.value = value.dialCode.toString();
-              },
-              dialogBackgroundColor: AppColors.background,
-              initialSelection: controller.countryCode.value,
-              comparator: (a, b) => b.name!.compareTo(a.name.toString()),
-              flagDecoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(2)),
+        const SizedBox(height: 16),
+        _buildTextField(
+            controller: controller.fullNameController.value,
+            label: 'Full Name'.tr,
+            icon: Icons.person_outline,
+            caption: "Enter Your Name"),
+        const SizedBox(height: 16),
+        _buildTextField(
+            controller: controller.emailController.value,
+            label: 'Email'.tr,
+            icon: Icons.email_outlined,
+            caption: "Enter Your Email"),
+        const SizedBox(height: 16),
+        _buildTextField(
+            controller: controller.passwordController.value,
+            label: 'Password'.tr,
+            icon: Icons.lock_outline,
+            obscureText: true,
+            caption: "Enter Your Password"),
+        const SizedBox(height: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Phone Number'.tr,
+              style: AppTypography.caption(Get.context!)
+                  .copyWith(color: AppColors.grey500),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.textField,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withOpacity(0.1)),
+              ),
+              child: TextFormField(
+                validator: (value) =>
+                    value != null && value.isNotEmpty ? null : 'Required',
+                keyboardType: TextInputType.number,
+                controller: controller.phoneNumberController.value,
+                style: GoogleFonts.poppins(fontSize: 14),
+                decoration: InputDecoration(
+                  isDense: true,
+                  prefixIcon: CountryCodePicker(
+                    onChanged: (value) {
+                      controller.countryCode.value = value.dialCode.toString();
+                    },
+                    dialogBackgroundColor: AppColors.background,
+                    initialSelection: controller.countryCode.value,
+                    comparator: (a, b) => b.name!.compareTo(a.name.toString()),
+                    flagDecoration: const BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(2)),
+                    ),
+                  ),
+                  border: InputBorder.none,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
               ),
             ),
-            border: OutlineInputBorder(
-              borderRadius: const BorderRadius.all(Radius.circular(4)),
-              borderSide:
-                  BorderSide(color: AppColors.textFieldBorder, width: 1),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImagePreview(BuildContext context, String imagePath) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            height: Responsive.height(15, context),
+            width: Responsive.width(30, context),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.grey[200]!, Colors.grey[300]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-            hintText: "Phone number".tr,
+            child: Constant().hasValidUrl(imagePath)
+                ? CachedNetworkImage(
+                    imageUrl: imagePath,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) =>
+                        Center(child: Constant.loader(context)),
+                    errorWidget: (context, url, error) =>
+                        Icon(Icons.error, color: Colors.red[300]),
+                  )
+                : Image.file(
+                    File(imagePath),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Icon(Icons.error, color: Colors.red[300]),
+                  ),
+          ),
+        ),
+        Positioned(
+          bottom: 8,
+          right: 8,
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.edit, color: Colors.white, size: 14),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildImagePlaceholder(BuildContext context, String text) {
+    return DottedBorder(
+      borderType: BorderType.RRect,
+      radius: const Radius.circular(8),
+      dashPattern: const [6, 4],
+      color: AppColors.primary.withOpacity(0.08),
+      strokeWidth: 1.5,
+      child: Container(
+        height: Responsive.height(15, context),
+        width: Responsive.width(30, context),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          gradient: LinearGradient(
+            colors: [Colors.grey[50]!, Colors.grey[100]!],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.darkBackground.withOpacity(0.07),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.cloud_upload_outlined,
+                  size: 25, color: AppColors.darkBackground),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              text,
+              style: AppTypography.boldLabel(context).copyWith(
+                color: AppColors.primary.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImageSourceSelector(
+      BuildContext context, InformationController controller) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                "Choose Photo Source".tr,
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Select how you want to add your profile photo".tr,
+                style:
+                    GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        controller.pickUserImage(source: ImageSource.camera);
+                        Navigator.pop(context);
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                          border: Border.all(
+                              color: AppColors.primary.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt,
+                                  color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Camera".tr,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        controller.pickUserImage(source: ImageSource.gallery);
+                        Navigator.pop(context);
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                          border: Border.all(
+                              color: AppColors.darkBackground.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.darkBackground,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.photo_library,
+                                  color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Gallery".tr,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.darkBackground,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -374,10 +979,10 @@ class InformationScreen extends StatelessWidget {
     return Column(
       children: [
         _buildTextField(
-          controller: controller.vehicleNumberController.value,
-          label: 'Vehicle Number'.tr,
-          icon: Icons.confirmation_number_outlined,
-        ),
+            controller: controller.vehicleNumberController.value,
+            label: 'Vehicle Number'.tr,
+            icon: Icons.confirmation_number_outlined,
+            caption: "Enter Your Vehicle Number"),
         const SizedBox(height: 16),
         _buildTextField(
           controller: controller.registrationDateController.value,
@@ -396,42 +1001,42 @@ class InformationScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Obx(() => _buildTextField(
-              controller: TextEditingController(
-                text: controller.selectedVehicle.value.id == null
-                    ? ''
-                    : Constant.localizationName(
-                        controller.selectedVehicle.value.name),
-              ),
-              label: 'Vehicle Type'.tr,
-              icon: Icons.directions_car_outlined,
-              enabled: false,
-              onTap: () => _showVehicleTypeSelector(context, controller),
-            )),
+            controller: TextEditingController(
+              text: controller.selectedVehicle.value.id == null
+                  ? ''
+                  : Constant.localizationName(
+                      controller.selectedVehicle.value.name),
+            ),
+            label: 'Vehicle Type'.tr,
+            icon: Icons.directions_car_outlined,
+            enabled: false,
+            onTap: () => _showVehicleTypeSelector(context, controller),
+            caption: "Enter Your Vehicle Type")),
         const SizedBox(height: 16),
         Obx(() => _buildTextField(
-              controller:
-                  TextEditingController(text: controller.selectedColor.value),
-              label: 'Vehicle Color'.tr,
-              icon: Icons.palette_outlined,
-              enabled: false,
-              onTap: () => _showColorSelector(context, controller),
-            )),
+            controller:
+                TextEditingController(text: controller.selectedColor.value),
+            label: 'Vehicle Color'.tr,
+            icon: Icons.palette_outlined,
+            enabled: false,
+            onTap: () => _showColorSelector(context, controller),
+            caption: "Enter Your Vehicle Color")),
         const SizedBox(height: 16),
         Obx(() => _buildTextField(
-              controller: controller.seatsController.value,
-              label: 'Number of Seats'.tr,
-              icon: Icons.event_seat_outlined,
-              enabled: false,
-              onTap: () => _showSeatsSelector(context, controller),
-            )),
+            controller: controller.seatsController.value,
+            label: 'Number of Seats'.tr,
+            icon: Icons.event_seat_outlined,
+            enabled: false,
+            onTap: () => _showSeatsSelector(context, controller),
+            caption: "Enter No Of Seats")),
         const SizedBox(height: 16),
         Obx(() => _buildTextField(
-              controller: controller.zoneNameController.value,
-              label: 'Service Zone'.tr,
-              icon: Icons.location_on_outlined,
-              enabled: false,
-              onTap: () => _showZoneSelector(context, controller),
-            )),
+            controller: controller.zoneNameController.value,
+            label: 'Service Zone'.tr,
+            icon: Icons.location_on_outlined,
+            enabled: false,
+            onTap: () => _showZoneSelector(context, controller),
+            caption: "Select Your Zone")),
       ],
     );
   }
@@ -441,40 +1046,8 @@ class InformationScreen extends StatelessWidget {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.only(bottom: 10, top: 10),
-          child: Column(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Icon(
-                  Icons.document_scanner,
-                  color: AppColors.primary,
-                  size: 30,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 46),
-                child: Text(
-                  "Complete your registration by uploading required documents"
-                      .tr,
-                  style: AppTypography.boldHeaders(context).copyWith(
-                    color: AppColors.darkBackground.withOpacity(0.8),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          height: MediaQuery.of(context).size.height * 0.4,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+          height: MediaQuery.of(context).size.height * 0.6,
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
           child: Obx(() => ListView.builder(
                 itemCount: controller.documentList.length,
                 physics: const BouncingScrollPhysics(),
@@ -501,7 +1074,7 @@ class InformationScreen extends StatelessWidget {
                           controller.showDocumentUploadScreen(
                               context, documentModel, documents);
                         },
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(6),
                         child: Container(
                           padding: const EdgeInsets.all(15),
                           decoration: BoxDecoration(
@@ -646,6 +1219,7 @@ class InformationScreen extends StatelessWidget {
     bool enabled = true,
     VoidCallback? onTap,
     bool obscureText = false,
+    String? caption,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -654,8 +1228,8 @@ class InformationScreen extends StatelessWidget {
         children: [
           Text(
             label,
-            style:
-                GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade600),
+            style: AppTypography.caption(Get.context!)
+                .copyWith(color: AppColors.grey500),
           ),
           const SizedBox(height: 8),
           Container(
@@ -670,6 +1244,9 @@ class InformationScreen extends StatelessWidget {
               obscureText: obscureText,
               style: GoogleFonts.poppins(fontSize: 14),
               decoration: InputDecoration(
+                hintText: caption,
+                hintStyle: AppTypography.input(Get.context!)
+                    .copyWith(color: AppColors.grey500),
                 prefixIcon: Icon(icon, color: Colors.black54, size: 20),
                 border: InputBorder.none,
                 contentPadding:

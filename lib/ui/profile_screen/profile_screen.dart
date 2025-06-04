@@ -10,6 +10,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -64,7 +65,26 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(75),
-                  child: _buildProfileImage(context, controller),
+                  child: Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      _buildProfileImage(context, controller),
+                      if (controller.driverModel.value.profileVerify == true)
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.verified,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               GestureDetector(
@@ -160,9 +180,11 @@ class ProfileScreen extends StatelessWidget {
                       hint: "Enter your email".tr,
                       controller: controller.emailController.value,
                       icon: Icons.email,
-                      // enabled: false,
                     ),
                     _buildModernPhoneField(context, controller),
+                    Obx(() => !controller.driverModel.value.profileVerify!
+                        ? _buildModernOtpSection(context, controller)
+                        : const SizedBox.shrink()),
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -282,19 +304,10 @@ class ProfileScreen extends StatelessWidget {
               border: Border.all(color: Colors.grey.shade200, width: 1.0),
               color: Colors.grey.shade100,
             ),
-            child: TextField(
-              controller: controller.phoneNumberController.value,
-              enabled: true, // Enable for interaction
-              style: AppTypography.input(context).copyWith(
-                color: AppColors.darkBackground.withOpacity(0.7),
-              ),
-              decoration: InputDecoration(
-                hintText: "Enter phone number".tr,
-                hintStyle: AppTypography.input(context).copyWith(
-                  color: AppColors.darkBackground.withOpacity(0.6),
-                ),
-                prefixIcon: Container(
-                  width: 80, // Increased width for better rendering
+            child: Row(
+              children: [
+                Container(
+                  width: 80,
                   padding: const EdgeInsets.only(left: 0),
                   child: CountryCodePicker(
                     onChanged: (value) {
@@ -303,7 +316,7 @@ class ProfileScreen extends StatelessWidget {
                     dialogBackgroundColor:
                         Theme.of(context).colorScheme.background,
                     initialSelection: controller.countryCode.value.isEmpty
-                        ? "+1" // Fallback to a default code
+                        ? "+1"
                         : controller.countryCode.value,
                     comparator: (a, b) => b.name!.compareTo(a.name.toString()),
                     flagDecoration: const BoxDecoration(
@@ -311,7 +324,6 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     textStyle: AppTypography.boldLabel(context).copyWith(
                       color: AppColors.darkBackground.withOpacity(0.7),
-                      // fontSize: 14,
                     ),
                     searchDecoration: InputDecoration(
                       hintText: "Search country".tr,
@@ -326,9 +338,96 @@ class ProfileScreen extends StatelessWidget {
                     padding: EdgeInsets.zero,
                   ),
                 ),
+                Expanded(
+                  child: TextField(
+                    controller: controller.phoneNumberController.value,
+                    enabled: false, // Disabled after modal input
+                    style: AppTypography.input(context).copyWith(
+                      color: AppColors.darkBackground.withOpacity(0.7),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: "Enter phone number".tr,
+                      hintStyle: AppTypography.input(context).copyWith(
+                        color: AppColors.darkBackground.withOpacity(0.6),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                    ),
+                  ),
+                ),
+                if (!controller.driverModel.value.profileVerify!)
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: AppColors.primary),
+                    onPressed: () => _showPhoneModal(context, controller),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernOtpSection(
+      BuildContext context, ProfileController controller) {
+    return Obx(() => controller.isOtpSent.value
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              _buildModernOtpField(context, controller),
+            ],
+          )
+        : const SizedBox.shrink());
+  }
+
+  Widget _buildModernOtpField(
+      BuildContext context, ProfileController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Enter OTP".tr,
+            style: AppTypography.boldLabel(context)
+                .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade200, width: 1.5),
+              color: AppColors.background,
+            ),
+            child: TextField(
+              controller: controller.otpController.value,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              style: AppTypography.label(context)
+                  .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
+              decoration: InputDecoration(
+                hintText: "Enter 6-digit OTP".tr,
+                hintStyle: AppTypography.label(context)
+                    .copyWith(color: AppColors.darkBackground.withOpacity(0.7)),
                 border: InputBorder.none,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: controller.verifyOtp,
+            child: Text(
+              "Verify OTP".tr,
+              style: AppTypography.boldLabel(context).copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -385,6 +484,9 @@ class ProfileScreen extends StatelessWidget {
               driverUserModel.fullName =
                   controller.fullNameController.value.text;
               driverUserModel.profilePic = controller.profileImage.value;
+              driverUserModel.phoneNumber =
+                  controller.phoneNumberController.value.text;
+              driverUserModel.countryCode = controller.countryCode.value;
 
               await FireStoreUtils.updateDriverUser(driverUserModel)
                   .then((value) {
@@ -552,6 +654,181 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showPhoneModal(BuildContext context, ProfileController controller) {
+    TextEditingController phoneController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.darkBackground.withOpacity(0.1),
+              blurRadius: 10,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              height: 4,
+              width: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              "Enter Phone Number".tr,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkBackground.withOpacity(0.8),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 45,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200, width: 1.0),
+                color: Colors.grey.shade100,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 80,
+                    padding: const EdgeInsets.only(left: 0),
+                    child: CountryCodePicker(
+                      onChanged: (value) {
+                        controller.countryCode.value = value.dialCode.toString();
+                      },
+                      dialogBackgroundColor:
+                          Theme.of(context).colorScheme.background,
+                      initialSelection: controller.countryCode.value.isEmpty
+                          ? "+1"
+                          : controller.countryCode.value,
+                      comparator: (a, b) => b.name!.compareTo(a.name.toString()),
+                      flagDecoration: const BoxDecoration(
+                        borderRadius: BorderRadius.all(Radius.circular(2)),
+                      ),
+                      textStyle: AppTypography.boldLabel(context).copyWith(
+                        color: AppColors.darkBackground.withOpacity(0.7),
+                      ),
+                      searchDecoration: InputDecoration(
+                        hintText: "Search country".tr,
+                        hintStyle: AppTypography.input(context).copyWith(
+                          color: AppColors.darkBackground.withOpacity(0.7),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      style: AppTypography.input(context).copyWith(
+                        color: AppColors.darkBackground.withOpacity(0.7),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: "Enter phone number".tr,
+                        hintStyle: AppTypography.input(context).copyWith(
+                          color: AppColors.darkBackground.withOpacity(0.6),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildModernUpdateButtonModal(context, controller, phoneController),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernUpdateButtonModal(
+      BuildContext context, ProfileController controller, TextEditingController phoneController) {
+    return Container(
+      width: double.infinity,
+      height: 40,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.darkBackground,
+            AppColors.darkBackground.withOpacity(0.8),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.darkBackground.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            if (phoneController.text.isEmpty) {
+              ShowToastDialog.showToast("Please enter phone number".tr);
+            } else {
+              controller.phoneNumberController.value.text = phoneController.text;
+              controller.countryCode.value = controller.countryCode.value.isEmpty
+                  ? "+1"
+                  : controller.countryCode.value;
+              Navigator.pop(context);
+              controller.sendOtp();
+            }
+          },
+          child: Container(
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 15,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "Send OTP".tr,
+                  style: AppTypography.button(context)
+                      .copyWith(color: AppColors.background),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

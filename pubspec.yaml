@@ -92,6 +92,7 @@ dependencies:
   sensors_plus: ^6.1.1
   scroll_date_picker: ^3.8.0
   flutter_launcher_icons: ^0.14.3
+  firebase_app_check: ^0.3.2+6
 
 dependency_overrides:
   webview_flutter: ^4.8.0

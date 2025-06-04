@@ -26,7 +26,7 @@ class ButtonThem {
         width: Responsive.width(100, context) * btnWidthRatio,
         child: MaterialButton(
           onPressed: onPress,
-          height: 35,
+          height: 40,
           elevation: 0.5,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(btnRadius),
@@ -59,7 +59,7 @@ class ButtonThem {
       visible: isVisible,
       child: Container(
         width: Responsive.width(100, context) * btnWidthRatio,
-        height: 35,
+        height: 40,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
           boxShadow: [

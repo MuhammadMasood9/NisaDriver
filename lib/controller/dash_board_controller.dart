@@ -8,8 +8,6 @@ import 'package:driver/ui/intercity_screen/home_intercity_screen.dart';
 import 'package:driver/ui/online_registration/online_registartion_screen.dart';
 import 'package:driver/ui/profile_screen/profile_screen.dart';
 import 'package:driver/ui/settings_screen/setting_screen.dart';
-import 'package:driver/ui/subscription_plan_screen/subscription_history.dart';
-import 'package:driver/ui/subscription_plan_screen/subscription_list_screen.dart';
 import 'package:driver/ui/vehicle_information/vehicle_information_screen.dart';
 // import 'package:driver/ui/vehicle_information/vehicle_information_screen.dart';
 import 'package:driver/ui/wallet/wallet_screen.dart';
@@ -43,10 +41,7 @@ class DashBoardController extends GetxController {
         return const VehicleInformationScreen();
       case 8:
         return const SettingScreen();
-      case 9:
-        return const SubscriptionListScreen();
-      case 10:
-        return const SubscriptionHistory();
+     
       default:
         return const Text("Error");
     }

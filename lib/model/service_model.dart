@@ -11,7 +11,15 @@ class ServiceModel {
   String? kmCharge;
   AdminCommission? adminCommission;
 
-  ServiceModel({this.image, this.enable, this.intercityType, this.offerRate, this.id, this.title, this.kmCharge, this.adminCommission});
+  ServiceModel(
+      {this.image,
+      this.enable,
+      this.intercityType,
+      this.offerRate,
+      this.id,
+      this.title,
+      this.kmCharge,
+      this.adminCommission});
 
   ServiceModel.fromJson(Map<String, dynamic> json) {
     image = json['image'];
@@ -20,8 +28,9 @@ class ServiceModel {
     id = json['id'];
     kmCharge = json['kmCharge'];
     intercityType = json['intercityType'];
-    adminCommission =
-    json['adminCommission'] != null ? AdminCommission.fromJson(json['adminCommission']) : AdminCommission(isEnabled: true, amount: "", type: "");
+    adminCommission = json['adminCommission'] != null
+        ? AdminCommission.fromJson(json['adminCommission'])
+        : AdminCommission(isEnabled: true, amount: "", type: "");
     if (json['title'] != null) {
       title = <LanguageTitle>[];
       json['title'].forEach((v) {
