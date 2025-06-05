@@ -318,6 +318,8 @@ class FireStoreUtils {
 
     await fireStore.collection(CollectionName.driverUsers).doc(uid).get().then(
       (value) {
+        log("message :${value.exists}");
+        log("message :${value.id}");
         if (value.exists) {
           isExit = true;
         } else {

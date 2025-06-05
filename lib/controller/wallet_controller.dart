@@ -51,14 +51,12 @@ class WalletController extends GetxController {
   @override
   void onInit() {
     getPaymentData();
-    // Set default filter to last 30 days
     startDate.value = DateTime.now().subtract(const Duration(days: 30));
     endDate.value = DateTime.now();
     _applyDateFilter();
     super.onInit();
   }
 
-  // Add these filter methods
   void setStartDate(DateTime date) {
     startDate.value = date;
     _applyDateFilter();
@@ -73,13 +71,10 @@ class WalletController extends GetxController {
     if (startDate.value != null && endDate.value != null) {
       filterTransactionsByDate(startDate.value!, endDate.value!);
     } else if (startDate.value != null) {
-      // Filter from start date to now
       filterTransactionsByDate(startDate.value!, DateTime.now());
     } else if (endDate.value != null) {
-      // Filter from beginning to end date
       filterTransactionsByDate(DateTime(2000), endDate.value!);
     } else {
-      // No filter applied
       filteredTransactionList.value = transactionList.toList();
     }
   }
@@ -95,17 +90,12 @@ class WalletController extends GetxController {
   }
 
   void filterTransactionsByDate(DateTime start, DateTime end) {
-    // Normalize start and end dates to include full days
     final startOfDay = DateTime(start.year, start.month, start.day);
     final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
-
     selectedDateRange.value = DateTimeRange(start: startOfDay, end: endOfDay);
-
     filteredTransactionList.value = transactionList.where((transaction) {
       if (transaction.createdDate == null) return false;
-
       final date = transaction.createdDate!.toDate();
-      // Ensure date is within the start and end range (inclusive)
       return date
               .isAfter(startOfDay.subtract(const Duration(milliseconds: 1))) &&
           date.isBefore(endOfDay.add(const Duration(milliseconds: 1)));
@@ -120,22 +110,31 @@ class WalletController extends GetxController {
   }
 
   getPaymentData() async {
-    await getTraction();
-    await getUser();
-    await FireStoreUtils().getPayment().then((value) {
-      if (value != null) {
-        paymentModel.value = value;
-        Stripe.publishableKey =
-            paymentModel.value.strip!.clientpublishableKey.toString();
-        Stripe.merchantIdentifier = 'NisaRide';
-        Stripe.instance.applySettings();
-        setRef();
-      }
-    });
-    filteredTransactionList.value =
-        transactionList.toList(); // Initialize filtered list
-    isLoading.value = false;
-    update();
+    try {
+      await getTraction();
+      await getUser();
+      await FireStoreUtils().getPayment().then((value) {
+        if (value != null) {
+          paymentModel.value = value;
+          Stripe.publishableKey =
+              'pk_test_51RImPWI8apCRipzsMYqVYuBObJHGJLo4fqZ1lPNCGK9O4IT8ygIvB49q1EayIkel7hl2OP4EyhxLh1BQpoKBKUQB00UUjIn0mC';
+          Stripe.merchantIdentifier = 'NisaRide';
+          Stripe.instance.applySettings();
+          log('Stripe initialized with publishable key: ${Stripe.publishableKey}');
+          setRef();
+        } else {
+          log('Failed to load payment model');
+          ShowToastDialog.showToast("Payment configuration failed to load.");
+        }
+      });
+      filteredTransactionList.value = transactionList.toList();
+    } catch (e) {
+      log('Error in getPaymentData: $e');
+      ShowToastDialog.showToast("Failed to initialize payment configuration.");
+    } finally {
+      isLoading.value = false;
+      update();
+    }
   }
 
   getUser() async {
@@ -146,7 +145,6 @@ class WalletController extends GetxController {
           driverUserModel.value = value;
         }
       });
-
       await FireStoreUtils.getBankDetails().then((value) {
         if (value != null) {
           bankDetailsModel.value = value;
@@ -173,7 +171,6 @@ class WalletController extends GetxController {
         userId: FireStoreUtils.getCurrentUid(),
         userType: "driver",
         note: "Wallet Topup");
-
     await FireStoreUtils.setWalletTransaction(transactionModel)
         .then((value) async {
       if (value == true) {
@@ -185,95 +182,103 @@ class WalletController extends GetxController {
         });
       }
     });
-
     ShowToastDialog.showToast("Amount added in your wallet.");
   }
 
-  // Strip
   Future<void> stripeMakePayment({required String amount}) async {
-    log(double.parse(amount).toStringAsFixed(0));
+    // if (Stripe.publishableKey.isEmpty) {
+    //   ShowToastDialog.showToast("Payment configuration was not initialized.");
+    //   log('Stripe publishable key is empty');
+    //   return;
+    // }
     try {
+      log('Attempting Stripe payment for amount: ${double.parse(amount).toStringAsFixed(0)}');
       Map<String, dynamic>? paymentIntentData =
           await createStripeIntent(amount: amount);
-      if (paymentIntentData!.containsKey("error")) {
-        // Get.back();
+      if (paymentIntentData == null || paymentIntentData.containsKey('error')) {
         ShowToastDialog.showToast(
-            "Something went wrong, please contact admin.");
-      } else {
-        await Stripe.instance.initPaymentSheet(
-            paymentSheetParameters: SetupPaymentSheetParameters(
-                paymentIntentClientSecret: paymentIntentData['client_secret'],
-                allowsDelayedPaymentMethods: false,
-                googlePay: const PaymentSheetGooglePay(
-                  merchantCountryCode: 'US',
-                  testEnv: true,
-                  currencyCode: "USD",
-                ),
-                style: ThemeMode.system,
-                appearance: const PaymentSheetAppearance(
-                  colors: PaymentSheetAppearanceColors(
-                    primary: AppColors.primary,
-                  ),
-                ),
-                merchantDisplayName: 'NisaRide'));
-        displayStripePaymentSheet(amount: amount);
+            "Failed to create payment intent. Please contact admin.");
+        return;
       }
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: paymentIntentData['client_secret'],
+          allowsDelayedPaymentMethods: false,
+          googlePay: const PaymentSheetGooglePay(
+            merchantCountryCode: 'US',
+            testEnv: true,
+            currencyCode: 'USD',
+          ),
+          style: ThemeMode.system,
+          appearance: const PaymentSheetAppearance(
+            colors: PaymentSheetAppearanceColors(
+              primary: AppColors.primary,
+            ),
+          ),
+          merchantDisplayName: 'NisaRide',
+        ),
+      );
+      await displayStripePaymentSheet(amount: amount);
     } catch (e, s) {
-      log("$e \n$s");
-      ShowToastDialog.showToast("exception:$e \n$s");
+      log('Stripe payment error: $e\n$s');
+      ShowToastDialog.showToast('Payment error: $e');
+    } finally {
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
     }
   }
 
-  displayStripePaymentSheet({required String amount}) async {
+  Future<void> displayStripePaymentSheet({required String amount}) async {
     try {
-      await Stripe.instance.presentPaymentSheet().then((value) {
-        // Get.back();
-        ShowToastDialog.showToast("Payment successfully");
-        walletTopUp();
-      });
+      await Stripe.instance.presentPaymentSheet();
+      ShowToastDialog.showToast('Payment successful');
+      await walletTopUp();
     } on StripeException catch (e) {
-      var lo1 = jsonEncode(e);
-      var lo2 = jsonDecode(lo1);
-      StripePayFailedModel lom = StripePayFailedModel.fromJson(lo2);
-      ShowToastDialog.showToast(lom.error.message);
+      final error = StripePayFailedModel.fromJson(jsonDecode(jsonEncode(e)));
+      ShowToastDialog.showToast(error.error.message ?? 'Payment failed');
     } catch (e) {
-      ShowToastDialog.showToast(e.toString());
+      ShowToastDialog.showToast('Unexpected error: $e');
+    } finally {
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
     }
   }
 
-  createStripeIntent({required String amount}) async {
+  Future<Map<String, dynamic>?> createStripeIntent(
+      {required String amount}) async {
     try {
       Map<String, dynamic> body = {
         'amount': ((double.parse(amount) * 100).round()).toString(),
-        'currency': "USD",
+        'currency': 'USD',
         'payment_method_types[]': 'card',
-        "description": "Strip Payment",
-        "shipping[name]": driverUserModel.value.fullName,
-        "shipping[address][line1]": "510 Townsend St",
-        "shipping[address][postal_code]": "98140",
-        "shipping[address][city]": "San Francisco",
-        "shipping[address][state]": "CA",
-        "shipping[address][country]": "US",
+        'description': 'Stripe Payment',
+        'shipping[name]': driverUserModel.value.fullName ?? 'Unknown',
+        'shipping[address][line1]': '510 Townsend St',
+        'shipping[address][postal_code]': '98140',
+        'shipping[address][city]': 'San Francisco',
+        'shipping[address][state]': 'CA',
+        'shipping[address][country]': 'US',
       };
-      log(paymentModel.value.strip!.stripeSecret.toString());
-      var stripeSecret = paymentModel.value.strip!.stripeSecret;
-      var response = await http.post(
-          Uri.parse('https://api.stripe.com/v1/payment_intents'),
-          body: body,
-          headers: {
-            'Authorization': 'Bearer $stripeSecret',
-            'Content-Type': 'application/x-www-form-urlencoded'
-          });
-
+      const stripeSecret =
+          'sk_test_51RImPWI8apCRipzs1Iu4CiENE8IXQYo9yiQsRVMWR6oazosPHK8n4nR7GCskZuKr3E5LstudoGBak7oC4dB7aRue00bosoxZVa';
+      final response = await http.post(
+        Uri.parse('https://api.stripe.com/v1/payment_intents'),
+        body: body,
+        headers: {
+          'Authorization': 'Bearer $stripeSecret',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      );
+      log('Stripe API response: ${response.body}');
       return jsonDecode(response.body);
     } catch (e) {
-      log(e.toString());
+      log('Error creating Stripe intent: $e');
+      return {'error': e.toString()};
     }
   }
 
-  //mercadoo
-
-  //flutter wave Payment Method
   flutterWaveInitiatePayment(
       {required BuildContext context, required String amount}) async {
     final url = Uri.parse('https://api.flutterwave.com/v3/payments');
@@ -281,7 +286,6 @@ class WalletController extends GetxController {
       'Authorization': 'Bearer ${paymentModel.value.flutterWave!.secretKey}',
       'Content-Type': 'application/json',
     };
-
     final body = jsonEncode({
       "tx_ref": _ref,
       "amount": amount,
@@ -290,18 +294,15 @@ class WalletController extends GetxController {
       "payment_options": "ussd, card, barter, payattitude",
       "customer": {
         "email": driverUserModel.value.email.toString(),
-        "phonenumber":
-            driverUserModel.value.phoneNumber, // Add a real phone number
-        "name": driverUserModel.value.fullName!, // Add a real customer name
+        "phonenumber": driverUserModel.value.phoneNumber ?? '',
+        "name": driverUserModel.value.fullName ?? 'Unknown',
       },
       "customizations": {
         "title": "Payment for Services",
         "description": "Payment for XYZ services",
       }
     });
-
     final response = await http.post(url, headers: headers, body: body);
-
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       Get.to(MercadoPagoScreen(initialURl: data['data']['link']))!
@@ -315,7 +316,7 @@ class WalletController extends GetxController {
       });
     } else {
       ShowToastDialog.showToast("Something went wrong, please contact admin.");
-      print('Payment initialization failed: ${response.body}');
+      log('Payment initialization failed: ${response.body}');
       return null;
     }
   }
@@ -350,31 +351,23 @@ class WalletController extends GetxController {
     //     true,
     //     true,
     //   );
-    //
     //   response.then((value) {
     //     if (value!["RESPMSG"] == "Txn Success") {
-    //       print("txt done!!");
+    //       log("Transaction successful");
     //       ShowToastDialog.showToast("Payment Successful!!");
     //       walletTopUp();
     //     }
     //   }).catchError((onError) {
     //     if (onError is PlatformException) {
-    //       Get.back();
-    //
     //       ShowToastDialog.showToast(onError.message.toString());
     //     } else {
-    //       print("======>>2");
-    //       Get.back();
-    //       ShowToastDialog.showToast(onError.message.toString());
+    //       ShowToastDialog.showToast(onError.toString());
     //     }
     //   });
     // } catch (err) {
-    //   Get.back();
     //   ShowToastDialog.showToast(err.toString());
     // }
   }
-
-  //XenditPayment
 
   String generateBasicAuthHeader(String apiKey) {
     String credentials = '$apiKey:';
@@ -382,7 +375,6 @@ class WalletController extends GetxController {
     return 'Basic $base64Encoded';
   }
 
-//Orangepay payment
   static String accessToken = '';
   static String payToken = '';
   static String orderId = '';
@@ -394,6 +386,4 @@ class WalletController extends GetxController {
     orderId = '';
     amount = '';
   }
-
-  //Midtrans payment
 }

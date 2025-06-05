@@ -110,6 +110,18 @@ class InformationController extends GetxController {
   @override
   void onInit() {
     getInitialData();
+    // Retrieve login arguments
+    if (Get.arguments != null && Get.arguments['userModel'] != null) {
+      DriverUserModel passedUserModel = Get.arguments['userModel'];
+      userModel.value = passedUserModel;
+      loginType.value = passedUserModel.loginType ?? Constant.emailLoginType;
+      // Prefill fields
+      fullNameController.value.text = passedUserModel.fullName ?? '';
+      emailController.value.text = passedUserModel.email ?? '';
+      userImage.value = passedUserModel.profilePic ?? '';
+      phoneNumberController.value.text = passedUserModel.phoneNumber ?? '';
+      countryCode.value = passedUserModel.countryCode ?? '+1';
+    }
     super.onInit();
   }
 
@@ -853,15 +865,17 @@ class InformationController extends GetxController {
           ShowToastDialog.showToast("Please enter email".tr);
           return;
         }
-        if (Constant.validateEmail(emailController.value.text) == false) {
+        if (!Constant.validateEmail(emailController.value.text)) {
           ShowToastDialog.showToast("Please enter valid email".tr);
           return;
         }
-        if (passwordController.value.text.isEmpty) {
+        if (loginType.value == Constant.emailLoginType &&
+            passwordController.value.text.isEmpty) {
           ShowToastDialog.showToast("Please enter password".tr);
           return;
         }
-        if (passwordController.value.text.length < 6) {
+        if (loginType.value == Constant.emailLoginType &&
+            passwordController.value.text.length < 6) {
           ShowToastDialog.showToast(
               "Password must be at least 6 characters".tr);
           return;
@@ -927,26 +941,24 @@ class InformationController extends GetxController {
 
         ShowToastDialog.showLoader("Processing".tr);
         try {
-          final email = emailController.value.text;
-          final password = passwordController.value.text;
-          UserCredential userCredential = await FirebaseAuth.instance
-              .createUserWithEmailAndPassword(email: email, password: password);
-          final driverId = userCredential.user!.uid;
+          final driverId = FirebaseAuth.instance.currentUser!.uid;
 
           userModel.value
             ..id = driverId
             ..fullName = fullNameController.value.text
             ..email = emailController.value.text
-            ..password = passwordController.value.text
+            ..password = loginType.value == Constant.emailLoginType
+                ? passwordController.value.text
+                : null
             ..countryCode = countryCode.value
             ..profilePic = userImage.value
             ..phoneNumber = phoneNumberController.value.text
             ..documentVerification = false
-            ..isOnline = false
+            ..isOnline = true
             ..createdAt = Timestamp.now()
             ..serviceId = selectedServiceId.value
             ..zoneIds = selectedZone.toList()
-            ..loginType = Constant.emailLoginType
+            ..loginType = loginType.value
             ..vehicleInformation = VehicleInformation(
               vehicleNumber: vehicleNumberController.value.text,
               registrationDate: Timestamp.fromDate(selectedDate.value!),

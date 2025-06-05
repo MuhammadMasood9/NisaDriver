@@ -53,7 +53,6 @@ class OrderMapScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 200.0),
                 onMapCreated: (GoogleMapController mapController) {
                   controller.mapController.complete(mapController);
-                  // controller.getPolyline();
                 },
                 initialCameraPosition: CameraPosition(
                   zoom: 15,
@@ -74,10 +73,9 @@ class OrderMapScreen extends StatelessWidget {
                 right: 20,
                 child: FloatingActionButton(
                   backgroundColor: AppColors.primary,
-                    onPressed: () async {
-      // Use the same method that's called during initialization
-      await controller.animateToSourceLocation();
-    },
+                  onPressed: () async {
+                    await controller.animateToSourceLocation();
+                  },
                   child: const Icon(Icons.my_location, color: Colors.white),
                 ),
               ),
@@ -86,10 +84,10 @@ class OrderMapScreen extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
-                    color:  AppColors.containerBackground,
+                    color: AppColors.containerBackground,
                     borderRadius: const BorderRadius.all(Radius.circular(15)),
                     border: Border.all(
-                      color:  AppColors.containerBorder,
+                      color: AppColors.containerBorder,
                       width: 0.5,
                     ),
                     boxShadow: [
@@ -300,59 +298,7 @@ class OrderMapScreen extends StatelessWidget {
                                                           .newAmount.value
                                                           .toString()) >
                                                       0) {
-                                                if (controller.driverModel.value
-                                                        .subscriptionTotalOrders ==
-                                                    "-1") {
-                                                  await controller
-                                                      .acceptOrder();
-                                                } else {
-                                                  if (Constant.isSubscriptionModelApplied ==
-                                                          false &&
-                                                      Constant.adminCommission!
-                                                              .isEnabled ==
-                                                          false) {
-                                                    await controller
-                                                        .acceptOrder();
-                                                  } else {
-                                                    if ((controller
-                                                                    .driverModel
-                                                                    .value
-                                                                    .subscriptionExpiryDate !=
-                                                                null &&
-                                                            controller
-                                                                    .driverModel
-                                                                    .value
-                                                                    .subscriptionExpiryDate!
-                                                                    .toDate()
-                                                                    .isBefore(
-                                                                        DateTime
-                                                                            .now()) ==
-                                                                false) ||
-                                                        controller
-                                                                .driverModel
-                                                                .value
-                                                                .subscriptionPlan
-                                                                ?.expiryDay ==
-                                                            '-1') {
-                                                      if (controller
-                                                              .driverModel
-                                                              .value
-                                                              .subscriptionTotalOrders !=
-                                                          '0') {
-                                                        await controller
-                                                            .acceptOrder();
-                                                      } else {
-                                                        ShowToastDialog.showToast(
-                                                            "Your order limit has reached its maximum capacity. Please subscribe to another plan."
-                                                                .tr);
-                                                      }
-                                                    } else {
-                                                      ShowToastDialog.showToast(
-                                                          "Your order limit has reached its maximum capacity. Please subscribe to another plan."
-                                                              .tr);
-                                                    }
-                                                  }
-                                                }
+                                                await controller.acceptOrder();
                                               } else {
                                                 ShowToastDialog.showToast(
                                                     "Please enter a valid offer rate"

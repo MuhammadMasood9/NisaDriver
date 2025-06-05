@@ -1,8 +1,10 @@
 import 'package:driver/constant/constant.dart';
+import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/controller/home_controller.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
+import 'package:driver/ui/profile_screen/profile_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -25,102 +27,181 @@ class HomeScreen extends StatelessWidget {
           body: controller.isLoading.value
               ? Constant.loader(context)
               : SafeArea(
-                  child: Column(
-                    children: [
-                      // Wallet Warning Banner
-                      double.parse(controller.driverModel.value.walletAmount
-                                      ?.toString() ??
-                                  '0.0') >=
-                              double.parse(
-                                  Constant.minimumDepositToRideAccept ?? '0.0')
-                          ? const SizedBox(height: 16)
-                          : Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFFE74C3C),
-                                    const Color(0xFFE74C3C).withOpacity(0.8),
+                  child: Obx(() {
+                    // Check if profile is not verified
+                    if (controller.driverModel.value.profileVerify != true) {
+                      return _buildProfileNotVerified(context);
+                    }
+                    // Existing verified profile UI
+                    return Column(
+                      children: [
+                        // Wallet Warning Banner
+                        double.parse(controller.driverModel.value.walletAmount
+                                        ?.toString() ??
+                                    '0.0') >=
+                                double.parse(
+                                    Constant.minimumDepositToRideAccept ??
+                                        '0.0')
+                            ? const SizedBox(height: 16)
+                            : Container(
+                                width: double.infinity,
+                                margin:
+                                    const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      const Color(0xFFE74C3C),
+                                      const Color(0xFFE74C3C).withOpacity(0.8),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFE74C3C)
+                                          .withOpacity(0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
                                   ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
                                 ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFE74C3C)
-                                        .withOpacity(0.2),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.account_balance_wallet_rounded,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
                                     ),
-                                    child: const Icon(
-                                      Icons.account_balance_wallet_rounded,
-                                      color: Colors.white,
-                                      size: 24,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        "You need a minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} in your wallet to accept orders and place bids."
+                                            .tr,
+                                        style: AppTypography.boldLabel(context)
+                                            .copyWith(
+                                                color: Colors.white,
+                                                height: 1.4),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      "You need a minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} in your wallet to accept orders and place bids."
-                                          .tr,
-                                      style:  AppTypography.boldLabel(context).copyWith(color: Colors.white,height: 1.4),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-
-                      // Main Content
-                      Expanded(
-                        child: Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(28),
-                              topRight: Radius.circular(28),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, -2),
+                        // Main Content
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(28),
+                                topRight: Radius.circular(28),
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(28),
-                              topRight: Radius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, -2),
+                                ),
+                              ],
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 8, left: 12, right: 12),
-                              child: controller.widgetOptions
-                                  .elementAt(controller.selectedIndex.value),
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(28),
+                                topRight: Radius.circular(28),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 8, left: 12, right: 12),
+                                child: controller.widgetOptions
+                                    .elementAt(controller.selectedIndex.value),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    );
+                  }),
                 ),
           bottomNavigationBar: _buildResponsiveBottomNav(context, controller),
         );
       },
+    );
+  }
+
+  Widget _buildProfileNotVerified(BuildContext context) {
+    final controllerDashBoard = Get.find<DashBoardController>();
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                size: 60,
+                color: Colors.orange.shade700,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              "Profile Not Verified".tr,
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkBackground,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "Please verify your phone number to access rides and features."
+                  .tr,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  controllerDashBoard.onSelectItem(5);
+                },
+                icon: const Icon(Icons.verified_user, size: 18),
+                label: Text(
+                  "Verify Phone Number".tr,
+                  style: AppTypography.buttonlight(context),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -173,6 +254,7 @@ class HomeScreen extends StatelessWidget {
             'New',
             0,
             isCompact,
+            isEnabled: controller.driverModel.value.profileVerify == true,
           ),
           _buildResponsiveNavItem(
             context,
@@ -182,6 +264,7 @@ class HomeScreen extends StatelessWidget {
             'Accepted',
             1,
             isCompact,
+            isEnabled: controller.driverModel.value.profileVerify == true,
           ),
           _buildResponsiveNavItem(
             context,
@@ -192,6 +275,7 @@ class HomeScreen extends StatelessWidget {
             2,
             isCompact,
             badgeCount: controller.isActiveValue.value,
+            isEnabled: controller.driverModel.value.profileVerify == true,
           ),
           _buildResponsiveNavItem(
             context,
@@ -201,6 +285,7 @@ class HomeScreen extends StatelessWidget {
             'Completed',
             3,
             isCompact,
+            isEnabled: controller.driverModel.value.profileVerify == true,
           ),
         ],
       ),
@@ -216,10 +301,13 @@ class HomeScreen extends StatelessWidget {
     int index,
     bool isCompact, {
     int? badgeCount,
+    required bool isEnabled,
   }) {
     return Expanded(
       child: GestureDetector(
-        onTap: () => controller.onItemTapped(index),
+        onTap: isEnabled
+            ? () => controller.onItemTapped(index)
+            : null, // Disable tap if not verified
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 350),
           curve: Curves.easeInOutCubic,
@@ -229,7 +317,7 @@ class HomeScreen extends StatelessWidget {
             vertical: isCompact ? 10 : 12,
           ),
           decoration: BoxDecoration(
-            gradient: isSelected
+            gradient: isSelected && isEnabled
                 ? LinearGradient(
                     colors: [
                       AppColors.primary,
@@ -247,13 +335,13 @@ class HomeScreen extends StatelessWidget {
                     end: Alignment.bottomCenter,
                   ),
             borderRadius: BorderRadius.circular(isCompact ? 20 : 24),
-            border: isSelected
+            border: isSelected && isEnabled
                 ? null
                 : Border.all(
                     color: Colors.transparent,
                     width: 1,
                   ),
-            boxShadow: isSelected
+            boxShadow: isSelected && isEnabled
                 ? [
                     BoxShadow(
                       color: AppColors.primary.withOpacity(0.25),
@@ -272,7 +360,7 @@ class HomeScreen extends StatelessWidget {
           ),
           child: _buildNavContent(
             context,
-            isSelected,
+            isSelected && isEnabled,
             icon,
             label,
             badgeCount,
@@ -324,7 +412,6 @@ class HomeScreen extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         iconWidget,
-        // Always show text, but with different styling for selected/unselected
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: FittedBox(

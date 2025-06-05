@@ -28,107 +28,160 @@ class NewOrderScreen extends StatelessWidget {
               ? Constant.loader(context)
               : controller.driverModel.value.isOnline == false
                   ? Center(
-                      child: Text("You are Now offline so you can't get nearest order.".tr),
+                      child: Text(
+                          "You are Now offline so you can't get nearest order."
+                              .tr),
                     )
-                  : StreamBuilder<List<OrderModel>>(
-                      stream: FireStoreUtils().getOrders(controller.driverModel.value, Constant.currentLocation?.latitude, Constant.currentLocation?.longitude),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return Constant.loader(context);
-                        }
-                        if (!snapshot.hasData || (snapshot.data?.isEmpty ?? true)) {
-                          return Center(
-                            child: Text("New Rides Not found".tr),
-                          );
-                        } else {
-                          // ordersList = snapshot.data!;
-                          return ListView.builder(
-                            itemCount: snapshot.data!.length,
-                            shrinkWrap: true,
-                            itemBuilder: (context, index) {
-                              OrderModel orderModel = snapshot.data![index];
-                              String amount;
-                              if (Constant.distanceType == "Km") {
-                                amount = Constant.amountCalculate(orderModel.service!.kmCharge.toString(), orderModel.distance.toString())
-                                    .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
-                              } else {
-                                amount = Constant.amountCalculate(orderModel.service!.kmCharge.toString(), orderModel.distance.toString())
-                                    .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
-                              }
-                              return InkWell(
-                                onTap: () {
-                                  Get.to(const OrderMapScreen(), arguments: {"orderModel": orderModel.id.toString()})!.then((value) {
-                                    if (value != null && value == true) {
-                                      controller.selectedIndex.value = 1;
-                                    }
-                                  });
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4.0),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color:  AppColors.containerBackground,
-                                      borderRadius: const BorderRadius.all(Radius.circular(10)),
-                                      boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.grey.withOpacity(0.4),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 2), // changes position of shadow
-                                              ),
-                                            ],
-                                    ),
+                  : controller.driverModel.value.documentVerification == false
+                      ? Center(
+                          child: Text(
+                            "Your documents are not verified. Please complete document verification to receive ride orders."
+                                .tr,
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : StreamBuilder<List<OrderModel>>(
+                          stream: FireStoreUtils().getOrders(
+                              controller.driverModel.value,
+                              Constant.currentLocation?.latitude,
+                              Constant.currentLocation?.longitude),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return Constant.loader(context);
+                            }
+                            if (!snapshot.hasData ||
+                                (snapshot.data?.isEmpty ?? true)) {
+                              return Center(
+                                child: Text("New Rides Not found".tr),
+                              );
+                            } else {
+                              // ordersList = snapshot.data!;
+                              return ListView.builder(
+                                itemCount: snapshot.data!.length,
+                                shrinkWrap: true,
+                                itemBuilder: (context, index) {
+                                  OrderModel orderModel = snapshot.data![index];
+                                  String amount;
+                                  if (Constant.distanceType == "Km") {
+                                    amount = Constant.amountCalculate(
+                                            orderModel.service!.kmCharge
+                                                .toString(),
+                                            orderModel.distance.toString())
+                                        .toStringAsFixed(Constant
+                                            .currencyModel!.decimalDigits!);
+                                  } else {
+                                    amount = Constant.amountCalculate(
+                                            orderModel.service!.kmCharge
+                                                .toString(),
+                                            orderModel.distance.toString())
+                                        .toStringAsFixed(Constant
+                                            .currencyModel!.decimalDigits!);
+                                  }
+                                  return InkWell(
+                                    onTap: () {
+                                      Get.to(const OrderMapScreen(),
+                                              arguments: {
+                                            "orderModel":
+                                                orderModel.id.toString()
+                                          })!
+                                          .then((value) {
+                                        if (value != null && value == true) {
+                                          controller.selectedIndex.value = 1;
+                                        }
+                                      });
+                                    },
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                                      child: Column(
-                                        children: [
-                                          UserView(
-                                            userId: orderModel.userId,
-                                            amount: orderModel.offerRate,
-                                            distance: orderModel.distance,
-                                            distanceType: orderModel.distanceType,
-                                          ),
-                                          const Padding(
-                                            padding: EdgeInsets.symmetric(vertical: 5),
-                                            child: Divider(),
-                                          ),
-                                          LocationView(
-                                            sourceLocation: orderModel.sourceLocationName.toString(),
-                                            destinationLocation: orderModel.destinationLocationName.toString(),
-                                          ),
-                                          Column(
+                                      padding: const EdgeInsets.all(4.0),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: AppColors.containerBackground,
+                                          borderRadius: const BorderRadius.all(
+                                              Radius.circular(10)),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.grey.withOpacity(0.4),
+                                              blurRadius: 8,
+                                              offset: const Offset(0,
+                                                  2), // changes position of shadow
+                                            ),
+                                          ],
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8, horizontal: 8),
+                                          child: Column(
                                             children: [
-                                              const SizedBox(
-                                                height: 10,
+                                              UserView(
+                                                userId: orderModel.userId,
+                                                amount: orderModel.offerRate,
+                                                distance: orderModel.distance,
+                                                distanceType:
+                                                    orderModel.distanceType,
                                               ),
-                                              Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                                child: Container(
-                                                  width: Responsive.width(100, context),
-                                                  decoration: BoxDecoration(
-                                                      color:  AppColors.gray, borderRadius: BorderRadius.all(Radius.circular(10))),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical:8),
-                                                    child: Center(
-                                                      child: Text(
-                                                        'Recommended Price is ${Constant.amountShow(amount: amount)}. Approx distance ${double.parse(orderModel.distance.toString()).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${Constant.distanceType}',
-                                                        style: AppTypography.smBoldLabel(context),
+                                              const Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                    vertical: 5),
+                                                child: Divider(),
+                                              ),
+                                              LocationView(
+                                                sourceLocation: orderModel
+                                                    .sourceLocationName
+                                                    .toString(),
+                                                destinationLocation: orderModel
+                                                    .destinationLocationName
+                                                    .toString(),
+                                              ),
+                                              Column(
+                                                children: [
+                                                  const SizedBox(
+                                                    height: 10,
+                                                  ),
+                                                  Padding(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5),
+                                                    child: Container(
+                                                      width: Responsive.width(
+                                                          100, context),
+                                                      decoration: BoxDecoration(
+                                                          color: AppColors.gray,
+                                                          borderRadius:
+                                                              BorderRadius.all(
+                                                                  Radius
+                                                                      .circular(
+                                                                          10))),
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 8),
+                                                        child: Center(
+                                                          child: Text(
+                                                            'Recommended Price is ${Constant.amountShow(amount: amount)}. Approx distance ${double.parse(orderModel.distance.toString()).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${Constant.distanceType}',
+                                                            style: AppTypography
+                                                                .smBoldLabel(
+                                                                    context),
+                                                          ),
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                              ),
+                                                ],
+                                              )
                                             ],
-                                          )
-                                        ],
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
+                                  );
+                                },
                               );
-                            },
-                          );
-                        }
-                      });
+                            }
+                          });
         });
   }
 }

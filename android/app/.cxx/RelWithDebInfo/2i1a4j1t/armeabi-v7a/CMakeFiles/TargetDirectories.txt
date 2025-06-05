@@ -1,0 +1,2 @@
+D:/Masood/NisaDriver/android/app/.cxx/RelWithDebInfo/2i1a4j1t/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/Masood/NisaDriver/android/app/.cxx/RelWithDebInfo/2i1a4j1t/armeabi-v7a/CMakeFiles/rebuild_cache.dir

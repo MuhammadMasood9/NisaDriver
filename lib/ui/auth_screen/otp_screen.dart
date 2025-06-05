@@ -330,6 +330,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                                 controller.phoneNumber.value;
                                             userModel.loginType =
                                                 Constant.phoneLoginType;
+                                            userModel.profileVerify = true;
 
                                             ShowToastDialog.closeLoader();
                                             Get.off(const InformationScreen(),
@@ -419,6 +420,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                                         .phoneNumber.value;
                                                 userModel.loginType =
                                                     Constant.phoneLoginType;
+                                                userModel.profileVerify = true;
 
                                                 Get.off(
                                                     const InformationScreen(),

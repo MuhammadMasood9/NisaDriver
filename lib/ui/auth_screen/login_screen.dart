@@ -56,11 +56,7 @@ class LoginScreen extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: Responsive.height(3, context)),
-                        Text(
-                          "Login".tr,
-                          style: AppTypography.boldHeaders(context),
-                          textAlign: TextAlign.center,
-                        ),
+
                         const SizedBox(height: 10),
                         Text(
                           "Welcome Back! We are happy to have you back".tr,
@@ -443,7 +439,7 @@ class LoginScreen extends StatelessWidget {
                             context,
                             title: controller.loginMethod.value == 'phone'
                                 ? "Next".tr
-                                : "Login with Email".tr,
+                                : "Continue with Email".tr,
                             onPress: () {
                               if (controller.formKey.value != null &&
                                   controller.formKey.value.currentState!
@@ -497,7 +493,7 @@ class LoginScreen extends StatelessWidget {
                           width: Responsive.width(80, context),
                           child: ButtonThem.buildBorderButton(
                             context,
-                            title: "Login with Google".tr,
+                            title: "Continue with Google".tr,
                             iconVisibility: true,
                             iconAssetImage: 'assets/icons/ic_google.png',
                             onPress: () async {
@@ -516,7 +512,7 @@ class LoginScreen extends StatelessWidget {
                                     userModel.profilePic = value.user!.photoURL;
                                     userModel.loginType =
                                         Constant.googleLoginType;
-
+                                    userModel.profileVerify = true;
                                     Get.to(const InformationScreen(),
                                         arguments: {"userModel": userModel});
                                   } else {
@@ -524,6 +520,7 @@ class LoginScreen extends StatelessWidget {
                                     FireStoreUtils.userExitOrNot(
                                             value.user!.uid)
                                         .then((userExit) async {
+                                      log(" ms $userExit");
                                       if (userExit == true) {
                                         String token = await NotificationService
                                             .getToken();
@@ -598,7 +595,8 @@ class LoginScreen extends StatelessWidget {
                                             value.user!.photoURL;
                                         userModel.loginType =
                                             Constant.googleLoginType;
-
+                                        userModel.profileVerify = true;
+                                        log("message");
                                         Get.to(const InformationScreen(),
                                             arguments: {
                                               "userModel": userModel,
@@ -652,7 +650,7 @@ class LoginScreen extends StatelessWidget {
                                             .profile!['email'];
                                         userModel.fullName =
                                             "${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}";
-
+                                        userModel.profileVerify = true;
                                         Get.to(const InformationScreen(),
                                             arguments: {
                                               "userModel": userModel,
@@ -739,7 +737,7 @@ class LoginScreen extends StatelessWidget {
                                                 .profile!['email'];
                                             userModel.fullName =
                                                 "${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}";
-
+                                            userModel.profileVerify = true;
                                             Get.to(const InformationScreen(),
                                                 arguments: {
                                                   "userModel": userModel,
@@ -757,27 +755,6 @@ class LoginScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text.rich(
-                  TextSpan(
-                    text: "Don't have an account? ".tr,
-                    style: AppTypography.caption(context),
-                    children: <TextSpan>[
-                      TextSpan(
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            Get.to(const InformationScreen());
-                          },
-                        text: 'Sign Up'.tr,
-                        style: AppTypography.boldLabel(context)
-                            .copyWith(color: AppColors.primary),
-                      ),
-                    ],
-                  ),
-                  textAlign: TextAlign.center,
                 ),
               ),
             ],

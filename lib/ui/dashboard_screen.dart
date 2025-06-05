@@ -122,15 +122,15 @@ class DashBoardScreen extends StatelessWidget {
               children: [
                 SvgPicture.asset(
                   d.icon,
-                  width: 16,
+                  width: 15,
                   color: i == controller.selectedDrawerIndex.value
                       ? Colors.white
                       : AppColors.grey500,
                 ),
-                const SizedBox(width: 15),
+                const SizedBox(width: 10),
                 Text(
                   d.title,
-                  style: AppTypography.sideBar(context).copyWith(
+                  style: AppTypography.smBoldLabel(context).copyWith(
                     color: i == controller.selectedDrawerIndex.value
                         ? Colors.white
                         : Colors.black,
@@ -183,19 +183,21 @@ class DashBoardScreen extends StatelessWidget {
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: 8,
                             children: [
                               Padding(
                                 padding: const EdgeInsets.only(top: 6),
                                 child: Text(
                                   driverModel.fullName.toString(),
-                                  style: AppTypography.boldHeaders(context),
+                                  style: AppTypography.boldLabel(context),
                                 ),
                               ),
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
                                   driverModel.email.toString(),
-                                  style: AppTypography.caption(context),
+                                  style: AppTypography.smBoldLabel(context)
+                                      .copyWith(color: AppColors.grey500),
                                 ),
                               ),
                               Row(
