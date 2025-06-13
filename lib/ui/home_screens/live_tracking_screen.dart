@@ -23,7 +23,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:provider/provider.dart';
 
 class LiveTrackingScreen extends StatefulWidget {
   const LiveTrackingScreen({super.key});
@@ -68,7 +67,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             children: [
               Obx(() => GoogleMap(
                     compassEnabled: true,
-                    rotateGesturesEnabled: true,
+                    rotateGesturesEnabled: false, // Disabled rotation
                     myLocationEnabled: false,
                     myLocationButtonEnabled: false,
                     mapType: controller.isNightMode.value
@@ -79,31 +78,19 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                     polylines: Set.of(controller.polyLines.values),
                     markers: Set.of(controller.markers.values),
                     padding: EdgeInsets.only(
-                      bottom: controller.isNavigationView.value
-                          ? (isSmallScreen ? 300 : 340)
-                          : (isSmallScreen ? 340 : 380),
-                      top: controller.isNavigationView.value
-                          ? (isSmallScreen ? 140 : 160)
-                          : (isSmallScreen ? 160 : 180),
+                      bottom: isSmallScreen ? 300 : 340,
+                      top: isSmallScreen ? 140 : 160,
                     ),
                     onMapCreated: (GoogleMapController mapController) async {
                       controller.mapController = mapController;
-
-                      // String mapStyle = ;?
-
                       try {
                         await mapController.setMapStyle(_mapStyle);
                       } catch (e) {
                         print('Error applying map style: $e');
                       }
-
                       ShowToastDialog.closeLoader();
                       if (controller.isFollowingDriver.value) {
-                        if (controller.is3DNavigationMode.value) {
-                          controller.updateNavigationViewAligned();
-                        } else {
-                          controller.updateNavigationView();
-                        }
+                        controller.updateNavigationView();
                       }
                     },
                     initialCameraPosition: CameraPosition(
@@ -116,17 +103,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                             Constant.currentLocation?.longitude ??
                             -122.677433,
                       ),
-                      tilt: controller.isNavigationView.value
-                          ? controller.navigationTilt.value
-                          : 0.0,
-                      bearing: controller.deviceBearing.value,
+                      tilt: 0.0,
+                      bearing: 0.0, // Fixed bearing
                     ),
                     onCameraMove: (CameraPosition position) {
                       controller.navigationZoom.value = position.zoom;
-                      controller.navigationTilt.value = position.tilt;
-                      controller.deviceBearing.value;
-                      dev.log(
-                          'Device bearing: ${controller.deviceBearing.value} Map Bearing: ${position.bearing}');
+                      dev.log('Zoom: ${controller.navigationZoom.value}');
                     },
                     onTap: (LatLng position) {
                       controller.onMapTap(position);
@@ -448,12 +430,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 onPressed: () => controller.toggleNightMode(),
               ),
               _buildControlButton(
-                icon: Icons.threed_rotation_rounded,
-                iconOff: Icons.two_k_rounded,
-                isActive: controller.is3DNavigationMode.value,
-                onPressed: () => controller.toggle3DNavigationMode(),
-              ),
-              _buildControlButton(
                 icon: Icons.add_rounded,
                 onPressed: () {
                   controller.navigationZoom.value += 0.5;
@@ -481,443 +457,454 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     );
   }
 
-  Widget _buildBottomPanel(BuildContext context,
-      LiveTrackingController controller) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOutCubic,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
+  Widget _buildBottomPanel(
+      BuildContext context, LiveTrackingController controller) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.4,
+      minChildSize: 0.16,
+      maxChildSize: 0.45,
+      builder: (BuildContext context, ScrollController scrollController) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOutCubic,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -8),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -8),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 8, bottom: 8),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            _buildNavigationCard(context, controller),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Obx(() => Text(
-                            controller.currentStep.value,
-                            style: AppTypography.boldLabel(context),
-                          )),
-                      Obx(() => Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              controller.tripProgress.value,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                                color: Colors.green.shade700,
-                              ),
-                            ),
-                          )),
-                    ],
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 8),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Obx(() => LinearProgressIndicator(
-                            value: controller.tripProgressValue.value,
-                            backgroundColor: Colors.transparent,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              controller.status.value == Constant.rideInProgress
-                                  ? Colors.green.shade500
-                                  : AppColors.primary,
-                            ),
-                          )),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.grey.shade50,
-                    Colors.white,
-                  ],
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.grey.shade200,
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
+                _buildNavigationCard(context, controller),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
                     children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.primary,
-                              AppColors.primary.withOpacity(0.8),
-                            ],
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.person_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Obx(() => Text(
-                                  controller.driverUserModel.value.fullName ??
-                                      "Driver",
-                                  style: const TextStyle(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Obx(() => Text(
+                                controller.currentStep.value,
+                                style: AppTypography.boldLabel(context),
+                              )),
+                          Obx(() => Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  controller.tripProgress.value,
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                    color: Colors.black87,
+                                    fontSize: 12,
+                                    color: Colors.green.shade700,
                                   ),
-                                )),
-                            const SizedBox(height: 2),
-                            Obx(() => Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    controller.type.value == "orderModel"
-                                        ? "Order #${controller.orderModel.value.id?.substring(0, 8) ?? 'N/A'}"
-                                        : "Intercity #${controller.intercityOrderModel.value.id?.substring(0, 8) ?? 'N/A'}",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.blue.shade700,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                )),
-                          ],
-                        ),
+                                ),
+                              )),
+                        ],
                       ),
-                      InkWell(
-                        onTap: () => controller.shareLocation(),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.share_location_rounded,
-                            color: Colors.grey.shade700,
-                            size: 20,
-                          ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Obx(() => LinearProgressIndicator(
+                                value: controller.tripProgressValue.value,
+                                backgroundColor: Colors.transparent,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  controller.status.value ==
+                                          Constant.rideInProgress
+                                      ? Colors.green.shade500
+                                      : AppColors.primary,
+                                ),
+                              )),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Obx(() => _buildStatItem(
-                              icon: Icons.pin_drop_rounded,
-                              value: controller
-                                  .formatDistance(controller.distance.value),
-                              label: "Distance",
-                              color: AppColors.primary,
-                            )),
-                      ),
-                      Container(
-                        height: 40,
-                        width: 1,
-                        color: Colors.grey.shade300,
-                      ),
-                      Expanded(
-                        child: Obx(() => _buildStatItem(
-                              icon: Icons.access_time_rounded,
-                              value: controller.estimatedTime.value,
-                              label: "Time Left",
-                              color: Colors.orange.shade600,
-                            )),
-                      ),
-                      Container(
-                        height: 40,
-                        width: 1,
-                        color: Colors.grey.shade300,
-                      ),
-                      Expanded(
-                        child: Obx(() => _buildStatItem(
-                              icon: Icons.schedule_rounded,
-                              value: controller.estimatedArrival.value,
-                              label: "ETA",
-                              color: Colors.green.shade600,
-                            )),
-                      ),
-                    ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.grey.shade50,
+                        Colors.white,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey.shade200,
+                      width: 1,
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Obx(() {
-                          final isRideInProgress = controller.status.value ==
-                              Constant.rideInProgress;
-                          return ButtonThem.buildBorderButton(
-                            context,
-                            title: isRideInProgress
-                                ? "Complete Ride".tr
-                                : "Pickup Customer".tr,
-                            btnHeight: 34,
-                            txtSize: 12,
-                            borderRadius: 5,
-                            iconVisibility: false,
-                            onPress: () async {
-                              OrderModel orderModel =
-                                  controller.orderModel.value;
-                              InterCityOrderModel interOrderModel =
-                                  controller.intercityOrderModel.value;
-
-                              // InterCityOrderModel
-                              if (isRideInProgress) {
-                                ShowToastDialog.showLoader(
-                                    "Completing ride...".tr);
-
-                                orderModel.status = Constant.rideComplete;
-
-                                await FireStoreUtils.getCustomer(
-                                        orderModel.userId.toString())
-                                    .then((value) async {
-                                  if (value != null && value.fcmToken != null) {
-                                    Map<String, dynamic> playLoad =
-                                        <String, dynamic>{
-                                      "type": "city_order_complete",
-                                      "orderId": orderModel.id,
-                                    };
-                                    await SendNotification.sendOneNotification(
-                                      token: value.fcmToken.toString(),
-                                      title: 'Ride complete!'.tr,
-                                      body: 'Please complete your payment.'.tr,
-                                      payload: playLoad,
-                                    );
-                                  }
-                                });
-
-                                await FireStoreUtils.setOrder(orderModel)
-                                    .then((value) {
-                                  if (value == true) {
-                                    ShowToastDialog.closeLoader();
-                                    ShowToastDialog.showToast(
-                                        "Ride completed successfully".tr);
-                                    Get.back();
-                                  }
-                                });
-                              } else {
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) => _otpDialog(
-                                      context,
-                                      controller,
-                                      orderModel,
-                                      interOrderModel),
-                                );
-                              }
-                            },
-                          );
-                        }),
-                      ),
-                      const SizedBox(width: 10),
                       Row(
                         children: [
-                          InkWell(
-                            onTap: () async {
-                              UserModel? customer =
-                                  await FireStoreUtils.getCustomer(controller
-                                      .orderModel.value.userId
-                                      .toString());
-                              DriverUserModel? driver =
-                                  await FireStoreUtils.getDriverProfile(
-                                      controller.orderModel.value.driverId
-                                          .toString());
-                              Get.to(ChatScreens(
-                                driverId: driver!.id,
-                                customerId: customer!.id,
-                                customerName: customer.fullName,
-                                customerProfileImage: customer.profilePic,
-                                driverName: driver.fullName,
-                                driverProfileImage: driver.profilePic,
-                                orderId: controller.orderModel.value.id,
-                                token: customer.fcmToken,
-                              ));
-                            },
-                            child: Container(
-                              height: 34,
-                              width: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.darkBackground,
-                                borderRadius: BorderRadius.circular(5),
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.primary,
+                                  AppColors.primary.withOpacity(0.8),
+                                ],
                               ),
-                              child: Icon(
-                                Icons.chat,
-                                color: Colors.white,
-                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Obx(() => Text(
+                                      controller
+                                              .driverUserModel.value.fullName ??
+                                          "Driver",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                      ),
+                                    )),
+                                const SizedBox(height: 2),
+                                Obx(() => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        controller.type.value == "orderModel"
+                                            ? "Order #${controller.orderModel.value.id?.substring(0, 8) ?? 'N/A'}"
+                                            : "Intercity #${controller.intercityOrderModel.value.id?.substring(0, 8) ?? 'N/A'}",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.blue.shade700,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    )),
+                              ],
+                            ),
+                          ),
                           InkWell(
-                            onTap: () async {
-                              UserModel? customer =
-                                  await FireStoreUtils.getCustomer(controller
-                                      .orderModel.value.userId
-                                      .toString());
-                              Constant.makePhoneCall(
-                                  "${customer!.countryCode}${customer.phoneNumber}");
-                            },
+                            onTap: () => controller.shareLocation(),
                             child: Container(
-                              height: 34,
-                              width: 44,
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color:  AppColors.darkBackground,
-                                borderRadius: BorderRadius.circular(5),
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
-                                Icons.call,
-                                color: Colors.white,
+                                Icons.share_location_rounded,
+                                color: Colors.grey.shade700,
+                                size: 20,
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ButtonThem.buildBorderButton(
-                    context,
-                    title: "Cancel Ride".tr,
-                    btnHeight: 34,
-                    borderRadius: 5,
-                    txtSize: 12,
-                    iconVisibility: false,
-                    onPress: () async {
-                      bool? confirmCancel = await showDialog<bool>(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text("Confirm Cancel".tr),
-                            content: Text(
-                                "Are you sure you want to cancel this ride?"
-                                    .tr),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text("No".tr),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Obx(() => _buildStatItem(
+                                  icon: Icons.pin_drop_rounded,
+                                  value: controller.formatDistance(
+                                      controller.distance.value),
+                                  label: "Distance",
+                                  color: AppColors.primary,
+                                )),
+                          ),
+                          Container(
+                            height: 40,
+                            width: 1,
+                            color: Colors.grey.shade300,
+                          ),
+                          Expanded(
+                            child: Obx(() => _buildStatItem(
+                                  icon: Icons.access_time_rounded,
+                                  value: controller.estimatedTime.value,
+                                  label: "Time Left",
+                                  color: Colors.orange.shade600,
+                                )),
+                          ),
+                          Container(
+                            height: 40,
+                            width: 1,
+                            color: Colors.grey.shade300,
+                          ),
+                          Expanded(
+                            child: Obx(() => _buildStatItem(
+                                  icon: Icons.schedule_rounded,
+                                  value: controller.estimatedArrival.value,
+                                  label: "ETA",
+                                  color: Colors.green.shade600,
+                                )),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Obx(() {
+                              final isRideInProgress =
+                                  controller.status.value ==
+                                      Constant.rideInProgress;
+                              return ButtonThem.buildBorderButton(
+                                context,
+                                title: isRideInProgress
+                                    ? "Complete Ride".tr
+                                    : "Pickup Customer".tr,
+                                btnHeight: 34,
+                                txtSize: 12,
+                                borderRadius: 5,
+                                iconVisibility: false,
+                                onPress: () async {
+                                  OrderModel orderModel =
+                                      controller.orderModel.value;
+                                  InterCityOrderModel interOrderModel =
+                                      controller.intercityOrderModel.value;
+
+                                  if (isRideInProgress) {
+                                    ShowToastDialog.showLoader(
+                                        "Completing ride...".tr);
+                                    orderModel.status = Constant.rideComplete;
+
+                                    await FireStoreUtils.getCustomer(
+                                            orderModel.userId.toString())
+                                        .then((value) async {
+                                      if (value != null &&
+                                          value.fcmToken != null) {
+                                        Map<String, dynamic> playLoad =
+                                            <String, dynamic>{
+                                          "type": "city_order_complete",
+                                          "orderId": orderModel.id,
+                                        };
+                                        await SendNotification
+                                            .sendOneNotification(
+                                          token: value.fcmToken.toString(),
+                                          title: 'Ride complete!'.tr,
+                                          body: 'Please complete your payment.'
+                                              .tr,
+                                          payload: playLoad,
+                                        );
+                                      }
+                                    });
+
+                                    await FireStoreUtils.setOrder(orderModel)
+                                        .then((value) {
+                                      if (value == true) {
+                                        ShowToastDialog.closeLoader();
+                                        ShowToastDialog.showToast(
+                                            "Ride completed successfully".tr);
+                                        Get.back();
+                                      }
+                                    });
+                                  } else {
+                                    showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) =>
+                                          _otpDialog(context, controller,
+                                              orderModel, interOrderModel),
+                                    );
+                                  }
+                                },
+                              );
+                            }),
+                          ),
+                          const SizedBox(width: 10),
+                          Row(
+                            children: [
+                              InkWell(
+                                onTap: () async {
+                                  UserModel? customer =
+                                      await FireStoreUtils.getCustomer(
+                                          controller.orderModel.value.userId
+                                              .toString());
+                                  DriverUserModel? driver =
+                                      await FireStoreUtils.getDriverProfile(
+                                          controller.orderModel.value.driverId
+                                              .toString());
+                                  Get.to(ChatScreens(
+                                    driverId: driver!.id,
+                                    customerId: customer!.id,
+                                    customerName: customer.fullName,
+                                    customerProfileImage: customer.profilePic,
+                                    driverName: driver.fullName,
+                                    driverProfileImage: driver.profilePic,
+                                    orderId: controller.orderModel.value.id,
+                                    token: customer.fcmToken,
+                                  ));
+                                },
+                                child: Container(
+                                  height: 34,
+                                  width: 44,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.darkBackground,
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: Icon(
+                                    Icons.chat,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text("Yes".tr),
+                              const SizedBox(width: 10),
+                              InkWell(
+                                onTap: () async {
+                                  UserModel? customer =
+                                      await FireStoreUtils.getCustomer(
+                                          controller.orderModel.value.userId
+                                              .toString());
+                                  Constant.makePhoneCall(
+                                      "${customer!.countryCode}${customer.phoneNumber}");
+                                },
+                                child: Container(
+                                  height: 34,
+                                  width: 44,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.darkBackground,
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: Icon(
+                                    Icons.call,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ButtonThem.buildBorderButton(
+                        context,
+                        title: "Cancel Ride".tr,
+                        btnHeight: 34,
+                        borderRadius: 5,
+                        txtSize: 12,
+                        iconVisibility: false,
+                        onPress: () async {
+                          bool? confirmCancel = await showDialog<bool>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: Text("Confirm Cancel".tr),
+                                content: Text(
+                                    "Are you sure you want to cancel this ride?"
+                                        .tr),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: Text("No".tr),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: Text("Yes".tr),
+                                  ),
+                                ],
+                              );
+                            },
                           );
+
+                          if (confirmCancel == true) {
+                            ShowToastDialog.showLoader("Cancelling ride...".tr);
+                            OrderModel orderModel = controller.orderModel.value;
+                            orderModel.status = Constant.rideCanceled;
+
+                            await FireStoreUtils.getCustomer(
+                                    orderModel.userId.toString())
+                                .then((value) async {
+                              if (value != null && value.fcmToken != null) {
+                                Map<String, dynamic> playLoad =
+                                    <String, dynamic>{
+                                  "type": "city_order_cancelled",
+                                  "orderId": orderModel.id,
+                                };
+                                await SendNotification.sendOneNotification(
+                                  token: value.fcmToken.toString(),
+                                  title: 'Ride Cancelled'.tr,
+                                  body:
+                                      'Your ride has been cancelled by the driver.'
+                                          .tr,
+                                  payload: playLoad,
+                                );
+                              }
+                            });
+
+                            await FireStoreUtils.setOrder(orderModel)
+                                .then((value) {
+                              if (value == true) {
+                                ShowToastDialog.closeLoader();
+                                ShowToastDialog.showToast(
+                                    "Ride cancelled successfully".tr);
+                                Get.back();
+                              }
+                            });
+                          }
                         },
-                      );
-
-                      if (confirmCancel == true) {
-                        ShowToastDialog.showLoader("Cancelling ride...".tr);
-                        OrderModel orderModel = controller.orderModel.value;
-                        orderModel.status = Constant.rideCanceled;
-
-                        await FireStoreUtils.getCustomer(
-                                orderModel.userId.toString())
-                            .then((value) async {
-                          if (value != null && value.fcmToken != null) {
-                            Map<String, dynamic> playLoad = <String, dynamic>{
-                              "type": "city_order_cancelled",
-                              "orderId": orderModel.id,
-                            };
-                            await SendNotification.sendOneNotification(
-                              token: value.fcmToken.toString(),
-                              title: 'Ride Cancelled'.tr,
-                              body:
-                                  'Your ride has been cancelled by the driver.'
-                                      .tr,
-                              payload: playLoad,
-                            );
-                          }
-                        });
-
-                        await FireStoreUtils.setOrder(orderModel).then((value) {
-                          if (value == true) {
-                            ShowToastDialog.closeLoader();
-                            ShowToastDialog.showToast(
-                                "Ride cancelled successfully".tr);
-                            Get.back();
-                          }
-                        });
-                      }
-                    },
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+              ],
             ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -931,7 +918,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             isActive: controller.trafficLevel.value > 0,
             onPressed: () {
               showDialog(
-                
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
@@ -979,7 +965,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
 
   Dialog _otpDialog(BuildContext context, LiveTrackingController controller,
       OrderModel orderModel, InterCityOrderModel interOrderModel) {
-
     String currentOtp = ""; // Add this variable to store the current OTP
     bool isOtpComplete = false; // Track if OTP is complete
 
@@ -1006,11 +991,11 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 pinTheme: PinTheme(
                   fieldHeight: 40,
                   fieldWidth: 40,
-                  activeColor:  AppColors.textFieldBorder,
+                  activeColor: AppColors.textFieldBorder,
                   selectedColor: AppColors.textFieldBorder,
                   inactiveColor: AppColors.textFieldBorder,
                   activeFillColor: AppColors.textField,
-                  inactiveFillColor:  AppColors.textField,
+                  inactiveFillColor: AppColors.textField,
                   selectedFillColor: AppColors.textField,
                   shape: PinCodeFieldShape.box,
                   borderRadius: BorderRadius.circular(5),

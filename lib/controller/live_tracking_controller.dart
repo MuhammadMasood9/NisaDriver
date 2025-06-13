@@ -104,9 +104,7 @@ class LiveTrackingController extends GetxController {
   final RxString currentStep = "".obs;
 
   RxBool isNavigationView = true.obs;
-  RxDouble navigationZoom = 18.0.obs;
-  RxDouble navigationTilt = 70.0.obs;
-  RxDouble navigationBearing = 0.0.obs;
+  RxDouble navigationZoom = 16.0.obs;
   RxInt nextRoutePointIndex = 0.obs;
   Timer? _bearingUpdateTimer;
   Position? _previousPosition;
@@ -115,18 +113,8 @@ class LiveTrackingController extends GetxController {
   RxList<String> currentLanes = <String>[].obs;
   RxString recommendedLane = "".obs;
 
-  RxDouble navigation3DTilt = 70.0.obs;
-  RxDouble navigation3DZoom = 19.0.obs;
-  RxBool is3DNavigationMode = true.obs;
-
   final List<Map<String, dynamic>> _ttsQueue = [];
   bool _isSpeaking = false;
-
-  bool _shouldUpdateBearing(double newBearing) {
-    double diff = (newBearing - lastProcessedBearing.value).abs();
-    if (diff > 180) diff = 360 - diff;
-    return diff >= 15.0; // Update if bearing changes by 15 degrees or more
-  }
 
   @override
   void onInit() {
@@ -136,26 +124,18 @@ class LiveTrackingController extends GetxController {
     getArgument();
     isFollowingDriver.value = true;
     isNavigationView.value = true;
-    is3DNavigationMode.value = true;
 
     _magnetometerSubscription = magnetometerEventStream().listen(
       (MagnetometerEvent event) {
         double rawBearing = atan2(event.y, event.x) * (180.0 / pi);
         if (rawBearing < 0) rawBearing += 360.0;
-        deviceBearing.value = 0.7 * deviceBearing.value + 0.3 * rawBearing; // Smoothing
-        if (_shouldUpdateBearing(deviceBearing.value)) {
-          lastProcessedBearing.value = deviceBearing.value;
-          addDeviceMarker();
-          if (isFollowingDriver.value && isNavigationView.value) {
-            updateNavigationViewAligned();
-          }
-        }
+        deviceBearing.value = 0.7 * deviceBearing.value + 0.3 * rawBearing;
       },
     );
 
-    _bearingUpdateTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+    _bearingUpdateTimer = Timer.periodic(Duration(milliseconds: 50), (timer) {
       if (isFollowingDriver.value && isNavigationView.value) {
-        updateNavigationViewAligned();
+        updateNavigationView();
         addDeviceMarker();
       }
     });
@@ -256,23 +236,14 @@ class LiveTrackingController extends GetxController {
 
   void updateDeviceLocation(Position position) {
     currentPosition.value = position;
-    currentSpeed.value = position.speed * 3.6; // Convert m/s to km/h
-
-    if (position.speed > 1.0 && position.heading >= 0 && position.heading <= 360 && position.headingAccuracy <= 30) {
-      double newBearing = position.heading;
-      double diff = (newBearing - deviceBearing.value + 540) % 360 - 180;
-      deviceBearing.value = (deviceBearing.value + 0.2 * diff) % 360; // Smoothing with GPS
-    }
+    currentSpeed.value = position.speed * 3.6;
 
     _previousPosition = position;
     _previousTime = DateTime.now();
 
-    if (_shouldUpdateBearing(deviceBearing.value)) {
-      lastProcessedBearing.value = deviceBearing.value;
-      addDeviceMarker();
-      if (isFollowingDriver.value && isNavigationView.value) {
-        updateNavigationViewAligned();
-      }
+    addDeviceMarker();
+    if (isFollowingDriver.value && isNavigationView.value) {
+      updateNavigationView();
     }
 
     fetchSpeedLimit(LatLng(position.latitude, position.longitude));
@@ -289,27 +260,69 @@ class LiveTrackingController extends GetxController {
 
     markers.removeWhere((key, value) => key.value == "Device");
 
+    LatLng devicePos = LatLng(
+        currentPosition.value!.latitude, currentPosition.value!.longitude);
+    double rotation = _getSmoothedBearing();
+
     addMarker(
       latitude: currentPosition.value!.latitude,
       longitude: currentPosition.value!.longitude,
       id: "Device",
       descriptor: driverIcon!,
-      rotation: deviceBearing.value, // Align marker with bearing
+      rotation: rotation,
     );
   }
 
-  void toggle3DNavigationMode() {
-    is3DNavigationMode.value = !is3DNavigationMode.value;
-    if (is3DNavigationMode.value) {
-      navigationTilt.value = navigation3DTilt.value;
-      navigationZoom.value = navigation3DZoom.value;
-    } else {
-      navigationTilt.value = 0.0;
-      navigationZoom.value = 18.0;
+  double _getSmoothedBearing() {
+    if (currentPosition.value == null) return lastProcessedBearing.value;
+
+    double newBearing = 0.0;
+
+    // Use device heading if moving and heading is reliable
+    if (currentSpeed.value > 5.0 &&
+        currentPosition.value!.headingAccuracy < 45.0 &&
+        currentPosition.value!.heading >= 0) {
+      newBearing = currentPosition.value!.heading;
+    } else if (routePoints.isNotEmpty) {
+      // Fallback to route-based bearing
+      LatLng devicePos = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+      LatLng nextPoint = getNextRoutePoint(devicePos);
+      newBearing = _calculateBearing(devicePos, nextPoint);
     }
-    if (isFollowingDriver.value) {
-      updateNavigationViewAligned();
-    }
+
+    // Smooth the bearing to prevent jitter
+    double smoothedBearing =
+        _smoothBearing(lastProcessedBearing.value, newBearing);
+    lastProcessedBearing.value = smoothedBearing;
+    return smoothedBearing;
+  }
+
+  double _smoothBearing(double oldBearing, double newBearing) {
+    // Normalize the angle difference to [-180, 180]
+    double diff = (newBearing - oldBearing) % 360;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+
+    // Apply smoothing (70% old + 30% new)
+    return (oldBearing + 0.3 * diff) % 360;
+  }
+
+  double _calculateBearing(LatLng start, LatLng end) {
+    double startLat = start.latitude * pi / 180;
+    double startLng = start.longitude * pi / 180;
+    double endLat = end.latitude * pi / 180;
+    double endLng = end.longitude * pi / 180;
+
+    double deltaLng = endLng - startLng;
+
+    double y = sin(deltaLng) * cos(endLat);
+    double x = cos(startLat) * sin(endLat) -
+        sin(startLat) * cos(endLat) * cos(deltaLng);
+    double bearing = atan2(y, x) * 180 / pi;
+
+    bearing = (bearing + 360) % 360;
+    return bearing;
   }
 
   LatLng getNextRoutePoint(LatLng devicePos) {
@@ -332,7 +345,8 @@ class LiveTrackingController extends GetxController {
     }
 
     int lookAheadDistance = currentSpeed.value > 30 ? 15 : 8;
-    return routePoints[min(closestIndex + lookAheadDistance, routePoints.length - 1)];
+    return routePoints[
+        min(closestIndex + lookAheadDistance, routePoints.length - 1)];
   }
 
   LatLng getTargetLocation() {
@@ -346,7 +360,8 @@ class LiveTrackingController extends GetxController {
       }
     } else {
       if (intercityOrderModel.value.status == Constant.rideInProgress) {
-        return LatLng(intercityOrderModel.value.destinationLocationLAtLng!.latitude!,
+        return LatLng(
+            intercityOrderModel.value.destinationLocationLAtLng!.latitude!,
             intercityOrderModel.value.destinationLocationLAtLng!.longitude!);
       } else {
         return LatLng(intercityOrderModel.value.sourceLocationLAtLng!.latitude!,
@@ -357,14 +372,16 @@ class LiveTrackingController extends GetxController {
 
   void startEstimationUpdates() {
     _estimationUpdateTimer?.cancel();
-    _estimationUpdateTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _estimationUpdateTimer =
+        Timer.periodic(const Duration(seconds: 5), (timer) {
       updateTimeAndDistanceEstimates();
     });
   }
 
   void startAutoNavigation() {
     _autoNavigationTimer?.cancel();
-    _autoNavigationTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+    _autoNavigationTimer =
+        Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (isAutoNavigationEnabled.value) {
         updateAutoNavigation();
       }
@@ -379,40 +396,27 @@ class LiveTrackingController extends GetxController {
   }
 
   void updateAutoNavigation() {
-    if (!isAutoNavigationEnabled.value || routePoints.isEmpty || currentPosition.value == null) return;
+    if (!isAutoNavigationEnabled.value ||
+        routePoints.isEmpty ||
+        currentPosition.value == null) return;
 
-    LatLng devicePos = LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude);
+    LatLng devicePos = LatLng(
+        currentPosition.value!.latitude, currentPosition.value!.longitude);
     checkUpcomingTurns(devicePos);
     adjustCameraForNavigation(devicePos);
     updateLaneGuidance();
-    autoAdjust3DPerspective();
   }
 
-  void autoAdjust3DPerspective() {
-    if (!is3DNavigationMode.value) return;
-
-    if (distanceToNextTurn.value < 100) {
-      navigation3DTilt.value = 75.0;
-    } else if (currentSpeed.value > 50) {
-      navigation3DTilt.value = 60.0;
-    } else {
-      navigation3DTilt.value = 70.0;
-    }
-    navigation3DTilt.value = navigation3DTilt.value.clamp(60.0, 80.0);
-  }
-
-  void resetTo3DView() {
-    is3DNavigationMode.value = true;
+  void resetToDefaultView() {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
-    navigation3DTilt.value = 70.0;
-    navigation3DZoom.value = 19.0;
-    updateNavigationViewAligned();
+    updateNavigationView();
     updateMarkersAndPolyline();
   }
 
   void checkUpcomingTurns(LatLng devicePos) async {
-    if (navigationSteps.isEmpty || currentStepIndex.value >= navigationSteps.length) return;
+    if (navigationSteps.isEmpty ||
+        currentStepIndex.value >= navigationSteps.length) return;
 
     NavigationStep currentStep = navigationSteps[currentStepIndex.value];
     double distanceToStep = await calculateDistance(
@@ -435,31 +439,34 @@ class LiveTrackingController extends GetxController {
         }
       }
 
-      if (targetDistance != null && !announcedDistances.contains(targetDistance)) {
-        String announcement = targetDistance == 20 ? "Now: ${currentStep.instruction}" : currentStep.instruction;
+      if (targetDistance != null &&
+          !announcedDistances.contains(targetDistance)) {
+        String announcement = targetDistance == 20
+            ? "Now: ${currentStep.instruction}"
+            : currentStep.instruction;
         queueAnnouncement(announcement, priority: 2);
         announcedDistances.add(targetDistance);
       }
     }
 
     if (distanceToStep < 10) {
-      currentStepIndex.value = min(currentStepIndex.value + 1, navigationSteps.length - 1);
+      currentStepIndex.value =
+          min(currentStepIndex.value + 1, navigationSteps.length - 1);
       announcedDistances.clear();
       updateNavigationInstructions();
     }
   }
 
   void adjustCameraForNavigation(LatLng devicePos) {
-    double zoom = is3DNavigationMode.value ? 19.0 : 18.0;
-    double tilt = is3DNavigationMode.value ? navigation3DTilt.value : 0.0;
+    navigationZoom.value = showDriverToPickupRoute.value ? 16.0 : 15.0;
 
-    if (currentSpeed.value < 5) zoom += 0.5;
-    else if (currentSpeed.value > 50) zoom -= 0.5;
+    if (currentSpeed.value < 5)
+      navigationZoom.value += 0.5;
+    else if (currentSpeed.value > 50) navigationZoom.value -= 0.5;
 
-    if (distanceToNextTurn.value < 150) zoom += 0.5;
+    if (distanceToNextTurn.value < 150) navigationZoom.value += 0.5;
 
-    navigationZoom.value = zoom.clamp(17.0, 20.0);
-    navigation3DZoom.value = zoom.clamp(17.0, 20.0);
+    navigationZoom.value = navigationZoom.value.clamp(14.0, 17.0);
   }
 
   void onMapTap(LatLng position) {
@@ -467,7 +474,7 @@ class LiveTrackingController extends GetxController {
     Timer(Duration(seconds: 8), () {
       if (!isFollowingDriver.value) {
         isFollowingDriver.value = true;
-        updateNavigationViewAligned();
+        updateNavigationView();
       }
     });
   }
@@ -496,7 +503,8 @@ class LiveTrackingController extends GetxController {
   void checkOffRoute() async {
     if (routePoints.isEmpty || currentPosition.value == null) return;
 
-    LatLng devicePos = LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude);
+    LatLng devicePos = LatLng(
+        currentPosition.value!.latitude, currentPosition.value!.longitude);
     double minDistanceToRoute = double.infinity;
     int closestIndex = 0;
 
@@ -521,7 +529,8 @@ class LiveTrackingController extends GetxController {
       polyLines.clear();
       recalculateRoute();
     } else if (!isOffRoute.value && wasOffRoute) {
-      queueAnnouncement("Back on route. Continue following the path.", priority: 3);
+      queueAnnouncement("Back on route. Continue following the path.",
+          priority: 3);
       polyLines.remove(PolylineId("ReturnToRoute"));
       nextRoutePointIndex.value = closestIndex;
       updateDynamicPolyline();
@@ -531,7 +540,8 @@ class LiveTrackingController extends GetxController {
   void updateDynamicPolyline() {
     if (routePoints.isEmpty || currentPosition.value == null) return;
 
-    LatLng devicePos = LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude);
+    LatLng devicePos = LatLng(
+        currentPosition.value!.latitude, currentPosition.value!.longitude);
     int closestIndex = 0;
     double minDistance = double.infinity;
 
@@ -549,8 +559,11 @@ class LiveTrackingController extends GetxController {
     }
 
     List<LatLng> remainingPoints = routePoints.sublist(closestIndex);
-    String polylineId = showDriverToPickupRoute.value ? "DeviceToPickup" : "DeviceToDestination";
-    Color color = showDriverToPickupRoute.value ? AppColors.primary : Colors.green;
+    String polylineId = showDriverToPickupRoute.value
+        ? "DeviceToPickup"
+        : "DeviceToDestination";
+    Color color =
+        showDriverToPickupRoute.value ? AppColors.primary : Colors.green;
 
     polyLines.clear();
     _addPolyLine(remainingPoints, polylineId, color);
@@ -559,7 +572,8 @@ class LiveTrackingController extends GetxController {
   void updateNextRoutePoint() {
     if (routePoints.isEmpty || currentPosition.value == null) return;
 
-    LatLng devicePos = LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude);
+    LatLng devicePos = LatLng(
+        currentPosition.value!.latitude, currentPosition.value!.longitude);
     int closestIndex = 0;
     double minDistance = double.infinity;
 
@@ -602,7 +616,11 @@ class LiveTrackingController extends GetxController {
   }
 
   double getTrafficSpeedMultiplier() {
-    return trafficLevel.value == 2 ? 0.6 : trafficLevel.value == 1 ? 0.8 : 1.0;
+    return trafficLevel.value == 2
+        ? 0.6
+        : trafficLevel.value == 1
+            ? 0.8
+            : 1.0;
   }
 
   void updateTripProgress() {
@@ -642,50 +660,47 @@ class LiveTrackingController extends GetxController {
     tripProgress.value = "${progressPercentage.toStringAsFixed(0)}%";
   }
 
-  Future<double> calculateDistance(double startLat, double startLng, double endLat, double endLng) async {
+  Future<double> calculateDistance(
+      double startLat, double startLng, double endLat, double endLng) async {
     try {
-      return await Geolocator.distanceBetween(startLat, startLng, endLat, endLng);
+      return await Geolocator.distanceBetween(
+          startLat, startLng, endLat, endLng);
     } catch (e) {
-      return calculateDistanceBetweenPoints(startLat, startLng, endLat, endLng) * 1000;
+      return calculateDistanceBetweenPoints(
+              startLat, startLng, endLat, endLng) *
+          1000;
     }
   }
 
-  double calculateDistanceBetweenPoints(double startLat, double startLng, double endLat, double endLng) {
+  double calculateDistanceBetweenPoints(
+      double startLat, double startLng, double endLat, double endLng) {
     var p = 0.017453292519943295;
     var c = cos;
-    var a = 0.5 - c((endLat - startLat) * p) / 2 + c(startLat * p) * c(endLat * p) * (1 - c((endLng - startLng) * p)) / 2;
+    var a = 0.5 -
+        c((endLat - startLat) * p) / 2 +
+        c(startLat * p) * c(endLat * p) * (1 - c((endLng - startLng) * p)) / 2;
     return 12742 * asin(sqrt(a));
   }
 
   void updateNavigationView() async {
     if (mapController == null || currentPosition.value == null) return;
-    LatLng deviceLocation = LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude);
+    LatLng deviceLocation = LatLng(
+        currentPosition.value!.latitude, currentPosition.value!.longitude);
     await mapController!.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
           target: deviceLocation,
           zoom: navigationZoom.value,
           tilt: 0.0,
-          bearing: deviceBearing.value,
+          bearing: 20.0,
         ),
       ),
     );
   }
 
-  double getBearing(double startLat, double startLng, double endLat, double endLng) {
-    double latitude1 = startLat * pi / 180;
-    double longitude1 = startLng * pi / 180;
-    double latitude2 = endLat * pi / 180;
-    double longitude2 = endLng * pi / 180;
-
-    double y = sin(longitude2 - longitude1) * cos(latitude2);
-    double x = cos(latitude1) * sin(latitude2) - sin(latitude1) * cos(latitude2) * cos(longitude2 - longitude1);
-    double bearing = atan2(y, x) * 180 / pi;
-    return (bearing + 360) % 360;
-  }
-
   void updateNavigationInstructions() async {
-    if (navigationSteps.isEmpty || currentStepIndex.value >= navigationSteps.length) {
+    if (navigationSteps.isEmpty ||
+        currentStepIndex.value >= navigationSteps.length) {
       navigationInstruction.value = "Follow route";
       nextTurnInstruction.value = "";
       announcedDistances.clear();
@@ -696,31 +711,13 @@ class LiveTrackingController extends GetxController {
     navigationInstruction.value = currentStep.instruction;
 
     if (currentStepIndex.value + 1 < navigationSteps.length) {
-      nextTurnInstruction.value = navigationSteps[currentStepIndex.value + 1].instruction;
+      nextTurnInstruction.value =
+          navigationSteps[currentStepIndex.value + 1].instruction;
     } else {
-      nextTurnInstruction.value = showDriverToPickupRoute.value ? "Nearing pickup" : "Nearing destination";
+      nextTurnInstruction.value = showDriverToPickupRoute.value
+          ? "Nearing pickup"
+          : "Nearing destination";
     }
-  }
-
-  double? extractBearingFromInstruction(String instruction) {
-    final directions = {
-      "north": 0.0,
-      "northeast": 45.0,
-      "east": 90.0,
-      "southeast": 135.0,
-      "south": 180.0,
-      "southwest": 225.0,
-      "west": 270.0,
-      "northwest": 315.0,
-    };
-
-    final regex = RegExp(r'Head (north|northeast|east|southeast|south|southwest|west|northwest)', caseSensitive: false);
-    final match = regex.firstMatch(instruction);
-    if (match != null) {
-      final direction = match.group(1)!.toLowerCase();
-      return directions[direction];
-    }
-    return null;
   }
 
   void updateRouteVisibility() {
@@ -728,14 +725,19 @@ class LiveTrackingController extends GetxController {
     bool wasShowingDestination = showPickupToDestinationRoute.value;
 
     if (type.value == "orderModel") {
-      showDriverToPickupRoute.value = (orderModel.value.status == Constant.rideActive);
-      showPickupToDestinationRoute.value = (orderModel.value.status == Constant.rideInProgress);
+      showDriverToPickupRoute.value =
+          (orderModel.value.status == Constant.rideActive);
+      showPickupToDestinationRoute.value =
+          (orderModel.value.status == Constant.rideInProgress);
     } else {
-      showDriverToPickupRoute.value = (intercityOrderModel.value.status == Constant.rideActive);
-      showPickupToDestinationRoute.value = (intercityOrderModel.value.status == Constant.rideInProgress);
+      showDriverToPickupRoute.value =
+          (intercityOrderModel.value.status == Constant.rideActive);
+      showPickupToDestinationRoute.value =
+          (intercityOrderModel.value.status == Constant.rideInProgress);
     }
 
-    if (wasShowingPickup != showDriverToPickupRoute.value || wasShowingDestination != showPickupToDestinationRoute.value) {
+    if (wasShowingPickup != showDriverToPickupRoute.value ||
+        wasShowingDestination != showPickupToDestinationRoute.value) {
       updateMarkersAndPolyline();
     }
   }
@@ -746,7 +748,11 @@ class LiveTrackingController extends GetxController {
       type.value = argumentData['type'];
       if (type.value == "orderModel") {
         OrderModel argumentOrderModel = argumentData['orderModel'];
-        FireStoreUtils.fireStore.collection(CollectionName.orders).doc(argumentOrderModel.id).snapshots().listen((event) {
+        FireStoreUtils.fireStore
+            .collection(CollectionName.orders)
+            .doc(argumentOrderModel.id)
+            .snapshots()
+            .listen((event) {
           if (event.data() != null) {
             orderModel.value = OrderModel.fromJson(event.data()!);
             status.value = orderModel.value.status ?? "";
@@ -755,13 +761,20 @@ class LiveTrackingController extends GetxController {
           }
         });
       } else {
-        InterCityOrderModel argumentOrderModel = argumentData['interCityOrderModel'];
-        FireStoreUtils.fireStore.collection(CollectionName.ordersIntercity).doc(argumentOrderModel.id).snapshots().listen((event) {
+        InterCityOrderModel argumentOrderModel =
+            argumentData['interCityOrderModel'];
+        FireStoreUtils.fireStore
+            .collection(CollectionName.ordersIntercity)
+            .doc(argumentOrderModel.id)
+            .snapshots()
+            .listen((event) {
           if (event.data() != null) {
-            intercityOrderModel.value = InterCityOrderModel.fromJson(event.data()!);
+            intercityOrderModel.value =
+                InterCityOrderModel.fromJson(event.data()!);
             status.value = intercityOrderModel.value.status ?? "";
             updateRouteVisibility();
-            if (intercityOrderModel.value.status == Constant.rideComplete) Get.back();
+            if (intercityOrderModel.value.status == Constant.rideComplete)
+              Get.back();
           }
         });
       }
@@ -796,7 +809,8 @@ class LiveTrackingController extends GetxController {
           sourceLatitude: currentPosition.value!.latitude,
           sourceLongitude: currentPosition.value!.longitude,
           destinationLatitude: orderModel.value.sourceLocationLAtLng!.latitude,
-          destinationLongitude: orderModel.value.sourceLocationLAtLng!.longitude,
+          destinationLongitude:
+              orderModel.value.sourceLocationLAtLng!.longitude,
           polylineId: "DeviceToPickup",
           color: AppColors.primary,
         );
@@ -812,8 +826,10 @@ class LiveTrackingController extends GetxController {
         getPolyline(
           sourceLatitude: currentPosition.value!.latitude,
           sourceLongitude: currentPosition.value!.longitude,
-          destinationLatitude: orderModel.value.destinationLocationLAtLng!.latitude,
-          destinationLongitude: orderModel.value.destinationLocationLAtLng!.longitude,
+          destinationLatitude:
+              orderModel.value.destinationLocationLAtLng!.latitude,
+          destinationLongitude:
+              orderModel.value.destinationLocationLAtLng!.longitude,
           polylineId: "DeviceToDestination",
           color: Colors.green,
         );
@@ -830,16 +846,20 @@ class LiveTrackingController extends GetxController {
         getPolyline(
           sourceLatitude: currentPosition.value!.latitude,
           sourceLongitude: currentPosition.value!.longitude,
-          destinationLatitude: intercityOrderModel.value.sourceLocationLAtLng!.latitude,
-          destinationLongitude: intercityOrderModel.value.sourceLocationLAtLng!.longitude,
+          destinationLatitude:
+              intercityOrderModel.value.sourceLocationLAtLng!.latitude,
+          destinationLongitude:
+              intercityOrderModel.value.sourceLocationLAtLng!.longitude,
           polylineId: "DeviceToPickup",
           color: AppColors.primary,
         );
       }
       if (showPickupToDestinationRoute.value) {
         addMarker(
-          latitude: intercityOrderModel.value.destinationLocationLAtLng!.latitude,
-          longitude: intercityOrderModel.value.destinationLocationLAtLng!.longitude,
+          latitude:
+              intercityOrderModel.value.destinationLocationLAtLng!.latitude,
+          longitude:
+              intercityOrderModel.value.destinationLocationLAtLng!.longitude,
           id: "Destination",
           descriptor: destinationIcon!,
           rotation: 0.0,
@@ -847,8 +867,10 @@ class LiveTrackingController extends GetxController {
         getPolyline(
           sourceLatitude: currentPosition.value!.latitude,
           sourceLongitude: currentPosition.value!.longitude,
-          destinationLatitude: intercityOrderModel.value.destinationLocationLAtLng!.latitude,
-          destinationLongitude: intercityOrderModel.value.destinationLocationLAtLng!.longitude,
+          destinationLatitude:
+              intercityOrderModel.value.destinationLocationLAtLng!.latitude,
+          destinationLongitude:
+              intercityOrderModel.value.destinationLocationLAtLng!.longitude,
           polylineId: "DeviceToDestination",
           color: Colors.green,
         );
@@ -856,7 +878,7 @@ class LiveTrackingController extends GetxController {
     }
 
     updateTimeAndDistanceEstimates();
-    updateNavigationViewAligned();
+    updateNavigationView();
   }
 
   Future<Map<String, dynamic>?> fetchDirections({
@@ -865,19 +887,28 @@ class LiveTrackingController extends GetxController {
     required double destinationLatitude,
     required double destinationLongitude,
   }) async {
-    const retryOptions = RetryOptions(maxAttempts: 3, delayFactor: Duration(seconds: 1), maxDelay: Duration(seconds: 5));
+    const retryOptions = RetryOptions(
+        maxAttempts: 3,
+        delayFactor: Duration(seconds: 1),
+        maxDelay: Duration(seconds: 5));
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String cacheKey = "$sourceLatitude,$sourceLongitude-$destinationLatitude,$destinationLongitude";
+    String cacheKey =
+        "$sourceLatitude,$sourceLongitude-$destinationLatitude,$destinationLongitude";
     String? cachedDirections = prefs.getString(cacheKey);
-    DateTime? lastFetchTime = prefs.getString("${cacheKey}_time") != null ? DateTime.parse(prefs.getString("${cacheKey}_time")!) : null;
+    DateTime? lastFetchTime = prefs.getString("${cacheKey}_time") != null
+        ? DateTime.parse(prefs.getString("${cacheKey}_time")!)
+        : null;
 
-    if (cachedDirections != null && lastFetchTime != null && DateTime.now().difference(lastFetchTime).inMinutes < 5) {
+    if (cachedDirections != null &&
+        lastFetchTime != null &&
+        DateTime.now().difference(lastFetchTime).inMinutes < 5) {
       return json.decode(cachedDirections);
     }
 
     try {
       return await retry(() async {
-        final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+        final String url =
+            'https://maps.googleapis.com/maps/api/directions/json?'
             'origin=$sourceLatitude,$sourceLongitude&'
             'destination=$destinationLatitude,$destinationLongitude&'
             'mode=driving&'
@@ -889,7 +920,8 @@ class LiveTrackingController extends GetxController {
           Map<String, dynamic> data = json.decode(response.body);
           if (data['status'] == 'OK') {
             await prefs.setString(cacheKey, json.encode(data));
-            await prefs.setString("${cacheKey}_time", DateTime.now().toIso8601String());
+            await prefs.setString(
+                "${cacheKey}_time", DateTime.now().toIso8601String());
             return data;
           } else {
             throw Exception('Directions API error: ${data['status']}');
@@ -905,9 +937,11 @@ class LiveTrackingController extends GetxController {
   }
 
   Future<void> fetchSpeedLimit(LatLng position) async {
-    speedLimit.value = "50"; // Placeholder
+    speedLimit.value = "50";
     if (currentSpeed.value > double.parse(speedLimit.value)) {
-      queueAnnouncement("You are exceeding the speed limit of ${speedLimit.value} km/h.", priority: 3);
+      queueAnnouncement(
+          "You are exceeding the speed limit of ${speedLimit.value} km/h.",
+          priority: 3);
     }
   }
 
@@ -919,16 +953,24 @@ class LiveTrackingController extends GetxController {
     required String polylineId,
     required Color color,
   }) async {
-    if (sourceLatitude == null || sourceLongitude == null || destinationLatitude == null || destinationLongitude == null) return;
+    if (sourceLatitude == null ||
+        sourceLongitude == null ||
+        destinationLatitude == null ||
+        destinationLongitude == null) return;
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String cacheKey = "$sourceLatitude,$sourceLongitude-$destinationLatitude,$destinationLongitude";
+    String cacheKey =
+        "$sourceLatitude,$sourceLongitude-$destinationLatitude,$destinationLongitude";
     String? cachedPolyline = prefs.getString(cacheKey);
     if (cachedPolyline != null) {
-      List<PointLatLng> decodedPoints = polylinePoints.decodePolyline(cachedPolyline);
-      List<LatLng> polylineCoordinates = decodedPoints.map((point) => LatLng(point.latitude, point.longitude)).toList();
+      List<PointLatLng> decodedPoints =
+          polylinePoints.decodePolyline(cachedPolyline);
+      List<LatLng> polylineCoordinates = decodedPoints
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
       if ((polylineId == "DeviceToPickup" && showDriverToPickupRoute.value) ||
-          (polylineId == "DeviceToDestination" && showPickupToDestinationRoute.value)) {
+          (polylineId == "DeviceToDestination" &&
+              showPickupToDestinationRoute.value)) {
         routePoints.value = polylineCoordinates;
       }
       _addPolyLine(polylineCoordinates, polylineId, color);
@@ -943,20 +985,27 @@ class LiveTrackingController extends GetxController {
       destinationLongitude: destinationLongitude,
     );
 
-    if (directionsData == null || directionsData['status'] != 'OK' || directionsData['routes'].isEmpty) {
+    if (directionsData == null ||
+        directionsData['status'] != 'OK' ||
+        directionsData['routes'].isEmpty) {
       navigationInstruction.value = "Route unavailable, please try again";
       ShowToastDialog.showToast("Failed to load route");
       return;
     }
 
-    String encodedPolyline = directionsData['routes'][0]['overview_polyline']['points'];
-    List<PointLatLng> decodedPoints = polylinePoints.decodePolyline(encodedPolyline);
-    List<LatLng> polylineCoordinates = decodedPoints.map((point) => LatLng(point.latitude, point.longitude)).toList();
+    String encodedPolyline =
+        directionsData['routes'][0]['overview_polyline']['points'];
+    List<PointLatLng> decodedPoints =
+        polylinePoints.decodePolyline(encodedPolyline);
+    List<LatLng> polylineCoordinates = decodedPoints
+        .map((point) => LatLng(point.latitude, point.longitude))
+        .toList();
 
     await prefs.setString(cacheKey, encodedPolyline);
 
     if ((polylineId == "DeviceToPickup" && showDriverToPickupRoute.value) ||
-        (polylineId == "DeviceToDestination" && showPickupToDestinationRoute.value)) {
+        (polylineId == "DeviceToDestination" &&
+            showPickupToDestinationRoute.value)) {
       routePoints.value = polylineCoordinates;
       parseNavigationSteps(directionsData);
       updateTrafficLevel(directionsData);
@@ -972,10 +1021,12 @@ class LiveTrackingController extends GetxController {
 
     List<dynamic> steps = directionsData['routes'][0]['legs'][0]['steps'];
     for (var step in steps) {
-      String instruction = _stripHtmlTags(step['html_instructions'] ?? "Continue");
+      String instruction =
+          _stripHtmlTags(step['html_instructions'] ?? "Continue");
       double distance = (step['distance']['value'] ?? 0).toDouble();
       String maneuver = step['maneuver'] ?? "straight";
-      LatLng location = LatLng(step['end_location']['lat'], step['end_location']['lng']);
+      LatLng location =
+          LatLng(step['end_location']['lat'], step['end_location']['lng']);
       navigationSteps.add(NavigationStep(
         instruction: _simplifyInstruction(maneuver, distance),
         distance: distance,
@@ -1018,12 +1069,21 @@ class LiveTrackingController extends GetxController {
   }
 
   void updateTrafficLevel(Map<String, dynamic> directionsData) {
-    double duration = (directionsData['routes'][0]['legs'][0]['duration']['value'] ?? 0).toDouble();
-    double durationInTraffic = (directionsData['routes'][0]['legs'][0]['duration_in_traffic']?['value'] ?? duration).toDouble();
+    double duration =
+        (directionsData['routes'][0]['legs'][0]['duration']['value'] ?? 0)
+            .toDouble();
+    double durationInTraffic = (directionsData['routes'][0]['legs'][0]
+                ['duration_in_traffic']?['value'] ??
+            duration)
+        .toDouble();
 
     if (duration > 0) {
       double trafficRatio = durationInTraffic / duration;
-      trafficLevel.value = trafficRatio > 1.5 ? 2 : trafficRatio > 1.2 ? 1 : 0;
+      trafficLevel.value = trafficRatio > 1.5
+          ? 2
+          : trafficRatio > 1.2
+              ? 1
+              : 0;
       if (isVoiceEnabled.value && trafficLevel.value > 0) {
         queueAnnouncement(getTrafficLevelText(), priority: 1);
       }
@@ -1040,12 +1100,20 @@ class LiveTrackingController extends GetxController {
     if (latitude == null || longitude == null) return;
 
     MarkerId markerId = MarkerId(id);
-    String title = id == "Departure" ? "Pickup Location" : id == "Destination" ? "Destination" : "Your Location";
+    String title = id == "Departure"
+        ? "Pickup Location"
+        : id == "Destination"
+            ? "Destination"
+            : "Your Location";
     String snippet = id == "Device"
         ? "Current Position"
         : type.value == "orderModel"
-            ? (id == "Departure" ? orderModel.value.sourceLocationName ?? "" : orderModel.value.destinationLocationName ?? "")
-            : (id == "Departure" ? intercityOrderModel.value.sourceLocationName ?? "" : intercityOrderModel.value.destinationLocationName ?? "");
+            ? (id == "Departure"
+                ? orderModel.value.sourceLocationName ?? ""
+                : orderModel.value.destinationLocationName ?? "")
+            : (id == "Departure"
+                ? intercityOrderModel.value.sourceLocationName ?? ""
+                : intercityOrderModel.value.destinationLocationName ?? "");
 
     Marker marker = Marker(
       markerId: markerId,
@@ -1058,15 +1126,19 @@ class LiveTrackingController extends GetxController {
   }
 
   void addMarkerSetup() async {
-    final Uint8List departure = await Constant().getBytesFromAsset('assets/images/pickup.png', 50);
-    final Uint8List destination = await Constant().getBytesFromAsset('assets/images/dropoff.png', 50);
-    final Uint8List driver = await Constant().getBytesFromAsset('assets/images/ic_cab.png', 30);
+    final Uint8List departure =
+        await Constant().getBytesFromAsset('assets/images/pickup.png', 50);
+    final Uint8List destination =
+        await Constant().getBytesFromAsset('assets/images/dropoff.png', 50);
+    final Uint8List driver =
+        await Constant().getBytesFromAsset('assets/images/ic_cab.png', 30);
     departureIcon = BitmapDescriptor.fromBytes(departure);
     destinationIcon = BitmapDescriptor.fromBytes(destination);
     driverIcon = BitmapDescriptor.fromBytes(driver);
   }
 
-  void _addPolyLine(List<LatLng> polylineCoordinates, String polylineId, Color color) {
+  void _addPolyLine(
+      List<LatLng> polylineCoordinates, String polylineId, Color color) {
     if (polylineCoordinates.isEmpty) return;
 
     PolylineId id = PolylineId(polylineId);
@@ -1077,7 +1149,8 @@ class LiveTrackingController extends GetxController {
       width: 6,
       startCap: Cap.roundCap,
       endCap: Cap.roundCap,
-      patterns: isOffRoute.value ? [PatternItem.dash(10), PatternItem.gap(5)] : [],
+      patterns:
+          isOffRoute.value ? [PatternItem.dash(10), PatternItem.gap(5)] : [],
     );
     polyLines[id] = polyline;
   }
@@ -1086,8 +1159,10 @@ class LiveTrackingController extends GetxController {
     if (mapController == null || isFollowingDriver.value) return;
 
     LatLngBounds bounds = LatLngBounds(
-      southwest: LatLng(min(source.latitude, destination.latitude), min(source.longitude, destination.longitude)),
-      northeast: LatLng(max(source.latitude, destination.latitude), max(source.longitude, destination.longitude)),
+      southwest: LatLng(min(source.latitude, destination.latitude),
+          min(source.longitude, destination.longitude)),
+      northeast: LatLng(max(source.latitude, destination.latitude),
+          max(source.longitude, destination.longitude)),
     );
 
     CameraUpdate cameraUpdate = CameraUpdate.newLatLngBounds(bounds, 100);
@@ -1097,25 +1172,8 @@ class LiveTrackingController extends GetxController {
   void toggleMapView() {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
-    is3DNavigationMode.value = true;
-    updateNavigationViewAligned();
+    updateNavigationView();
     updateMarkersAndPolyline();
-  }
-
-  void updateNavigationViewAligned() async {
-    if (currentPosition.value == null || mapController == null) return;
-
-    LatLng deviceLocation = LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude);
-    await mapController!.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: deviceLocation,
-          zoom: is3DNavigationMode.value ? navigation3DZoom.value : navigationZoom.value,
-          tilt: is3DNavigationMode.value ? navigation3DTilt.value : 0.0,
-          bearing: deviceBearing.value, // Consistent bearing alignment
-        ),
-      ),
-    );
   }
 
   void toggleVoiceGuidance() {
@@ -1130,7 +1188,8 @@ class LiveTrackingController extends GetxController {
 
   void toggleAutoNavigation() {
     isAutoNavigationEnabled.value = !isAutoNavigationEnabled.value;
-    ShowToastDialog.showToast("Auto navigation ${isAutoNavigationEnabled.value ? 'enabled' : 'disabled'}");
+    ShowToastDialog.showToast(
+        "Auto navigation ${isAutoNavigationEnabled.value ? 'enabled' : 'disabled'}");
   }
 
   void toggleNightMode() {
@@ -1139,7 +1198,8 @@ class LiveTrackingController extends GetxController {
       String mapStyle = isNightMode.value ? _getNightModeStyle() : '';
       mapController!.setMapStyle(mapStyle);
     }
-    ShowToastDialog.showToast("Night mode ${isNightMode.value ? 'enabled' : 'disabled'}");
+    ShowToastDialog.showToast(
+        "Night mode ${isNightMode.value ? 'enabled' : 'disabled'}");
   }
 
   String _getNightModeStyle() {
@@ -1160,7 +1220,10 @@ class LiveTrackingController extends GetxController {
   }
 
   void recalculateRoute() {
-    if (currentPosition.value == null || (_lastRerouteTime != null && DateTime.now().difference(_lastRerouteTime!).inSeconds < 30)) return;
+    if (currentPosition.value == null ||
+        (_lastRerouteTime != null &&
+            DateTime.now().difference(_lastRerouteTime!).inSeconds < 30))
+      return;
 
     _lastRerouteTime = DateTime.now();
     polyLines.clear();
@@ -1186,11 +1249,19 @@ class LiveTrackingController extends GetxController {
   }
 
   String getTrafficLevelText() {
-    return trafficLevel.value == 2 ? "Heavy traffic ahead" : trafficLevel.value == 1 ? "Moderate traffic ahead" : "Light traffic";
+    return trafficLevel.value == 2
+        ? "Heavy traffic ahead"
+        : trafficLevel.value == 1
+            ? "Moderate traffic ahead"
+            : "Light traffic";
   }
 
   Color getTrafficLevelColor() {
-    return trafficLevel.value == 2 ? Colors.red : trafficLevel.value == 1 ? Colors.orange : Colors.green;
+    return trafficLevel.value == 2
+        ? Colors.red
+        : trafficLevel.value == 1
+            ? Colors.orange
+            : Colors.green;
   }
 
   void emergencyStop() async {
@@ -1201,7 +1272,8 @@ class LiveTrackingController extends GetxController {
 
   void shareLocation() {
     if (currentPosition.value != null) {
-      String locationUrl = "https://maps.google.com/?q=${currentPosition.value!.latitude},${currentPosition.value!.longitude}";
+      String locationUrl =
+          "https://maps.google.com/?q=${currentPosition.value!.latitude},${currentPosition.value!.longitude}";
       ShowToastDialog.showToast("Location shared: $locationUrl");
     }
   }
@@ -1213,7 +1285,8 @@ class LiveTrackingController extends GetxController {
       distanceFilter: currentSpeed.value > 50 ? 2 : 1,
     );
 
-    _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+    _positionStream =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
       (Position position) => updateDeviceLocation(position),
       onError: (error) {
         ShowToastDialog.showToast("Error tracking location. Please check GPS.");
@@ -1224,8 +1297,11 @@ class LiveTrackingController extends GetxController {
 
   Future<double?> testLiveBearing() async {
     try {
-      CompassEvent? event = await FlutterCompass.events!.first.timeout(Duration(seconds: 5));
-      if (event?.heading == null || event!.heading! < 0 || event.heading! > 360) {
+      CompassEvent? event =
+          await FlutterCompass.events!.first.timeout(Duration(seconds: 5));
+      if (event?.heading == null ||
+          event!.heading! < 0 ||
+          event.heading! > 360) {
         ShowToastDialog.showToast("Invalid compass data, please calibrate");
         return null;
       }
@@ -1238,7 +1314,8 @@ class LiveTrackingController extends GetxController {
 
   Future<void> getCurrentLocation() async {
     try {
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
       updateDeviceLocation(position);
     } catch (e) {
       ShowToastDialog.showToast("Error getting current location");
@@ -1250,8 +1327,10 @@ class LiveTrackingController extends GetxController {
 
     Timer.periodic(Duration(seconds: 2), (timer) {
       if (currentPosition.value != null) {
-        double newLat = currentPosition.value!.latitude + (Random().nextDouble() - 0.5) * 0.001;
-        double newLng = currentPosition.value!.longitude + (Random().nextDouble() - 0.5) * 0.001;
+        double newLat = currentPosition.value!.latitude +
+            (Random().nextDouble() - 0.5) * 0.001;
+        double newLng = currentPosition.value!.longitude +
+            (Random().nextDouble() - 0.5) * 0.001;
 
         Position simulatedPosition = Position(
           latitude: newLat,
@@ -1259,11 +1338,15 @@ class LiveTrackingController extends GetxController {
           timestamp: DateTime.now(),
           accuracy: 5.0,
           altitude: 0,
-          heading: Random().nextDouble() * 360,
+          heading: _calculateBearing(
+            LatLng(currentPosition.value!.latitude,
+                currentPosition.value!.longitude),
+            LatLng(newLat, newLng),
+          ),
           speed: Random().nextDouble() * 20,
           speedAccuracy: 1.0,
           altitudeAccuracy: 1.0,
-          headingAccuracy: 45.0,
+          headingAccuracy: 10.0,
         );
 
         updateDeviceLocation(simulatedPosition);
