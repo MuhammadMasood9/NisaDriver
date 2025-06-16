@@ -67,14 +67,13 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             children: [
               Obx(() => GoogleMap(
                     compassEnabled: true,
-                    rotateGesturesEnabled: false, // Disabled rotation
+                    rotateGesturesEnabled: false, // Disable manual rotation
                     myLocationEnabled: false,
                     myLocationButtonEnabled: false,
-                    mapType: controller.isNightMode.value
-                        ? MapType.hybrid
-                        : MapType.normal,
+                    mapType: MapType.normal, // Use normal map type with traffic
                     zoomControlsEnabled: false,
                     mapToolbarEnabled: false,
+                    trafficEnabled: true, // Enable traffic layer
                     polylines: Set.of(controller.polyLines.values),
                     markers: Set.of(controller.markers.values),
                     padding: EdgeInsets.only(
@@ -103,8 +102,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                             Constant.currentLocation?.longitude ??
                             -122.677433,
                       ),
-                      tilt: 0.0,
-                      bearing: 0.0, // Fixed bearing
+                      tilt: 30.0,
+                      bearing: controller.deviceBearing.value,
                     ),
                     onCameraMove: (CameraPosition position) {
                       controller.navigationZoom.value = position.zoom;

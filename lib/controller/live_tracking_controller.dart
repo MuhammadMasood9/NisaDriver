@@ -125,6 +125,7 @@ class LiveTrackingController extends GetxController {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
 
+    // Initialize map with traffic layer and night mode
     _magnetometerSubscription = magnetometerEventStream().listen(
       (MagnetometerEvent event) {
         double rawBearing = atan2(event.y, event.x) * (180.0 / pi);
@@ -140,15 +141,18 @@ class LiveTrackingController extends GetxController {
       }
     });
 
-    addDeviceMarker();
+    // Fetch initial location and center immediately
+    getCurrentLocation().then((_) {
+      addDeviceMarker();
+      updateNavigationView();
+      updateMarkersAndPolyline();
+    });
+
     startLocationTracking();
     startEstimationUpdates();
     startAutoNavigation();
     startTrafficUpdates();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      updateMarkersAndPolyline();
-    });
     super.onInit();
   }
 
@@ -278,20 +282,17 @@ class LiveTrackingController extends GetxController {
 
     double newBearing = 0.0;
 
-    // Use device heading if moving and heading is reliable
     if (currentSpeed.value > 5.0 &&
         currentPosition.value!.headingAccuracy < 45.0 &&
         currentPosition.value!.heading >= 0) {
       newBearing = currentPosition.value!.heading;
     } else if (routePoints.isNotEmpty) {
-      // Fallback to route-based bearing
       LatLng devicePos = LatLng(
           currentPosition.value!.latitude, currentPosition.value!.longitude);
       LatLng nextPoint = getNextRoutePoint(devicePos);
       newBearing = _calculateBearing(devicePos, nextPoint);
     }
 
-    // Smooth the bearing to prevent jitter
     double smoothedBearing =
         _smoothBearing(lastProcessedBearing.value, newBearing);
     lastProcessedBearing.value = smoothedBearing;
@@ -299,12 +300,9 @@ class LiveTrackingController extends GetxController {
   }
 
   double _smoothBearing(double oldBearing, double newBearing) {
-    // Normalize the angle difference to [-180, 180]
     double diff = (newBearing - oldBearing) % 360;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
-
-    // Apply smoothing (70% old + 30% new)
     return (oldBearing + 0.3 * diff) % 360;
   }
 
@@ -410,6 +408,7 @@ class LiveTrackingController extends GetxController {
   void resetToDefaultView() {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
+    polyLines.clear(); // Clear polylines when resetting view
     updateNavigationView();
     updateMarkersAndPolyline();
   }
@@ -467,6 +466,19 @@ class LiveTrackingController extends GetxController {
     if (distanceToNextTurn.value < 150) navigationZoom.value += 0.5;
 
     navigationZoom.value = navigationZoom.value.clamp(14.0, 17.0);
+
+    if (mapController != null && isFollowingDriver.value) {
+      mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: devicePos,
+            zoom: navigationZoom.value,
+            tilt: 45.0, // Customer app-like 3D tilt
+            bearing: _getSmoothedBearing(),
+          ),
+        ),
+      );
+    }
   }
 
   void onMapTap(LatLng position) {
@@ -474,6 +486,7 @@ class LiveTrackingController extends GetxController {
     Timer(Duration(seconds: 8), () {
       if (!isFollowingDriver.value) {
         isFollowingDriver.value = true;
+        polyLines.clear(); // Clear polylines when recentering
         updateNavigationView();
       }
     });
@@ -563,7 +576,7 @@ class LiveTrackingController extends GetxController {
         ? "DeviceToPickup"
         : "DeviceToDestination";
     Color color =
-        showDriverToPickupRoute.value ? AppColors.primary : Colors.green;
+        showDriverToPickupRoute.value ? AppColors.primary : Colors.black;
 
     polyLines.clear();
     _addPolyLine(remainingPoints, polylineId, color);
@@ -691,8 +704,8 @@ class LiveTrackingController extends GetxController {
         CameraPosition(
           target: deviceLocation,
           zoom: navigationZoom.value,
-          tilt: 0.0,
-          bearing: 20.0,
+          tilt: 45.0, // Customer app-like 3D tilt
+          bearing: _getSmoothedBearing(),
         ),
       ),
     );
@@ -738,6 +751,7 @@ class LiveTrackingController extends GetxController {
 
     if (wasShowingPickup != showDriverToPickupRoute.value ||
         wasShowingDestination != showPickupToDestinationRoute.value) {
+      polyLines.clear(); // Clear polylines when route visibility changes
       updateMarkersAndPolyline();
     }
   }
@@ -831,7 +845,7 @@ class LiveTrackingController extends GetxController {
           destinationLongitude:
               orderModel.value.destinationLocationLAtLng!.longitude,
           polylineId: "DeviceToDestination",
-          color: Colors.green,
+          color: Colors.black,
         );
       }
     } else {
@@ -872,7 +886,7 @@ class LiveTrackingController extends GetxController {
           destinationLongitude:
               intercityOrderModel.value.destinationLocationLAtLng!.longitude,
           polylineId: "DeviceToDestination",
-          color: Colors.green,
+          color: Colors.black,
         );
       }
     }
@@ -1172,6 +1186,7 @@ class LiveTrackingController extends GetxController {
   void toggleMapView() {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
+    polyLines.clear(); // Clear polylines when toggling view
     updateNavigationView();
     updateMarkersAndPolyline();
   }
@@ -1222,13 +1237,21 @@ class LiveTrackingController extends GetxController {
   void recalculateRoute() {
     if (currentPosition.value == null ||
         (_lastRerouteTime != null &&
-            DateTime.now().difference(_lastRerouteTime!).inSeconds < 30))
+            DateTime.now().difference(_lastRerouteTime!).inSeconds < 10))
       return;
 
     _lastRerouteTime = DateTime.now();
     polyLines.clear();
     updateMarkersAndPolyline();
     isOffRoute.value = false;
+  }
+
+  void centerMapOnDriver() {
+    isFollowingDriver.value = true;
+    isNavigationView.value = true;
+    polyLines.clear(); // Clear polylines when centering on driver
+    updateNavigationView();
+    updateMarkersAndPolyline();
   }
 
   void reportTraffic(int level) {
