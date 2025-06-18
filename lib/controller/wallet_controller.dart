@@ -116,8 +116,7 @@ class WalletController extends GetxController {
       await FireStoreUtils().getPayment().then((value) {
         if (value != null) {
           paymentModel.value = value;
-          Stripe.publishableKey =
-              'pk_test_51RImPWI8apCRipzsMYqVYuBObJHGJLo4fqZ1lPNCGK9O4IT8ygIvB49q1EayIkel7hl2OP4EyhxLh1BQpoKBKUQB00UUjIn0mC';
+          Stripe.publishableKey = '';
           Stripe.merchantIdentifier = 'NisaRide';
           Stripe.instance.applySettings();
           log('Stripe initialized with publishable key: ${Stripe.publishableKey}');
@@ -261,8 +260,7 @@ class WalletController extends GetxController {
         'shipping[address][state]': 'CA',
         'shipping[address][country]': 'US',
       };
-      const stripeSecret =
-          'sk_test_51RImPWI8apCRipzs1Iu4CiENE8IXQYo9yiQsRVMWR6oazosPHK8n4nR7GCskZuKr3E5LstudoGBak7oC4dB7aRue00bosoxZVa';
+      const stripeSecret = '';
       final response = await http.post(
         Uri.parse('https://api.stripe.com/v1/payment_intents'),
         body: body,
