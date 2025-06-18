@@ -339,16 +339,15 @@ class OrderScreen extends StatelessWidget {
         mode: TravelMode.driving,
       );
 
-      // Fix: getRouteBetweenCoordinates returns List<PolylineResult>
-      List<PolylineResult> results =
-          await PolylinePoints().getRouteBetweenCoordinates(
+      // Fix: getRouteBetweenCoordinates returns PolylineResult
+      PolylineResult result = await PolylinePoints().getRouteBetweenCoordinates(
         request: request,
         googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
       );
 
-      // Process first result if available
-      if (results.isNotEmpty && results.first.points.isNotEmpty) {
-        polylineCoordinates = results.first.points
+      // Process result if available
+      if (result.points.isNotEmpty) {
+        polylineCoordinates = result.points
             .map((point) => LatLng(point.latitude, point.longitude))
             .toList();
       }

@@ -46,7 +46,7 @@ class Constant {
   static String radius = "";
   static String distanceType = "";
   static String minimumAmountToWithdrawal = "0.0";
-  static String minimumDepositToRideAccept = "0.0";
+  static String minimumDepositToRideAccept = "50.0";
   static List<LanguageTermsCondition> termsAndConditions = [];
   static List<LanguagePrivacyPolicy> privacyPolicy = [];
   static String? supportURL = "";
