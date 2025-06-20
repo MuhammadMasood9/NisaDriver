@@ -59,63 +59,89 @@ class OrderMapController extends GetxController {
     );
   }
 
+  // In OrderMapController class
+
   Future<void> acceptOrder() async {
+    // 1. Check if driver's wallet has sufficient funds
     if (double.parse(driverModel.value.walletAmount.toString()) >=
         double.parse(Constant.minimumDepositToRideAccept)) {
       ShowToastDialog.showLoader("Please wait".tr);
 
-      // Clear other drivers and assign this driver
-      orderModel.value
-        ..acceptedDriverId = [FireStoreUtils.getCurrentUid()]
-        ..driverId = FireStoreUtils.getCurrentUid()
-        ..status = Constant.rideActive
-        ..finalRate = double.parse(newAmount.value).toString();
+      try {
+        // 2. Create a map of the specific fields to update in Firestore
+        Map<String, dynamic> updatedData = {
+          'acceptedDriverId': [FireStoreUtils.getCurrentUid()],
+          'driverId': FireStoreUtils.getCurrentUid(),
+          'status': Constant.rideActive,
+          'finalRate': newAmount.value, // Use the final negotiated amount
+        };
 
-      await FireStoreUtils.setOrder(orderModel.value);
+        // 3. Atomically update the document in Firestore using the update method
+        await FireStoreUtils.fireStore
+            .collection(CollectionName.orders)
+            .doc(orderModel.value.id)
+            .update(updatedData);
 
-      // Notify customer
-      var customer =
-          await FireStoreUtils.getCustomer(orderModel.value.userId.toString());
-      if (customer != null) {
-        await SendNotification.sendOneNotification(
-          token: customer.fcmToken.toString(),
-          title: 'Ride Accepted'.tr,
-          body:
-              'Your ride has been accepted by the driver for ${Constant.amountShow(amount: newAmount.value)}.'
-                  .tr,
-          payload: {'orderId': orderModel.value.id},
+        // 4. Update the local orderModel state to reflect the changes immediately
+        //    This ensures the data is correct when passed to the next screen
+        orderModel.value.driverId = FireStoreUtils.getCurrentUid();
+        orderModel.value.status = Constant.rideActive;
+        orderModel.value.finalRate = newAmount.value;
+        orderModel.value.acceptedDriverId = [FireStoreUtils.getCurrentUid()];
+
+        // 5. Notify the customer about the ride acceptance
+        var customer = await FireStoreUtils.getCustomer(
+            orderModel.value.userId.toString());
+        if (customer != null) {
+          await SendNotification.sendOneNotification(
+            token: customer.fcmToken.toString(),
+            title: 'Ride Accepted'.tr,
+            body:
+                'Your ride has been accepted by the driver for ${Constant.amountShow(amount: newAmount.value)}.'
+                    .tr,
+            payload: {'orderId': orderModel.value.id},
+          );
+        }
+
+        // 6. Save driver acceptance details (this seems to be for logging purposes)
+        DriverIdAcceptReject driverIdAcceptReject = DriverIdAcceptReject(
+          driverId: FireStoreUtils.getCurrentUid(),
+          acceptedRejectTime: cloudFirestore.Timestamp.now(),
+          offerAmount: newAmount.value,
         );
-      }
+        await FireStoreUtils.acceptRide(orderModel.value, driverIdAcceptReject);
 
-      // Save driver acceptance
-      DriverIdAcceptReject driverIdAcceptReject = DriverIdAcceptReject(
-        driverId: FireStoreUtils.getCurrentUid(),
-        acceptedRejectTime: cloudFirestore.Timestamp.now(),
-        offerAmount: newAmount.value,
-      );
-      await FireStoreUtils.acceptRide(orderModel.value, driverIdAcceptReject);
+        // 7. Update driver subscription details if applicable
+        if (driverModel.value.subscriptionTotalOrders != "-1" &&
+            driverModel.value.subscriptionTotalOrders != null) {
+          try {
+            int totalOrders =
+                int.parse(driverModel.value.subscriptionTotalOrders.toString());
+            driverModel.value.subscriptionTotalOrders =
+                (totalOrders - 1).toString();
+            await FireStoreUtils.updateDriverUser(driverModel.value);
+          } catch (e) {
+            if (kDebugMode) {
+              print("Error parsing subscriptionTotalOrders: $e");
+            }
+          }
+        }
 
-      // Update driver subscription if applicable
-      if (driverModel.value.subscriptionTotalOrders != "-1" &&
-          driverModel.value.subscriptionTotalOrders != null) {
-        try {
-          int totalOrders =
-              int.parse(driverModel.value.subscriptionTotalOrders.toString());
-          driverModel.value.subscriptionTotalOrders =
-              (totalOrders - 1).toString();
-          await FireStoreUtils.updateDriverUser(driverModel.value);
-        } catch (e) {
-          print("Error parsing subscriptionTotalOrders: $e");
-          return; // Prevent navigation if parsing fails
+        ShowToastDialog.closeLoader();
+        ShowToastDialog.showToast("Ride Accepted".tr);
+
+        // 8. Navigate to the live tracking screen with the updated order model
+        Get.to(() => const LiveTrackingScreen(), arguments: {
+          "orderModel": orderModel.value,
+          "type": "orderModel",
+        });
+      } catch (e) {
+        ShowToastDialog.closeLoader();
+        ShowToastDialog.showToast("Failed to accept ride: $e".tr);
+        if (kDebugMode) {
+          print("Error accepting order: $e");
         }
       }
-
-      ShowToastDialog.closeLoader();
-      ShowToastDialog.showToast("Ride Accepted".tr);
-      Get.to(const LiveTrackingScreen(), arguments: {
-        "orderModel": orderModel.value,
-        "type": "orderModel",
-      });
     } else {
       ShowToastDialog.showToast(
         "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet to accept this order."
