@@ -29,9 +29,9 @@ class HomeScreen extends StatelessWidget {
               : SafeArea(
                   child: Obx(() {
                     // Check if profile is not verified
-                    if (controller.driverModel.value.profileVerify != true) {
-                      return _buildProfileNotVerified(context);
-                    }
+                    // if (controller.driverModel.value.profileVerify != true) {
+                    //   return _buildProfileNotVerified(context);
+                    // }
                     // Existing verified profile UI
                     return Column(
                       children: [
@@ -254,7 +254,7 @@ class HomeScreen extends StatelessWidget {
             'New',
             0,
             isCompact,
-            isEnabled: controller.driverModel.value.profileVerify == true,
+            isEnabled: true,
           ),
           _buildResponsiveNavItem(
             context,
@@ -264,7 +264,7 @@ class HomeScreen extends StatelessWidget {
             'Accepted',
             1,
             isCompact,
-            isEnabled: controller.driverModel.value.profileVerify == true,
+            isEnabled:  true,
           ),
           _buildResponsiveNavItem(
             context,
@@ -275,7 +275,7 @@ class HomeScreen extends StatelessWidget {
             2,
             isCompact,
             badgeCount: controller.isActiveValue.value,
-            isEnabled: controller.driverModel.value.profileVerify == true,
+            isEnabled:true,
           ),
           _buildResponsiveNavItem(
             context,
@@ -285,7 +285,7 @@ class HomeScreen extends StatelessWidget {
             'Completed',
             3,
             isCompact,
-            isEnabled: controller.driverModel.value.profileVerify == true,
+            isEnabled: true,
           ),
         ],
       ),

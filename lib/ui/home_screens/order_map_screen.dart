@@ -285,13 +285,7 @@ class OrderMapScreen extends StatelessWidget {
                                       bgColors: hasActiveRide
                                           ? Colors.grey
                                           : AppColors.darkBackground,
-                                      onPress: hasActiveRide
-                                          ? () {
-                                              ShowToastDialog.showToast(
-                                                  "You already have an active ride. Complete it before accepting a new one."
-                                                      .tr);
-                                            }
-                                          : () async {
+                                      onPress:  () async {
                                               if (controller.newAmount.value
                                                       .isNotEmpty &&
                                                   double.parse(controller

@@ -7,6 +7,7 @@ import 'package:driver/model/order/driverId_accept_reject.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
+import 'package:driver/ui/home_screens/order_map_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
@@ -62,10 +63,16 @@ class AcceptedOrders extends StatelessWidget {
     );
   }
 }
+// ~~~ Keep your existing imports and the 'AcceptedOrders' widget as they are ~~~
+// ... (imports from your original code)
+// ... (AcceptedOrders class from your original code)
+
+
+// REPLACE the existing OrderItemWithTimer and _OrderItemWithTimerState
+// with the following updated code.
 
 class OrderItemWithTimer extends StatefulWidget {
   final OrderModel orderModel;
-
   final AcceptedOrdersController controller;
 
   const OrderItemWithTimer({
@@ -93,6 +100,12 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     _initializeTimer();
   }
 
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadDriverData() async {
     String? currentUid = FireStoreUtils.getCurrentUid();
     if (currentUid != null) {
@@ -112,14 +125,12 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
 
     try {
-      // Check if timer start time exists in Firestore
       DocumentSnapshot timerDoc = await FirebaseFirestore.instance
           .collection('driver_timers')
           .doc(timerKey)
           .get();
 
       if (timerDoc.exists) {
-        // Timer already exists, calculate remaining time
         Map<String, dynamic> timerData =
             timerDoc.data() as Map<String, dynamic>;
         Timestamp startTimestamp = timerData['startTime'];
@@ -130,7 +141,6 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
         int remaining = TIMER_DURATION - elapsedSeconds;
 
         if (remaining <= 0) {
-          // Timer already expired
           _isExpired.value = true;
           await _handleExpiredTimer();
           return;
@@ -138,7 +148,6 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
           _remainingSeconds.value = remaining;
         }
       } else {
-        // Create new timer
         _timerStartTime = DateTime.now();
         await FirebaseFirestore.instance
             .collection('driver_timers')
@@ -155,7 +164,6 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
       _startTimer();
     } catch (e) {
       print('Error initializing timer: $e');
-      // Fallback to local timer
       _remainingSeconds.value = TIMER_DURATION;
       _startTimer();
     }
@@ -180,7 +188,6 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
 
     try {
-      // Clean up timer document
       await FirebaseFirestore.instance
           .collection('driver_timers')
           .doc(timerKey)
@@ -212,13 +219,15 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
         }
       });
 
-      Get.snackbar(
-        'Time Expired'.tr,
-        'Your acceptance for this ride has expired'.tr,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (Get.isSnackbarOpen == false) {
+        Get.snackbar(
+          'Time Expired'.tr,
+          'Your acceptance for this ride has expired'.tr,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     } catch (e) {
       print('Error updating order after timer expired: $e');
     }
@@ -230,7 +239,6 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     String timerKey = '${widget.orderModel.id}_${driverId}_timer_start';
 
     try {
-      // Clean up timer document
       await FirebaseFirestore.instance
           .collection('driver_timers')
           .doc(timerKey)
@@ -240,14 +248,10 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     }
 
     _timer?.cancel();
-    _isExpired.value = true;
-    _handleExpiredTimer();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+    if (!_isExpired.value) {
+      _isExpired.value = true; // Prevents the widget from being interactable
+      _handleExpiredTimer(); // Reuse logic to remove driver from accepted list
+    }
   }
 
   @override
@@ -256,115 +260,153 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
       () => _isExpired.value
           ? const SizedBox.shrink()
           : Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.containerBackground,
-                  borderRadius: const BorderRadius.all(Radius.circular(10)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Timer indicator
-                    TimerIndicator(remainingSeconds: _remainingSeconds),
-                    // Order details
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 10),
-                      child: Column(
-                        children: [
-                          UserView(
-                            userId: widget.orderModel.userId,
-                            amount: widget.orderModel.offerRate,
-                            distance: widget.orderModel.distance,
-                            distanceType: widget.orderModel.distanceType,
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 5),
-                            child: Divider(),
-                          ),
-                          _buildOfferRate(),
-                          const SizedBox(height: 10),
-                          LocationView(
-                            sourceLocation:
-                                widget.orderModel.sourceLocationName.toString(),
-                            destinationLocation: widget
-                                .orderModel.destinationLocationName
-                                .toString(),
-                          ),
-                          const SizedBox(height: 10),
-                          Center(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: _cancelTimer,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: Text(
-                                      'Cancel'.tr,
-                                      style: AppTypography.boldLabel(context)
-                                          .copyWith(
-                                              color: AppColors.background),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                              ],
-                            ),
-                          ),
-                        ],
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              child: InkWell(
+                onTap: () {
+                  // Pause timer to prevent expiration while on the map screen
+                  _timer?.cancel();
+                  Get.to(const OrderMapScreen(),
+                          arguments: {"orderModel": widget.orderModel.id.toString()})!
+                      .then((value) {
+                    // This code runs when returning from OrderMapScreen
+
+                    // Resume timer if the widget is still active
+                    if (mounted && !_isExpired.value) {
+                      if (_timerStartTime != null) {
+                        final elapsed = DateTime.now().difference(_timerStartTime!).inSeconds;
+                        final remaining = TIMER_DURATION - elapsed;
+                        if (remaining > 0) {
+                          _remainingSeconds.value = remaining;
+                          _startTimer();
+                        } else {
+                          _isExpired.value = true;
+                          _handleExpiredTimer();
+                        }
+                      } else {
+                        _startTimer(); // Fallback
+                      }
+                    }
+
+                    if (value != null && value == true) {
+                      // widget.controller.selectedIndex.value = 1;
+                    }
+                  });
+                },
+                borderRadius: const BorderRadius.all(Radius.circular(15)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.containerBackground,
+                    borderRadius: const BorderRadius.all(Radius.circular(15)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      TimerIndicator(remainingSeconds: _remainingSeconds),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // UserView(
+                            //   userId: widget.orderModel.userId,
+                            // ),
+                            const SizedBox(height: 12),
+                            LocationView(
+                              sourceLocation: widget.orderModel.sourceLocationName.toString(),
+                              destinationLocation: widget.orderModel.destinationLocationName.toString(),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12.0),
+                              child: Divider(thickness: 1),
+                            ),
+                            _buildInfoRow(),
+                            const SizedBox(height: 16),
+                            _buildCancelButton(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
     );
   }
 
-  Widget _buildOfferRate() {
+  Widget _buildInfoRow() {
     if (_driverIdAcceptReject == null) {
-      return Constant.loader(context);
+      return Center(child: Constant.loader(context));
     }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.containerBackground,
-          borderRadius: const BorderRadius.all(Radius.circular(10)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.09),
-              blurRadius: 5,
-              offset: const Offset(0, 4),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildInfoItem(
+          icon: Icons.local_offer_outlined,
+          title: "Offer Rate".tr,
+          value: Constant.amountShow(
+              amount: _driverIdAcceptReject!.offerAmount.toString()),
+        ),
+        _buildInfoItem(
+          icon: Icons.directions_car_filled_outlined,
+          title: "Distance".tr,
+          value:
+              "${widget.orderModel.distance} ${widget.orderModel.distanceType}",
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoItem(
+      {required IconData icon, required String title, required String value}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          title,
+          style:
+              AppTypography.caption(context).copyWith(color: AppColors.grey200),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              value,
+              style: AppTypography.boldLabel(context).copyWith(fontSize: 16),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  "Offer Rate".tr,
-                  style: AppTypography.boldLabel(context),
-                ),
-              ),
-              Text(
-                Constant.amountShow(
-                    amount: _driverIdAcceptReject!.offerAmount.toString()),
-                style: AppTypography.boldLabel(context),
-              ),
-            ],
+      ],
+    );
+  }
+
+  Widget _buildCancelButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.cancel_outlined),
+        onPressed: _cancelTimer,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red.shade700,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        label: Text(
+          'Cancel Ride'.tr,
+          style: AppTypography.boldLabel(context).copyWith(
+            color: Colors.white,
+            fontSize: 16,
           ),
         ),
       ),
@@ -382,9 +424,9 @@ class TimerIndicator extends StatelessWidget {
     if (remainingSeconds.value > 20) {
       return Colors.green;
     } else if (remainingSeconds.value > 10) {
-      return Colors.orange;
+      return Colors.orange.shade700;
     } else {
-      return Colors.red;
+      return Colors.red.shade700;
     }
   }
 
@@ -396,18 +438,19 @@ class TimerIndicator extends StatelessWidget {
         decoration: BoxDecoration(
           color: _getTimerColor(),
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(10),
-            topRight: Radius.circular(10),
+            topLeft: Radius.circular(15),
+            topRight: Radius.circular(15),
           ),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Center(
             child: Text(
-              'Expires in ${remainingSeconds.value} seconds'.tr,
+              'Tap card to view on map • Expires in ${remainingSeconds.value}s'.tr,
               style: GoogleFonts.poppins(
                 color: Colors.white,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ),
