@@ -22,7 +22,6 @@ class NewOrderInterCityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return GetX<IntercityController>(
         init: IntercityController()..getOrder(),
         builder: (controller) {
@@ -172,14 +171,13 @@ class NewOrderInterCityScreen extends StatelessWidget {
                                                   const BorderRadius.all(
                                                       Radius.circular(10)),
                                               boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.grey
-                                                            .withOpacity(0.3),
-                                                        blurRadius: 5,
-                                                        offset:
-                                                            const Offset(0, 2),
-                                                      ),
-                                                    ],
+                                                BoxShadow(
+                                                  color: Colors.grey
+                                                      .withOpacity(0.3),
+                                                  blurRadius: 5,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
                                             ),
                                             child: Padding(
                                               padding:
@@ -342,7 +340,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
                                                         vertical: 14),
                                                     child: Container(
                                                       decoration: BoxDecoration(
-                                                        color:  AppColors.gray,
+                                                        color: AppColors.gray,
                                                         borderRadius:
                                                             const BorderRadius
                                                                 .all(
@@ -395,7 +393,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
                                                       width: Responsive.width(
                                                           100, context),
                                                       decoration: BoxDecoration(
-                                                        color:  AppColors.gray,
+                                                        color: AppColors.gray,
                                                         borderRadius:
                                                             const BorderRadius
                                                                 .all(
@@ -492,29 +490,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
                               Constant.adminCommission!.isEnabled == false) {
                             controller.acceptOrder(orderModel);
                           } else {
-                            if ((controller.driverModel.value
-                                            .subscriptionExpiryDate !=
-                                        null &&
-                                    controller.driverModel.value
-                                            .subscriptionExpiryDate!
-                                            .toDate()
-                                            .isBefore(DateTime.now()) ==
-                                        false) ||
-                                controller.driverModel.value.subscriptionPlan
-                                        ?.expiryDay ==
-                                    '-1') {
-                              if (controller.driverModel.value
-                                      .subscriptionTotalOrders !=
-                                  '0') {
-                                controller.acceptOrder(orderModel);
-                              } else {
-                                ShowToastDialog.showToast(
-                                    "Your order limit has reached their maximum order capacity. Please subscribe another subscription");
-                              }
-                            } else {
-                              ShowToastDialog.showToast(
-                                  "Your order limit has reached their maximum order capacity. Please subscribe another subscription");
-                            }
+                            controller.acceptOrder(orderModel);
                           }
                         }
                       },

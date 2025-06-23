@@ -7,7 +7,9 @@ import 'package:driver/controller/home_intercity_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/intercity_order_model.dart';
 import 'package:driver/model/order/driverId_accept_reject.dart';
+import 'package:driver/ui/home_screens/live_tracking_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -39,57 +41,98 @@ class IntercityController extends GetxController {
 
   Rx<DriverUserModel> driverModel = DriverUserModel().obs;
 
-  acceptOrder(InterCityOrderModel orderModel) async {
+  Future<void> acceptOrder(InterCityOrderModel orderModel) async {
     if (double.parse(driverModel.value.walletAmount.toString()) >=
-        double.parse(Constant.minimumAmountToWithdrawal)) {
+        double.parse(Constant.minimumDepositToRideAccept)) {
       ShowToastDialog.showLoader("Please wait".tr);
-      List<dynamic> newAcceptedDriverId = [];
-      if (orderModel.acceptedDriverId != null) {
-        newAcceptedDriverId = orderModel.acceptedDriverId!;
-      } else {
-        newAcceptedDriverId = [];
-      }
-      newAcceptedDriverId.add(FireStoreUtils.getCurrentUid());
-      orderModel.acceptedDriverId = newAcceptedDriverId;
-      await FireStoreUtils.setInterCityOrder(orderModel);
 
-      DriverIdAcceptReject driverIdAcceptReject = DriverIdAcceptReject(
+      try {
+        // Update Firestore document
+        Map<String, dynamic> updatedData = {
+          'acceptedDriverId': [
+            ...(orderModel.acceptedDriverId ?? []),
+            FireStoreUtils.getCurrentUid()
+          ],
+          'driverId': FireStoreUtils.getCurrentUid(),
+          'status': Constant.rideActive,
+          'finalRate': newAmount.value,
+        };
+
+        await FireStoreUtils.fireStore
+            .collection(CollectionName.ordersIntercity)
+            .doc(orderModel.id)
+            .update(updatedData);
+
+        // Update local orderModel
+        orderModel.driverId = FireStoreUtils.getCurrentUid();
+        orderModel.status = Constant.rideActive;
+        orderModel.finalRate = newAmount.value;
+        orderModel.acceptedDriverId = [
+          ...(orderModel.acceptedDriverId ?? []),
+          FireStoreUtils.getCurrentUid()
+        ];
+
+        // Notify customer
+        var customer =
+            await FireStoreUtils.getCustomer(orderModel.userId.toString());
+        if (customer != null) {
+          await SendNotification.sendOneNotification(
+            token: customer.fcmToken.toString(),
+            title: 'Ride Accepted'.tr,
+            body:
+                'Your ride has been accepted by the driver for ${Constant.amountShow(amount: newAmount.value)}.'
+                    .tr,
+            payload: {'orderId': orderModel.id},
+          );
+        }
+
+        // Save driver acceptance details
+        DriverIdAcceptReject driverIdAcceptReject = DriverIdAcceptReject(
           driverId: FireStoreUtils.getCurrentUid(),
           acceptedRejectTime: Timestamp.now(),
           offerAmount: newAmount.value,
           suggestedDate: orderModel.whenDates,
-          suggestedTime: DateFormat("HH:mm").format(suggestedTime!));
-      await FireStoreUtils.getCustomer(orderModel.userId.toString())
-          .then((value) async {
-        if (value != null) {
-          await SendNotification.sendOneNotification(
-              token: value.fcmToken.toString(),
-              title: 'New Bids'.tr,
-              body: 'Driver requested your ride.'.tr,
-              payload: {});
-        }
-      });
+          suggestedTime: DateFormat("HH:mm").format(suggestedTime!),
+        );
+        await FireStoreUtils.acceptInterCityRide(
+            orderModel, driverIdAcceptReject);
 
-      await FireStoreUtils.acceptInterCityRide(orderModel, driverIdAcceptReject)
-          .then((value) async {
-        ShowToastDialog.closeLoader();
-        ShowToastDialog.showToast("Ride Accepted".tr);
-        Get.back();
-        if (value != null && value == true) {
-          if (driverModel.value.subscriptionTotalOrders != "-1") {
-            driverModel.value.subscriptionTotalOrders = (int.parse(
-                        driverModel.value.subscriptionTotalOrders.toString()) -
-                    1)
-                .toString();
+        // Update driver subscription
+        if (driverModel.value.subscriptionTotalOrders != "-1" &&
+            driverModel.value.subscriptionTotalOrders != null) {
+          try {
+            int totalOrders =
+                int.parse(driverModel.value.subscriptionTotalOrders.toString());
+            driverModel.value.subscriptionTotalOrders =
+                (totalOrders - 1).toString();
             await FireStoreUtils.updateDriverUser(driverModel.value);
+          } catch (e) {
+            if (kDebugMode) {
+              print("Error parsing subscriptionTotalOrders: $e");
+            }
           }
         }
-        homeController.selectedIndex.value = 1;
-      });
+
+        ShowToastDialog.closeLoader();
+        ShowToastDialog.showToast("Ride Accepted".tr);
+
+        // Navigate to live tracking screen
+        Get.to(() => const LiveTrackingScreen(), arguments: {
+          "orderModel": orderModel,
+          "type": "interCityOrderModel",
+        });
+      } catch (e) {
+        ShowToastDialog.closeLoader();
+        ShowToastDialog.showToast("Failed to accept ride: $e".tr);
+        if (kDebugMode) {
+          print("Error accepting order: $e");
+        }
+      }
     } else {
       ShowToastDialog.showToast(
-          "You have to minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} wallet amount to Accept Order and place a bid"
-              .tr);
+        "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet to accept this order."
+            .tr,
+      );
     }
   }
 
