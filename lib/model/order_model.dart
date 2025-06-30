@@ -24,12 +24,12 @@ class OrderModel {
   String? status;
   String? driverId;
   String? otp;
-  String? orderType;
   List<dynamic>? acceptedDriverId;
   List<dynamic>? rejectedDriverId;
   Positions? position;
   Timestamp? createdDate;
   Timestamp? updateDate;
+  String? orderType;
   bool? paymentStatus;
   List<TaxModel>? taxList;
   ContactModel? someOneElse;
@@ -38,6 +38,8 @@ class OrderModel {
   AdminCommission? adminCommission;
   ZoneModel? zone;
   String? zoneId;
+   String? scheduleId;
+   bool? isScheduledRide;
 
   OrderModel(
       {this.position,
@@ -54,19 +56,21 @@ class OrderModel {
       this.status,
       this.driverId,
       this.otp,
-      this.orderType,
       this.offerRate,
       this.finalRate,
       this.paymentStatus,
       this.createdDate,
       this.updateDate,
+      this.orderType,
       this.taxList,
       this.coupon,
       this.someOneElse,
       this.service,
       this.adminCommission,
       this.zone,
-      this.zoneId});
+      this.zoneId,
+      this.scheduleId,
+      this.isScheduledRide, this.acceptedDriverId,this.rejectedDriverId});
 
   OrderModel.fromJson(Map<String, dynamic> json) {
     serviceId = json['serviceId'];
@@ -86,15 +90,15 @@ class OrderModel {
         : null;
     id = json['id'];
     userId = json['userId'];
-    offerRate = json['offerRate'];
+    offerRate = json['offerRate']?.toString();
     finalRate = json['finalRate'];
     distance = json['distance'];
     distanceType = json['distanceType'];
     status = json['status'];
     driverId = json['driverId'];
     otp = json['otp'];
-    orderType = json['orderType'];
     createdDate = json['createdDate'];
+    orderType = json['orderType'];
     updateDate = json['updateDate'];
     acceptedDriverId = json['acceptedDriverId'];
     rejectedDriverId = json['rejectedDriverId'];
@@ -108,6 +112,8 @@ class OrderModel {
         : null;
     zone = json['zone'] != null ? ZoneModel.fromJson(json['zone']) : null;
     zoneId = json['zoneId'];
+     scheduleId = json['scheduleId'];
+      isScheduledRide = json['isScheduledRide'] ?? false; // NEW
     if (json['taxList'] != null) {
       taxList = <TaxModel>[];
       json['taxList'].forEach((v) {
@@ -153,8 +159,9 @@ class OrderModel {
     data['status'] = status;
     data['driverId'] = driverId;
     data['otp'] = otp;
-    data['orderType'] = orderType;
     data['createdDate'] = createdDate;
+    data['orderType'] = orderType;
+
     data['updateDate'] = updateDate;
     data['acceptedDriverId'] = acceptedDriverId;
     data['rejectedDriverId'] = rejectedDriverId;
@@ -165,6 +172,8 @@ class OrderModel {
     if (position != null) {
       data['position'] = position!.toJson();
     }
+    data['scheduleId'] = scheduleId;
+      data['isScheduledRide'] = isScheduledRide; // NEW
     return data;
   }
 }

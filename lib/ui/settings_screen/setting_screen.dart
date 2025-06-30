@@ -6,6 +6,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart'; // Added for AppTypography
 import 'package:driver/ui/auth_screen/login_screen.dart';
+import 'package:driver/ui/scheduled_rides/scheduled_rides_screen.dart';
 import 'package:driver/utils/Preferences.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
@@ -55,6 +56,13 @@ class SettingScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
                           _buildSectionTitle("Support & Account".tr),
+                           IconButton(
+      icon: Icon(Icons.schedule),
+      tooltip: 'Weekly Schedules',
+      onPressed: () {
+        Get.to(() => const ScheduledRidesScreen());
+      },
+    ),
                           const SizedBox(height: 12),
                           _buildSettingsCard(
                             context,

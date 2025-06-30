@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
+import 'package:driver/constant/send_notification.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/VehicleUpdateRequestModel.dart';
 import 'package:driver/model/admin_commission.dart';
@@ -25,6 +26,7 @@ import 'package:driver/model/order_model.dart';
 import 'package:driver/model/payment_model.dart';
 import 'package:driver/model/referral_model.dart';
 import 'package:driver/model/review_model.dart';
+import 'package:driver/model/scheduled_ride_model.dart';
 import 'package:driver/model/service_model.dart';
 import 'package:driver/model/subscription_history.dart';
 import 'package:driver/model/subscription_plan_model.dart';
@@ -36,6 +38,7 @@ import 'package:driver/model/zone_model.dart';
 import 'package:driver/widget/geoflutterfire/src/geoflutterfire.dart';
 import 'package:driver/widget/geoflutterfire/src/models/point.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:get/get_utils/get_utils.dart';
 import 'package:uuid/uuid.dart';
 
 class FireStoreUtils {
@@ -183,6 +186,53 @@ class FireStoreUtils {
     }
   }
 
+  static Future<List<OrderModel>> getScheduledOrders() async {
+      List<OrderModel> rideList = [];
+      try {
+        QuerySnapshot<Map<String, dynamic>> rideSnapshot = await fireStore
+            .collection(CollectionName.orders)
+            .where('isScheduledRide', isEqualTo: true)
+            .where('status', isEqualTo: 'scheduled')
+            .orderBy('createdDate', descending: true)
+            .get();
+
+        for (var document in rideSnapshot.docs) {
+          OrderModel ride = OrderModel.fromJson(document.data());
+          rideList.add(ride);
+        }
+      } catch (e, s) {
+        print('-----------GET-SCHEDULED-ORDERS-ERROR-----------');
+        print(e);
+        print(s);
+      }
+      return rideList;
+    }
+// In your DRIVER app's fire_store_utils.dart file
+
+static Future<void> acceptScheduledRide({required String scheduleId, required String driverId}) async {
+  final docRef = fireStore.collection(CollectionName.scheduledRides).doc(scheduleId);
+
+  await fireStore.runTransaction((transaction) async {
+    // Get the latest document data
+    final snapshot = await transaction.get(docRef);
+
+    if (!snapshot.exists) {
+      throw Exception("Schedule does not exist!");
+    }
+
+    // Check if the schedule is still 'pending'
+    final model = ScheduleRideModel.fromJson(snapshot.data() as Map<String, dynamic>);
+    if (model.status != 'pending') {
+      throw Exception("This schedule has already been accepted or cancelled.");
+    }
+
+    // If it's still pending, update it with the driver's ID and change status to 'active'
+    transaction.update(docRef, {
+      'status': 'active',
+      'driverId': driverId,
+    });
+  });
+}
   static Future<DriverUserModel?> getDriverProfile(String uuid) async {
     DriverUserModel? driverModel;
     await fireStore
@@ -561,20 +611,136 @@ class FireStoreUtils {
     }
   }
 
-  static Future<bool?> setOrder(OrderModel orderModel) async {
-    bool isAdded = false;
-    await fireStore
-        .collection(CollectionName.orders)
-        .doc(orderModel.id)
-        .set(orderModel.toJson())
-        .then((value) {
-      isAdded = true;
-    }).catchError((error) {
-      log("Failed to update user: $error");
-      isAdded = false;
-    });
-    return isAdded;
+  static Future<bool> setOrder(OrderModel orderModel) async {
+    bool isSuccess = false;
+
+    // We only trigger the special logic when a ride is being marked as 'completed'.
+    if (orderModel.isScheduledRide == true &&
+        orderModel.scheduleId != null &&
+        orderModel.status == Constant.rideComplete) {
+      // ---- This is a SCHEDULED RIDE completion. Use a transaction. ----
+      final orderRef = fireStore.collection(CollectionName.orders).doc(orderModel.id);
+      final scheduleRef = fireStore.collection(CollectionName.scheduledRides).doc(orderModel.scheduleId);
+
+      try {
+        await fireStore.runTransaction((transaction) async {
+          // Get the schedule to ensure it exists. This makes the transaction safer.
+          final scheduleSnapshot = await transaction.get(scheduleRef);
+          if (!scheduleSnapshot.exists) {
+            throw Exception("Parent schedule document with ID ${orderModel.scheduleId} not found!");
+          }
+
+          // 1. Update the Order document to mark it as complete.
+          transaction.set(orderRef, orderModel.toJson());
+
+          // 2. Prepare the new history entry for the schedule's ride history.
+          final historyEntry = {
+            'rideDate': orderModel.updateDate ?? Timestamp.now(),
+            'orderId': orderModel.id,
+            'status': orderModel.status,
+            'finalRate': orderModel.finalRate,
+          };
+
+          // 3. Atomically add the new entry to the Schedule's 'rideHistory' array.
+          transaction.update(scheduleRef, {
+            'rideHistory': FieldValue.arrayUnion([historyEntry])
+          });
+        });
+
+        // If the transaction completes without errors, it was successful.
+        isSuccess = true;
+      } catch (e, s) {
+        log('--- SCHEDULED RIDE TRANSACTION FAILED ---');
+        log(e.toString());
+        log(s.toString());
+        isSuccess = false;
+      }
+    } else {
+      // ---- This is a REGULAR RIDE or just a status update (not completion). ----
+      await fireStore
+          .collection(CollectionName.orders)
+          .doc(orderModel.id)
+          .set(orderModel.toJson())
+          .then((value) {
+        isSuccess = true;
+      }).catchError((error) {
+        log("Failed to update order: $error");
+        isSuccess = false;
+      });
+    }
+
+    // ---- Handle post-completion tasks if the ride was successfully marked as complete ----
+    if (isSuccess && orderModel.status == Constant.rideComplete) {
+      await _handlePostCompletionTasks(orderModel);
+    }
+
+    return isSuccess;
   }
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // ~~~~~~~~~~~~~~~~~~~~~~~ NEW HELPER FUNCTION ~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /// Handles tasks like commission, wallet, and notifications after a ride is completed.
+  static Future<void> _handlePostCompletionTasks(OrderModel orderModel) async {
+    // 1. Calculate and deduct admin commission if payment type is cash.
+    if (orderModel.paymentType == "Cash") {
+      String? couponAmount = "0.0";
+      if (orderModel.coupon != null && orderModel.coupon?.code != null) {
+        couponAmount = orderModel.coupon!.type == "fix"
+            ? orderModel.coupon!.amount.toString()
+            : ((double.parse(orderModel.finalRate.toString()) *
+                        double.parse(orderModel.coupon!.amount.toString())) /
+                    100)
+                .toString();
+      }
+
+      WalletTransactionModel adminCommissionWallet = WalletTransactionModel(
+        id: Constant.getUuid(),
+        amount: "-${Constant.calculateAdminCommission(
+          amount: (double.parse(orderModel.finalRate.toString()) -
+                  double.parse(couponAmount))
+              .toString(),
+          adminCommission: orderModel.adminCommission,
+        )}",
+        createdDate: Timestamp.now(),
+        paymentType: "wallet".tr,
+        transactionId: orderModel.id,
+        orderType: "city",
+        userType: "driver",
+        userId: orderModel.driverId.toString(),
+        note: "Admin commission debited".tr,
+      );
+
+      final walletResult = await setWalletTransaction(adminCommissionWallet);
+      if (walletResult == true) {
+        await updatedDriverWallet(
+          amount: "-${Constant.calculateAdminCommission(
+            amount: (double.parse(orderModel.finalRate?.toString() ?? "0.0") -
+                    double.parse(couponAmount ?? "0.0"))
+                .toString(),
+            adminCommission: orderModel.adminCommission,
+          )}",
+        );
+      }
+    }
+
+    // 2. Send notification to the customer.
+    final customer = await getCustomer(orderModel.userId.toString());
+    if (customer?.fcmToken != null) {
+      await SendNotification.sendOneNotification(
+        token: customer!.fcmToken.toString(),
+        title: 'Ride Completed'.tr,
+        body: 'Your ride has been successfully completed. Thank you!'.tr,
+        payload: {'orderId': orderModel.id},
+      );
+    }
+
+    // 3. Handle referral amount for first-time orders.
+    if (await getFirestOrderOrNOt(orderModel)) {
+      await updateReferralAmount(orderModel);
+    }
+  }
+
 
   static Future<bool?> bankDetailsIsAvailable() async {
     bool isAdded = false;
