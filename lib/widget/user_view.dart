@@ -13,7 +13,9 @@ class UserView extends StatelessWidget {
   final String? distance;
   final String? distanceType;
 
-  const UserView({Key? key, this.userId, this.amount, this.distance, this.distanceType}) : super(key: key);
+  const UserView(
+      {Key? key, this.userId, this.amount, this.distance, this.distanceType})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +34,15 @@ class UserView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       ClipRRect(
-                        borderRadius: const BorderRadius.all(Radius.circular(10)),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(10)),
                         child: CachedNetworkImage(
                           height: 40,
                           width: 40,
                           imageUrl: Constant.userPlaceHolder,
                           fit: BoxFit.cover,
-                          placeholder: (context, url) => Constant.loader(context),
+                          placeholder: (context, url) =>
+                              Constant.loader(context),
                           errorWidget: (context, url, error) => Image.network(
                               'https://firebasestorage.googleapis.com/v0/b/goride-1a752.appspot.com/o/placeholderImages%2Fuser-placeholder.jpeg?alt=media&token=34a73d67-ba1d-4fe4-a29f-271d3e3ca115'),
                         ),
@@ -50,11 +54,15 @@ class UserView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Asynchronous user", style: AppTypography.boldLabel(context)),
+                            Text("Asynchronous user",
+                                style: AppTypography.boldLabel(context)),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(Constant.amountShow(amount: amount.toString()), style: AppTypography.label(context)),
+                                Text(
+                                    Constant.amountShow(
+                                        amount: amount.toString()),
+                                    style: AppTypography.label(context)),
                                 Row(
                                   children: [
                                     const Icon(
@@ -64,8 +72,10 @@ class UserView extends StatelessWidget {
                                     const SizedBox(
                                       width: 5,
                                     ),
-                                    Text("${(double.parse(distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} $distanceType",
-                                        style: AppTypography.boldLabel(context)),
+                                    Text(
+                                        "${(double.parse(distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} $distanceType",
+                                        style:
+                                            AppTypography.boldLabel(context)),
                                   ],
                                 ),
                                 Row(
@@ -78,7 +88,12 @@ class UserView extends StatelessWidget {
                                     const SizedBox(
                                       width: 5,
                                     ),
-                                    Text(Constant.calculateReview(reviewCount: "0.0", reviewSum: "0.0"), style: AppTypography.boldLabel(context)),
+                                    Text(
+                                        Constant.calculateReview(
+                                            reviewCount: "0.0",
+                                            reviewSum: "0.0"),
+                                        style:
+                                            AppTypography.boldLabel(context)),
                                   ],
                                 ),
                               ],
@@ -112,11 +127,15 @@ class UserView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(driverModel.fullName.toString(), style: AppTypography.boldLabel(context)),
+                          Text(driverModel.fullName.toString(),
+                              style: AppTypography.boldLabel(context)),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(Constant.amountShow(amount: amount.toString()), style: AppTypography.boldLabel(context)),
+                              Text(
+                                  Constant.amountShow(
+                                      amount: amount.toString()),
+                                  style: AppTypography.boldLabel(context)),
                               Row(
                                 children: [
                                   const Icon(
@@ -126,7 +145,8 @@ class UserView extends StatelessWidget {
                                   const SizedBox(
                                     width: 5,
                                   ),
-                                  Text("${(double.parse(distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} $distanceType",
+                                  Text(
+                                      "${(double.parse(distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} $distanceType",
                                       style: AppTypography.boldLabel(context)),
                                 ],
                               ),
@@ -140,7 +160,11 @@ class UserView extends StatelessWidget {
                                   const SizedBox(
                                     width: 5,
                                   ),
-                                  Text(Constant.calculateReview(reviewCount: driverModel.reviewsCount, reviewSum: driverModel.reviewsSum), style: AppTypography.boldLabel(context)),
+                                  Text(
+                                      Constant.calculateReview(
+                                          reviewCount: driverModel.reviewsCount,
+                                          reviewSum: driverModel.reviewsSum),
+                                      style: AppTypography.boldLabel(context)),
                                 ],
                               ),
                             ],

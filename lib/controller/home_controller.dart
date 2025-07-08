@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
@@ -26,7 +28,8 @@ class HomeController extends GetxController {
     const OrderScreen()
   ];
   DashBoardController dashboardController = Get.put(DashBoardController());
-
+  Rx<DriverUserModel> driverModel = DriverUserModel().obs;
+  RxBool isLoading = true.obs;
   void onItemTapped(int index) {
     selectedIndex.value = index;
   }
@@ -39,17 +42,16 @@ class HomeController extends GetxController {
     super.onInit();
   }
 
-  Rx<DriverUserModel> driverModel = DriverUserModel().obs;
-  RxBool isLoading = true.obs;
-
-  getDriver() async {
+  getDriver() {
     FireStoreUtils.fireStore
         .collection(CollectionName.driverUsers)
         .doc(FireStoreUtils.getCurrentUid())
         .snapshots()
         .listen((event) {
+      log("my driver ${event.data()!}");
       if (event.exists) {
         driverModel.value = DriverUserModel.fromJson(event.data()!);
+        log("controller driver ${driverModel.value}");
       }
     });
     updateCurrentLocation();

@@ -38,8 +38,8 @@ class OrderModel {
   AdminCommission? adminCommission;
   ZoneModel? zone;
   String? zoneId;
-   String? scheduleId;
-   bool? isScheduledRide;
+  String? scheduleId;
+  bool? isScheduledRide;
 
   OrderModel(
       {this.position,
@@ -70,7 +70,9 @@ class OrderModel {
       this.zone,
       this.zoneId,
       this.scheduleId,
-      this.isScheduledRide, this.acceptedDriverId,this.rejectedDriverId});
+      this.isScheduledRide,
+      this.acceptedDriverId,
+      this.rejectedDriverId});
 
   OrderModel.fromJson(Map<String, dynamic> json) {
     serviceId = json['serviceId'];
@@ -112,8 +114,8 @@ class OrderModel {
         : null;
     zone = json['zone'] != null ? ZoneModel.fromJson(json['zone']) : null;
     zoneId = json['zoneId'];
-     scheduleId = json['scheduleId'];
-      isScheduledRide = json['isScheduledRide'] ?? false; // NEW
+    scheduleId = json['scheduleId'];
+    isScheduledRide = json['isScheduledRide'] ?? false; // NEW
     if (json['taxList'] != null) {
       taxList = <TaxModel>[];
       json['taxList'].forEach((v) {
@@ -173,7 +175,7 @@ class OrderModel {
       data['position'] = position!.toJson();
     }
     data['scheduleId'] = scheduleId;
-      data['isScheduledRide'] = isScheduledRide; // NEW
+    data['isScheduledRide'] = isScheduledRide; // NEW
     return data;
   }
 }

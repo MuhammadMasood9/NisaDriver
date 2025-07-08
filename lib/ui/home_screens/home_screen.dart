@@ -42,7 +42,7 @@ class HomeScreen extends StatelessWidget {
                                 double.parse(
                                     Constant.minimumDepositToRideAccept ??
                                         '0.0')
-                            ? const SizedBox(height: 16)
+                            ? const SizedBox(height: 0)
                             : Container(
                                 width: double.infinity,
                                 margin:
@@ -101,10 +101,6 @@ class HomeScreen extends StatelessWidget {
                             width: double.infinity,
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(28),
-                                topRight: Radius.circular(28),
-                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.05),
@@ -264,7 +260,7 @@ class HomeScreen extends StatelessWidget {
             'Schedule',
             1,
             isCompact,
-            isEnabled:  true,
+            isEnabled: true,
           ),
           _buildResponsiveNavItem(
             context,
@@ -275,7 +271,7 @@ class HomeScreen extends StatelessWidget {
             2,
             isCompact,
             badgeCount: controller.isActiveValue.value,
-            isEnabled:true,
+            isEnabled: true,
           ),
           _buildResponsiveNavItem(
             context,

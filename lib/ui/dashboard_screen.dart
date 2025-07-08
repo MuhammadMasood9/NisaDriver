@@ -51,6 +51,33 @@ class DashBoardScreen extends StatelessWidget {
                 );
               },
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Obx(() {
+                  // Show a small loader while driver data is being fetched
+                  // if (controller.driverModel.value == null) {
+                  //   return const Center(
+                  //     child: SizedBox(
+                  //       width: 20,
+                  //       height: 20,
+                  //       child: CircularProgressIndicator(strokeWidth: 2),
+                  //     ),
+                  //   );
+                  // }
+                  // Once data is loaded, show the switch
+                  return Switch(
+                    splashRadius: 10,
+                    value: controller.isOnline.value,
+                    onChanged: (value) {
+                      controller.toggleOnlineStatus(value);
+                    },
+                    activeColor: AppColors.primary,
+                    inactiveThumbColor: AppColors.grey500,
+                  );
+                }),
+              )
+            ],
           ),
           drawer: buildAppDrawer(context, controller),
           body: WillPopScope(

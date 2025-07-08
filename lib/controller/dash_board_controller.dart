@@ -1,5 +1,8 @@
+import 'dart:developer';
+
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
+import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/ui/auth_screen/login_screen.dart';
 import 'package:driver/ui/bank_details/bank_details_screen.dart';
 import 'package:driver/ui/chat_screen/inbox_screen.dart';
@@ -11,6 +14,7 @@ import 'package:driver/ui/settings_screen/setting_screen.dart';
 import 'package:driver/ui/vehicle_information/vehicle_information_screen.dart';
 // import 'package:driver/ui/vehicle_information/vehicle_information_screen.dart';
 import 'package:driver/ui/wallet/wallet_screen.dart';
+import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +24,8 @@ import 'package:get/get.dart';
 class DashBoardController extends GetxController {
   RxList<DrawerItem> drawerItems = <DrawerItem>[].obs;
   RxInt selectedDrawerIndex = 0.obs;
+  final Rx<DriverUserModel?> driverModel = Rx<DriverUserModel?>(null);
+  var isOnline = false.obs;
 
   Widget getDrawerItemWidget(int pos) {
     switch (pos) {
@@ -41,7 +47,7 @@ class DashBoardController extends GetxController {
         return const VehicleInformationScreen();
       case 8:
         return const SettingScreen();
-     
+
       default:
         return const Text("Error");
     }
@@ -62,7 +68,21 @@ class DashBoardController extends GetxController {
   void onInit() {
     setDrawerList();
     getLocation();
+    fetchDriverData();
     super.onInit();
+  }
+
+  // Method to fetch driver data and update observables
+  Future<void> fetchDriverData() async {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid != null) {
+      driverModel.value = await FireStoreUtils.getDriverProfile(uid);
+      log('Driver:$driverModel');
+      if (driverModel.value != null) {
+        // Initialize the isOnline status from the fetched data
+        isOnline.value = driverModel.value!.isOnline ?? false;
+      }
+    }
   }
 
   void setDrawerList() {
@@ -86,6 +106,59 @@ class DashBoardController extends GetxController {
 
   Future<void> getLocation() async {
     await Utils.determinePosition();
+  }
+
+  Future<void> toggleOnlineStatus(bool value) async {
+    // Prevent action if data isn't loaded yet
+    log('Driver:$driverModel');
+    if (driverModel.value == null) {
+      ShowToastDialog.showToast("Please wait, user data is loading.");
+      return;
+    }
+
+    // Add checks before allowing the driver to go online
+    if (value == true) {
+      // Only check when turning online
+      if (driverModel.value!.documentVerification != true) {
+        Get.dialog(AlertDialog(
+          title: Text('Information'.tr),
+          content: Text(
+              'Please complete your document verification to go online.'.tr),
+          actions: [
+            TextButton(child: Text('OK'.tr), onPressed: () => Get.back()),
+          ],
+        ));
+        return; // Stop execution
+      }
+      // if (driverModel.value!.profileVerify != true) {
+      //   Get.dialog(AlertDialog(
+      //     title: Text('Information'.tr),
+      //     content: Text(
+      //         'Your profile is not yet verified by admin. Please wait for approval.'
+      //             .tr),
+      //     actions: [
+      //       TextButton(child: Text('OK'.tr), onPressed: () => Get.back()),
+      //     ],
+      //   ));
+      //   return; // Stop execution
+      // }
+    }
+
+    ShowToastDialog.showLoader("Updating Status...");
+    isOnline.value = value;
+    try {
+      // Update the 'isOnline' field in Firestore
+      driverModel.value!.isOnline = isOnline.value;
+      await FireStoreUtils.updateDriverUser(driverModel.value!);
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast(
+          isOnline.value ? "You are now Online" : "You are now Offline");
+    } catch (e) {
+      // Revert the switch if the update fails
+      isOnline.value = !value;
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Failed to update status: $e");
+    }
   }
 
   Rx<DateTime> currentBackPressTime = DateTime.now().obs;

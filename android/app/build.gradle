@@ -54,7 +54,7 @@ android {
         debug {
             storeFile file(keystoreProperties['storeFile'])
             storePassword keystoreProperties['storePassword']
-          keyAlias keystoreProperties['keyAlias']
+            keyAlias keystoreProperties['keyAlias']
             keyPassword keystoreProperties['keyPassword']
             println "Signing CONFIG: ${keystoreProperties['keyPassword']}"
         }
@@ -96,8 +96,13 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+    // FIXED: Use an updated version of the desugar library
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     implementation 'com.android.support:multidex:1.0.3'
-    implementation platform('com.google.firebase:firebase-bom:31.4.0')
-    implementation 'io.card:android-sdk:5.+'
+    
+    // FIXED: Use a more recent Firebase Bill of Materials (BOM) for better compatibility.
+    implementation platform('com.google.firebase:firebase-bom:33.0.0')
+
+    implementation("com.google.firebase:firebase-analytics")
+    implementation 'io.card:android-sdk:5.5.1' // Best practice to pin a version instead of using '+'
 }
