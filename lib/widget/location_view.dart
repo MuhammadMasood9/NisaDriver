@@ -1,75 +1,82 @@
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dash/flutter_dash.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class LocationView extends StatelessWidget {
   final String? sourceLocation;
   final String? destinationLocation;
 
-  const LocationView(
-      {super.key, this.sourceLocation, this.destinationLocation});
+  const LocationView({
+    super.key,
+    this.sourceLocation,
+    this.destinationLocation,
+  });
 
   @override
   Widget build(BuildContext context) {
+    const double iconSize = 18.0;
+    const double indentSpace = 10.0;
 
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min, // Use minimum vertical space
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
+        // 1. Source Location Row
+        Row(
           children: [
-            SvgPicture.asset('assets/icons/ic_destination.svg', width: 18),
-            Dash(
-                direction: Axis.vertical,
-                length: Responsive.height(4, context),
-                dashLength: 10,
-                dashColor: AppColors.dottedDivider),
-            SvgPicture.asset('assets/icons/ic_destination_dark.svg', width: 16),
+            Image.asset(
+              'assets/pickup.png', // Correct icon for source/pickup
+              width: iconSize,
+            ),
+            const SizedBox(width: indentSpace),
+            Expanded(
+              child: Text(
+                sourceLocation ?? 'Not available',
+                style: AppTypography.label(context),
+                maxLines: 1, // Ensure single line
+                overflow: TextOverflow.ellipsis, // Add '...' for long text
+              ),
+            ),
           ],
         ),
-        const SizedBox(
-          width: 10,
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(sourceLocation.toString(),
-                  maxLines: 2, style: AppTypography.label(context)),
-              SizedBox(
-                  height: calculateLineWraps(
-                              text: sourceLocation.toString(),
-                              textStyle: TextStyle(),
-                              maxWidth: Responsive.width(80, context)) ==
-                          2
-                      ? Responsive.height(3.2, context)
-                      : Responsive.height(3.2, context)),
-              Text(
-                destinationLocation.toString(),
-                maxLines: 2,
-                style: AppTypography.label(context),
-              )
-            ],
+
+        // 2. Vertical Dotted Line
+        Padding(
+          // Indent the dash to align with the center of the icons
+          padding: EdgeInsets.only(
+            left: iconSize / 2 - 1, // Center the dash
+            top: 4,
+            bottom: 4,
           ),
+          child: const Dash(
+            direction: Axis.vertical,
+            length: 12, // A fixed length often looks better
+            dashLength: 5,
+            dashThickness: 1,
+            dashColor: AppColors.dottedDivider,
+          ),
+        ),
+
+        // 3. Destination Location Row
+        Row(
+          children: [
+            Image.asset(
+              'assets/dropoff.png', // Correct icon for destination/dropoff
+              width: iconSize,
+            ),
+            const SizedBox(width: indentSpace),
+            Expanded(
+              child: Text(
+                destinationLocation ?? 'Not available',
+                style: AppTypography.label(context),
+                maxLines: 1, // Ensure single line
+                overflow: TextOverflow.ellipsis, // Add '...' for long text
+              ),
+            ),
+          ],
         ),
       ],
     );
-  }
-
-  int calculateLineWraps({
-    required String text,
-    required TextStyle textStyle,
-    required double maxWidth,
-  }) {
-    final TextPainter textPainter = TextPainter(
-      text: TextSpan(text: text, style: textStyle),
-      textDirection: TextDirection.ltr,
-      maxLines: null, // Allow unlimited lines
-    )..layout(maxWidth: maxWidth);
-    return textPainter.computeLineMetrics().length;
   }
 }

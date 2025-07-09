@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
       },
       builder: (controller) {
         return Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA),
+          backgroundColor: AppColors.background,
           body: controller.isLoading.value
               ? Constant.loader(context)
               : SafeArea(
@@ -116,7 +116,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.only(
-                                    top: 8, left: 12, right: 12),
+                                    top: 8, left: 0, right: 0),
                                 child: controller.widgetOptions
                                     .elementAt(controller.selectedIndex.value),
                               ),

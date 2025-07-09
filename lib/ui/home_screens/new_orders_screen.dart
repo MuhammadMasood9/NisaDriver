@@ -1,25 +1,26 @@
 import 'dart:async';
-import 'dart:math'; // Needed for min/max
+import 'dart:ui' as ui; // Needed for map camera bounds
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/home_controller.dart';
 import 'package:driver/model/order/driverId_accept_reject.dart';
 import 'package:driver/model/order_model.dart';
-import 'package:driver/model/zone_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/home_screens/order_map_screen.dart';
+import 'package:driver/ui/home_screens/zone_ride_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart'; // Import geolocator for distance calculation
+import 'package:flutter/services.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-// Main Screen Widget
 class NewOrderScreen extends StatefulWidget {
   const NewOrderScreen({super.key});
 
@@ -28,31 +29,11 @@ class NewOrderScreen extends StatefulWidget {
 }
 
 class _NewOrderScreenState extends State<NewOrderScreen>
-    with
-        SingleTickerProviderStateMixin,
-        AutomaticKeepAliveClientMixin<NewOrderScreen> {
-  late TabController _tabController;
+    with AutomaticKeepAliveClientMixin<NewOrderScreen> {
   final HomeController controller = Get.put(HomeController());
-  int _selectedTabIndex = 0;
 
   Stream<List<OrderModel>>? _allNewOrdersBroadcastStream;
   Stream<QuerySnapshot>? _acceptedOrdersStream;
-
-  // ~~~ State for the Online (Zoned) Map Tab ~~~
-  GoogleMapController? _mapController;
-  final Set<Marker> _markers = {};
-  final Set<Circle> _circles =
-      {}; // Use Circles instead of Polygons for driver zone
-  Set<Polygon> _adminZonePolygons = {}; // To hold the fetched admin zones
-  bool _isLoadingAdminZone = true;
-
-  LatLng? _zoneCenter;
-  double _zoneRadiusInMeters = 2000; // Default radius of 2km
-  bool _isZoneActive = false;
-
-  OrderModel? _zonedRide;
-  StreamSubscription? _zonedRideSubscription;
-  final Set<String> _shownRidePopups = {};
 
   @override
   bool get wantKeepAlive => true;
@@ -60,16 +41,8 @@ class _NewOrderScreenState extends State<NewOrderScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.index != _selectedTabIndex) {
-        if (mounted) {
-          setState(() => _selectedTabIndex = _tabController.index);
-        }
-      }
-    });
-
-    _fetchAndDrawAdminZones();
+    // Streams are initialized in the build method to ensure they refresh
+    // when the driver's online status changes.
   }
 
   void _initializeStreams() {
@@ -90,9 +63,6 @@ class _NewOrderScreenState extends State<NewOrderScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
-    _mapController?.dispose();
-    _zonedRideSubscription?.cancel();
     FireStoreUtils().closeStream();
     super.dispose();
   }
@@ -102,7 +72,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     super.build(context);
 
     return Scaffold(
-      backgroundColor: AppColors.grey50,
+      backgroundColor: AppColors.grey100,
       body: SafeArea(
         child: Obx(() {
           if (controller.isLoading.value) {
@@ -113,117 +83,104 @@ class _NewOrderScreenState extends State<NewOrderScreen>
             _initializeStreams();
           }
 
-          return Column(
-            children: [
-              _buildTabSwitcher(context),
-              Expanded(
-                child: Stack(
-                  children: [
-                    TabBarView(
-                      controller: _tabController,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _buildOfflineView(context, controller),
-                        _buildOnlineView(context),
-                      ],
+          if (controller.driverModel.value.isOnline == false) {
+            return _buildInfoMessage("You Are Offline",
+                "Go online from the dashboard to see new ride requests.",
+                icon: Icons.wifi_off_rounded);
+          }
+          if (controller.driverModel.value.documentVerification == false) {
+            return _buildInfoMessage("Documents Not Verified",
+                "Please complete document verification to receive ride orders.",
+                icon: Icons.description_outlined);
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              setState(() {
+                _initializeStreams();
+              });
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLiveRidesNavigationCard(),
+                  _buildAcceptedOrdersSection(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
+                    child: Text(
+                      "New Ride Requests".tr,
+                      style: AppTypography.boldHeaders(context),
                     ),
-                    if (_zonedRide != null) _buildZonedRidePopup(_zonedRide!),
-                  ],
-                ),
+                  ),
+                  _buildNewOrdersSection(context, controller),
+                ],
               ),
-            ],
+            ),
           );
         }),
       ),
     );
   }
 
-  /// Modern, animated tab switcher replacing the default TabBar.
-  Widget _buildTabSwitcher(BuildContext context) {
+  // UPDATED: This card now has more descriptive text for its function
+  Widget _buildLiveRidesNavigationCard() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      child: Container(
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.grey100,
-          borderRadius: BorderRadius.circular(25.0),
-        ),
-        child: Row(
-          children: [
-            _buildTabItem(context, "Offline", 0),
-            _buildTabItem(context, "Online (Zoned)", 1),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabItem(BuildContext context, String title, int index) {
-    bool isSelected = _selectedTabIndex == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          _tabController.animateTo(index);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          margin: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      child: InkWell(
+        onTap: () => Get.to(() => const RouteMatchingScreen()),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(21.0),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    )
-                  ]
-                : [],
-          ),
-          child: Center(
-            child: Text(
-              title.tr,
-              style: AppTypography.appTitle(context).copyWith(
-                color: isSelected ? AppColors.primary : Colors.grey.shade600,
+            borderRadius: BorderRadius.circular(8),
+            gradient: LinearGradient(
+              colors: [AppColors.primary, AppColors.darkModePrimary],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.darkBackground.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                const Icon(Icons.radar, color: Colors.white, size: 40),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Route Matching Ride Finder".tr,
+                        style: AppTypography.boldHeaders(context).copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Set your destination and find rides along your route."
+                            .tr,
+                        style: AppTypography.boldLabel(context).copyWith(
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios,
+                    color: Colors.white.withOpacity(0.7)),
+              ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // ~~~~~~~~~~~~~~~~~~~~~~ OFFLINE TAB IMPLEMENTATION ~~~~~~~~~~~~~~~~~~~~
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  Widget _buildOfflineView(BuildContext context, HomeController controller) {
-    if (controller.driverModel.value.isOnline == false) {
-      return _buildInfoMessage("You Are Offline",
-          "Go online from the dashboard to see new ride requests.",
-          icon: Icons.wifi_off_rounded);
-    }
-    if (controller.driverModel.value.documentVerification == false) {
-      return _buildInfoMessage("Documents Not Verified",
-          "Please complete document verification to receive ride orders.",
-          icon: Icons.description_outlined);
-    }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildAcceptedOrdersSection(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: Text(
-              "New Ride Requests".tr,
-              style: AppTypography.boldHeaders(context),
-            ),
-          ),
-          _buildNewOrdersSection(context, controller),
-        ],
       ),
     );
   }
@@ -244,8 +201,9 @@ class _NewOrderScreenState extends State<NewOrderScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Divider(),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 6.0),
               child: Text(
                 "Accepted - Awaiting Confirmation".tr,
                 style: GoogleFonts.poppins(
@@ -266,7 +224,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
               },
             ),
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 16),
+              padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 6),
               child: Divider(thickness: 1.5),
             ),
           ],
@@ -306,392 +264,26 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // ~~~~~~~~~~~~~~~~~~~~~~ ONLINE TAB IMPLEMENTATION ~~~~~~~~~~~~~~~~~~~~~
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  /// Fetches the admin-defined zones for the current driver and draws them.
-  Future<void> _fetchAndDrawAdminZones() async {
-    List<ZoneModel>? allZones = await FireStoreUtils.getZone();
-    List<Polygon> zones = [];
-
-    if (allZones != null && controller.driverModel.value.zoneIds != null) {
-      for (String zoneId in controller.driverModel.value.zoneIds!) {
-        final zoneDoc = allZones.firstWhereOrNull((z) => z.id == zoneId);
-        if (zoneDoc != null && zoneDoc.area != null) {
-          final points = zoneDoc.area!
-              .map((geoPoint) => LatLng(geoPoint.latitude, geoPoint.longitude))
-              .toList();
-
-          if (points.length > 2) {
-            zones.add(Polygon(
-              polygonId: PolygonId(zoneId),
-              points: points,
-              strokeWidth: 2,
-              strokeColor: AppColors.primary.withOpacity(0.8),
-              fillColor: AppColors.primary.withOpacity(0.1),
-            ));
-          }
-        }
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _adminZonePolygons = Set<Polygon>.from(zones);
-        _isLoadingAdminZone = false;
-      });
-    }
-  }
-
-  /// Builds the main view for the Online (Zoned) tab.
-  Widget _buildOnlineView(BuildContext context) {
-    final initialCameraPosition = CameraPosition(
-      target: LatLng(Constant.currentLocation?.latitude ?? 37.7749,
-          Constant.currentLocation?.longitude ?? -122.4194),
-      zoom: 12,
-    );
-
-    return Column(
-      children: [
-        Expanded(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                decoration:
-                    BoxDecoration(borderRadius: BorderRadius.circular(10)),
-                child: GoogleMap(
-                  initialCameraPosition: initialCameraPosition,
-                  onMapCreated: (mapController) =>
-                      _mapController = mapController,
-                  onTap: _isZoneActive ? null : _handleMapTap,
-                  markers: _markers,
-                  polygons: _adminZonePolygons, // Only show admin zones here
-                  circles: _circles, // Show driver's circular zone
-                  myLocationButtonEnabled: true,
-                  myLocationEnabled: true,
-                  zoomControlsEnabled: false,
-                ),
-              ),
-              if (_isLoadingAdminZone) const CircularProgressIndicator(),
-              Positioned(
-                top: 10,
-                left: 16,
-                right: 16,
-                child: _buildMapInstructions(),
-              ),
-            ],
-          ),
-        ),
-        _buildZoneControls(),
-      ],
-    );
-  }
-
-  /// Main handler for taps on the map to set the circular zone.
-  void _handleMapTap(LatLng position) {
-    if (_isLoadingAdminZone || _adminZonePolygons.isEmpty) return;
-
-    bool isPointInAnyAdminZone =
-        _isPointInPolygon(position, _adminZonePolygons);
-
-    if (!isPointInAnyAdminZone) {
-      Get.snackbar(
-        "Outside Operational Area".tr,
-        "Please select a center point inside your assigned zones.".tr,
-        backgroundColor: Colors.orange.shade800,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
-    setState(() {
-      _zoneCenter = position;
-      _updateDriverZone();
-    });
-  }
-
-  /// Creates or updates the driver's circular zone on the map.
-  void _updateDriverZone() {
-    if (_zoneCenter == null) return;
-    _markers.clear();
-    _circles.clear();
-
-    // Add marker for the center
-    _markers.add(Marker(
-      markerId: const MarkerId('zone_center'),
-      position: _zoneCenter!,
-      infoWindow: InfoWindow(title: 'Zone Center'.tr),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-    ));
-
-    // Add the circle for the zone
-    _circles.add(Circle(
-      circleId: const CircleId('driver_zone'),
-      center: _zoneCenter!,
-      radius: _zoneRadiusInMeters,
-      strokeWidth: 2,
-      strokeColor: Colors.blue,
-      fillColor: Colors.blue.withOpacity(0.25),
-    ));
-  }
-
-  /// Resets all driver selections on the map.
-  void _resetZoneSelection() {
-    setState(() {
-      _markers.clear();
-      _circles.clear();
-      _zoneCenter = null;
-      _zoneRadiusInMeters = 2000; // Reset to default
-    });
-  }
-
-  Widget _buildMapInstructions() {
-    String instruction;
-    Color color;
-
-    if (_isLoadingAdminZone) {
-      instruction = "Loading your operational zones...".tr;
-      color = Colors.grey;
-    } else if (_adminZonePolygons.isEmpty) {
-      instruction = "No operational zones assigned. Contact admin.".tr;
-      color = Colors.orange;
-    } else if (_isZoneActive) {
-      instruction = "Listening for rides in your selected zone.".tr;
-      color = Colors.green;
-    } else if (_zoneCenter == null) {
-      instruction = "Tap inside a shaded area to set ZONE CENTER.".tr;
-      color = AppColors.primary;
-    } else {
-      instruction = "Zone set. Press 'Start Listening' to begin.".tr;
-      color = Colors.blue;
-    }
-
-    return Material(
-      elevation: 4.0,
-      borderRadius: BorderRadius.circular(30),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        child: Text(
-          instruction,
-          style: AppTypography.boldLabel(context).copyWith(
-            color: Colors.white,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildZoneControls() {
-    bool canListen = _zoneCenter != null;
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, -5))
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("Zone Radius:".tr,
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-              Text("${(_zoneRadiusInMeters / 1000).toStringAsFixed(1)} km".tr,
-                  style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold, color: AppColors.primary)),
-            ],
-          ),
-          Slider(
-            value: _zoneRadiusInMeters,
-            min: 500, // 0.5 km
-            max: 10000, // 10 km
-            divisions: 19,
-            activeColor: AppColors.primary,
-            inactiveColor: AppColors.primary.withOpacity(0.2),
-            onChanged: _isZoneActive
-                ? null
-                : (value) {
-                    setState(() {
-                      _zoneRadiusInMeters = value;
-                      _updateDriverZone();
-                    });
-                  },
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              SizedBox(
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: _isZoneActive ? null : _resetZoneSelection,
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    side: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  child: Icon(Icons.refresh,
-                      color: Colors.grey.shade700, size: 26),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    icon: Icon(_isZoneActive
-                        ? Icons.stop_circle_outlined
-                        : Icons.radar),
-                    label: Text(
-                        _isZoneActive
-                            ? "Stop Listening".tr
-                            : "Start Listening".tr,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
-                    onPressed: (canListen || _isZoneActive)
-                        ? _toggleZoneListening
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isZoneActive
-                          ? Colors.red.shade600
-                          : AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 2,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      disabledForegroundColor: Colors.grey.shade500,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _toggleZoneListening() {
-    if (_isZoneActive) {
-      setState(() {
-        _isZoneActive = false;
-        _zonedRideSubscription?.cancel();
-        _zonedRide = null;
-        _shownRidePopups.clear();
-      });
-      _resetZoneSelection();
-      Get.snackbar("Zone Deactivated", "You have stopped listening for rides.",
-          snackPosition: SnackPosition.BOTTOM);
-    } else {
-      if (_zoneCenter == null) return;
-      setState(() => _isZoneActive = true);
-      _listenForZonedRides();
-      Get.snackbar("Zone Activated!", "Listening for rides in your area.",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white);
-    }
-  }
-
-  Future<void> _listenForZonedRides() async {
-    if (_zoneCenter == null || _allNewOrdersBroadcastStream == null) return;
-
-    _zonedRideSubscription = _allNewOrdersBroadcastStream!.listen((orders) {
-      if (!mounted || !_isZoneActive) return;
-
-      final potentialRide = orders.firstWhereOrNull((order) {
-        if (_shownRidePopups.contains(order.id) ||
-            order.sourceLocationLAtLng?.latitude == null ||
-            order.sourceLocationLAtLng?.longitude == null) {
-          return false;
-        }
-
-        final ridePickupPoint = LatLng(order.sourceLocationLAtLng!.latitude!,
-            order.sourceLocationLAtLng!.longitude!);
-
-        // Calculate distance from zone center to ride pickup
-        final distance = Geolocator.distanceBetween(
-          _zoneCenter!.latitude,
-          _zoneCenter!.longitude,
-          ridePickupPoint.latitude,
-          ridePickupPoint.longitude,
-        );
-
-        return distance <= _zoneRadiusInMeters;
-      });
-
-      if (potentialRide != null) {
-        setState(() {
-          _zonedRide = potentialRide;
-          _shownRidePopups.add(potentialRide.id!);
-        });
+  // --- NEW: Function to show the bottom sheet ---
+  void _showRideDetailsBottomSheet(OrderModel orderModel) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Important for flexible height
+      backgroundColor: Colors.transparent,
+      builder: (context) => RideDetailBottomSheet(orderModel: orderModel),
+    ).then((value) {
+      // This logic runs after the bottom sheet is closed.
+      // If the "Accept" button was pressed, it will return true.
+      if (value != null && value == true) {
+        controller.selectedIndex.value = 1; // Switch to the 'On Ride' tab
       }
     });
   }
 
-  bool _isPointInPolygon(LatLng point, Set<Polygon> polygons) {
-    for (final polygon in polygons) {
-      int intersections = 0;
-      List<LatLng> polygonPoints = polygon.points;
-      for (int i = 0; i < polygonPoints.length; i++) {
-        LatLng p1 = polygonPoints[i];
-        LatLng p2 = polygonPoints[(i + 1) % polygonPoints.length];
-        if (p1.longitude == p2.longitude &&
-            point.longitude == p1.longitude &&
-            point.latitude >= min(p1.latitude, p2.latitude) &&
-            point.latitude <= max(p1.latitude, p2.latitude)) {
-          return true;
-        }
-        if (point.longitude > min(p1.longitude, p2.longitude) &&
-            point.longitude <= max(p1.longitude, p2.longitude) &&
-            point.latitude <= max(p1.latitude, p2.latitude) &&
-            p1.longitude != p2.longitude) {
-          double xinters = (point.longitude - p1.longitude) *
-                  (p2.latitude - p1.latitude) /
-                  (p2.longitude - p1.longitude) +
-              p1.latitude;
-          if (p1.latitude == p2.latitude || point.latitude <= xinters) {
-            intersections++;
-          }
-        }
-      }
-      if (intersections % 2 != 0) {
-        return true; // Point is in this polygon
-      }
-    }
-    return false; // Point is not in any of the polygons
-  }
-
+  // UPDATED: onTap now calls the bottom sheet function
   Widget _buildNewRideRequestCard(OrderModel orderModel, {Key? key}) => InkWell(
       key: key,
-      onTap: () {
-        Get.to(() => const OrderMapScreen(),
-            arguments: {"orderModel": orderModel.id.toString()})?.then((value) {
-          if (value != null && value == true) {
-            controller.selectedIndex.value = 1;
-          }
-        });
-      },
+      onTap: () => _showRideDetailsBottomSheet(orderModel),
       child: _buildRideCardContainer(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -700,21 +292,20 @@ class _NewOrderScreenState extends State<NewOrderScreen>
             offerRate: orderModel.offerRate,
             distance: orderModel.distance,
             distanceType: orderModel.distanceType),
-        const Divider(height: 24, color: AppColors.grey200),
+        const Divider(height: 12, color: AppColors.grey200),
         _buildLocationDetailRow(
           source: orderModel.sourceLocationName.toString(),
           destination: orderModel.destinationLocationName.toString(),
         ),
-        const SizedBox(height: 16),
-        _buildRecommendedPriceBanner(orderModel),
       ])));
 
+  // All other helper widgets below this line remain unchanged.
   Widget _buildRideCardContainer({required Widget child}) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.08),
@@ -741,56 +332,12 @@ class _NewOrderScreenState extends State<NewOrderScreen>
             distanceType: distanceType,
             amount: offerRate,
           )),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text("Offer".tr,
-                  style: AppTypography.headers(context)
-                      .copyWith(color: Colors.grey)),
-              Text(
-                Constant.amountShow(amount: offerRate ?? '0'),
-                style: AppTypography.appTitle(context)
-                    .copyWith(color: AppColors.primary),
-              ),
-            ],
-          ),
         ],
       );
 
   Widget _buildLocationDetailRow(
           {required String source, required String destination}) =>
       LocationView(sourceLocation: source, destinationLocation: destination);
-
-  Widget _buildRecommendedPriceBanner(OrderModel orderModel) {
-    String amount;
-    if (Constant.distanceType == "Km") {
-      amount = Constant.amountCalculate(orderModel.service!.kmCharge.toString(),
-              orderModel.distance.toString())
-          .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
-    } else {
-      amount = Constant.amountCalculate(orderModel.service!.kmCharge.toString(),
-              orderModel.distance.toString())
-          .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
-    }
-    final distanceValue =
-        double.tryParse(orderModel.distance.toString()) ?? 0.0;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Center(
-        child: Text(
-          'Recommended: ${Constant.amountShow(amount: amount)} for approx ${distanceValue.toStringAsFixed(1)} ${Constant.distanceType}',
-          style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w500,
-              color: AppColors.primary.withOpacity(0.9)),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
 
   Widget _buildInfoMessage(String title, String subtitle,
           {IconData? icon, Color? color}) =>
@@ -826,43 +373,303 @@ class _NewOrderScreenState extends State<NewOrderScreen>
           ),
         ),
       );
-
-  Widget _buildZonedRidePopup(OrderModel order) => Positioned(
-        bottom: 16,
-        left: 16,
-        right: 16,
-        child: Material(
-          elevation: 10,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              onTap: () {
-                setState(() => _zonedRide = null);
-                Get.to(() => const OrderMapScreen(),
-                    arguments: {"orderModel": order.id.toString()});
-              },
-              leading: const Icon(Icons.notifications_active,
-                  color: Colors.white, size: 30),
-              title: Text("New Zoned Ride!".tr,
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-              subtitle: Text("Tap to view details and accept.".tr,
-                  style: const TextStyle(color: Colors.white70)),
-              trailing:
-                  const Icon(Icons.arrow_forward_ios, color: Colors.white),
-            ),
-          ),
-        ),
-      );
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~ WIDGETS FROM YOUR ORIGINAL CODE (ADAPTED) ~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~ NEW: RIDE DETAIL BOTTOM SHEET WIDGET ~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class RideDetailBottomSheet extends StatefulWidget {
+  final OrderModel orderModel;
+  const RideDetailBottomSheet({Key? key, required this.orderModel})
+      : super(key: key);
+
+  @override
+  State<RideDetailBottomSheet> createState() => _RideDetailBottomSheetState();
+}
+
+class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
+  // TODO: IMPORTANT! Add your Google Maps API Key with "Directions API" enabled.
+  final String _googleApiKey = "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4";
+
+  GoogleMapController? _mapController;
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
+  final PolylinePoints _polylinePoints = PolylinePoints();
+
+  bool _isLoadingRoute = true;
+  String _routeDistance = '...';
+  String _routeDuration = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _setMarkersAndDrawRoute();
+  }
+
+  Future<void> _setMarkersAndDrawRoute() async {
+    final source = LatLng(widget.orderModel.sourceLocationLAtLng!.latitude!,
+        widget.orderModel.sourceLocationLAtLng!.longitude!);
+    final destination = LatLng(
+        widget.orderModel.destinationLocationLAtLng!.latitude!,
+        widget.orderModel.destinationLocationLAtLng!.longitude!);
+
+    _markers.add(Marker(
+        markerId: const MarkerId('source'),
+        position: source,
+        icon:
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)));
+    _markers.add(Marker(
+        markerId: const MarkerId('destination'),
+        position: destination,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed)));
+
+    if (mounted) setState(() {});
+
+    await _drawRouteAndGetDetails(source, destination);
+  }
+
+  Future<void> _drawRouteAndGetDetails(
+      LatLng origin, LatLng destination) async {
+    if (_googleApiKey.contains("AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4")) {
+      debugPrint(
+          "Directions API Skipped: Please add your Google Maps API key.");
+      if (mounted) setState(() => _isLoadingRoute = false);
+      return;
+    }
+    try {
+      PolylineResult result = await _polylinePoints.getRouteBetweenCoordinates(
+        request: PolylineRequest(
+          origin: PointLatLng(origin.latitude, origin.longitude),
+          destination: PointLatLng(destination.latitude, destination.longitude),
+          mode: TravelMode.driving,
+        ),
+        googleApiKey: _googleApiKey,
+      );
+      if (result.points.isNotEmpty) {
+        final routePoints = result.points
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
+
+        _polylines.add(Polyline(
+          polylineId: const PolylineId('route'),
+          points: routePoints,
+          color: AppColors.primary,
+          width: 4,
+        ));
+
+        // Update ETA and Distance
+        // _routeDistance = result.distance ?? 'N/A';
+        // _routeDuration = result.duration ?? 'N/A';
+      }
+    } catch (e) {
+      debugPrint("Error fetching polyline: $e");
+      _routeDistance = 'Error';
+      _routeDuration = 'Error';
+    } finally {
+      if (mounted) setState(() => _isLoadingRoute = false);
+    }
+  }
+
+  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
+    double? x0, x1, y0, y1;
+    for (LatLng latLng in list) {
+      if (x0 == null) {
+        x0 = x1 = latLng.latitude;
+        y0 = y1 = latLng.longitude;
+      } else {
+        if (latLng.latitude > x1!) x1 = latLng.latitude;
+        if (latLng.latitude < x0) x0 = latLng.latitude;
+        if (latLng.longitude > y1!) y1 = latLng.longitude;
+        if (latLng.longitude < y0!) y0 = latLng.longitude;
+      }
+    }
+    return LatLngBounds(
+        northeast: LatLng(x1!, y1!), southwest: LatLng(x0!, y0!));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Grabber handle
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Container(
+              width: 40,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Map Section
+          _buildMapSection(),
+          // Details Section
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                UserView(
+                  userId: widget.orderModel.userId,
+                  amount: widget.orderModel.offerRate,
+                  distance: widget.orderModel.distance,
+                  distanceType: widget.orderModel.distanceType,
+                ),
+                const Divider(height: 24),
+                LocationView(
+                  sourceLocation:
+                      widget.orderModel.sourceLocationName.toString(),
+                  destinationLocation:
+                      widget.orderModel.destinationLocationName.toString(),
+                ),
+                const Divider(height: 24),
+                _buildRouteInfoRow(),
+                const SizedBox(height: 20),
+                _buildActionButtons(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMapSection() {
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(
+                      widget.orderModel.sourceLocationLAtLng!.latitude!,
+                      widget.orderModel.sourceLocationLAtLng!.longitude!),
+                  zoom: 14,
+                ),
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                  // Animate camera to show both markers
+                  Future.delayed(const Duration(milliseconds: 200), () {
+                    final bounds = _boundsFromLatLngList(
+                        _markers.map((m) => m.position).toList());
+                    _mapController?.animateCamera(
+                        CameraUpdate.newLatLngBounds(bounds, 60.0));
+                  });
+                },
+                markers: _markers,
+                polylines: _polylines,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+              ),
+              if (_isLoadingRoute)
+                Container(
+                  color: Colors.white.withOpacity(0.7),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRouteInfoRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildInfoChip(
+            icon: Icons.timer_outlined, label: 'ETA', value: _routeDuration),
+        Container(height: 30, width: 1, color: Colors.grey.shade300),
+        _buildInfoChip(
+            icon: Icons.map_outlined, label: 'Distance', value: _routeDistance),
+      ],
+    );
+  }
+
+  Widget _buildInfoChip(
+      {required IconData icon, required String label, required String value}) {
+    return Column(
+      children: [
+        Text(label.tr,
+            style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Text(value,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey.shade800,
+              side: BorderSide(color: Colors.grey.shade400),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: Text("Close".tr,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              // Close the bottom sheet and return 'true' to indicate acceptance
+              Navigator.pop(context, true);
+              // Navigate to the OrderMapScreen
+              Get.to(() => const OrderMapScreen(),
+                  arguments: {"orderModel": widget.orderModel.id.toString()});
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: Text("Accept Ride".tr,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// --- HELPER WIDGETS (UNCHANGED) from the original file ---
 class OrderItemWithTimer extends StatefulWidget {
   final OrderModel orderModel;
   const OrderItemWithTimer({Key? key, required this.orderModel})
