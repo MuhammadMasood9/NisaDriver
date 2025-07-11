@@ -130,6 +130,8 @@ flutter:
     - assets/audio/
     - assets/
     - assets/map_style.json
+    - assets/images/green_mark.png
+    - assets/images/red_mark.png
 
 flutter_launcher_icons:
   android: true

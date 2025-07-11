@@ -1,6 +1,8 @@
 import 'dart:async';
-import 'dart:ui' as ui; // Needed for map camera bounds
-
+import 'dart:convert';
+import 'dart:math';
+import 'dart:ui' as ui; // Needed for map camera bounds and image codec
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
@@ -125,7 +127,23 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
-  // UPDATED: This card now has more descriptive text for its function
+  void _showRideDetailsBottomSheet(OrderModel orderModel) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RideDetailBottomSheet(orderModel: orderModel),
+    ).then((value) {
+      if (value != null && value == true) {
+        // You should have a function here to officially accept the ride in your backend/Firestore
+        // Example: controller.acceptRide(orderModel);
+
+        Get.to(() => const OrderMapScreen(),
+            arguments: {"orderModel": orderModel.id.toString()});
+      }
+    });
+  }
+
   Widget _buildLiveRidesNavigationCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
@@ -264,23 +282,6 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
-  // --- NEW: Function to show the bottom sheet ---
-  void _showRideDetailsBottomSheet(OrderModel orderModel) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true, // Important for flexible height
-      backgroundColor: Colors.transparent,
-      builder: (context) => RideDetailBottomSheet(orderModel: orderModel),
-    ).then((value) {
-      // This logic runs after the bottom sheet is closed.
-      // If the "Accept" button was pressed, it will return true.
-      if (value != null && value == true) {
-        controller.selectedIndex.value = 1; // Switch to the 'On Ride' tab
-      }
-    });
-  }
-
-  // UPDATED: onTap now calls the bottom sheet function
   Widget _buildNewRideRequestCard(OrderModel orderModel, {Key? key}) => InkWell(
       key: key,
       onTap: () => _showRideDetailsBottomSheet(orderModel),
@@ -299,7 +300,6 @@ class _NewOrderScreenState extends State<NewOrderScreen>
         ),
       ])));
 
-  // All other helper widgets below this line remain unchanged.
   Widget _buildRideCardContainer({required Widget child}) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         padding: const EdgeInsets.all(12),
@@ -376,7 +376,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~ NEW: RIDE DETAIL BOTTOM SHEET WIDGET ~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~ RIDE DETAIL BOTTOM SHEET WIDGET ~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class RideDetailBottomSheet extends StatefulWidget {
@@ -389,17 +389,41 @@ class RideDetailBottomSheet extends StatefulWidget {
 }
 
 class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
-  // TODO: IMPORTANT! Add your Google Maps API Key with "Directions API" enabled.
+  // TODO: IMPORTANT! Replace with your actual Google Maps API Key.
+  // Make sure the "Directions API" is enabled in your Google Cloud Console.
   final String _googleApiKey = "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4";
 
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
-  final PolylinePoints _polylinePoints = PolylinePoints();
 
   bool _isLoadingRoute = true;
   String _routeDistance = '...';
   String _routeDuration = '...';
+
+  // Custom map style (dark mode)
+  static const _darkMapStyle = '''
+  [
+    { "elementType": "geometry", "stylers": [ { "color": "#242f3e" } ] },
+    { "elementType": "labels.text.fill", "stylers": [ { "color": "#746855" } ] },
+    { "elementType": "labels.text.stroke", "stylers": [ { "color": "#242f3e" } ] },
+    { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] },
+    { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] },
+    { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#263c3f" } ] },
+    { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#6b9a76" } ] },
+    { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#38414e" } ] },
+    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [ { "color": "#212a37" } ] },
+    { "featureType": "road", "elementType": "labels.text.fill", "stylers": [ { "color": "#9ca5b3" } ] },
+    { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#746855" } ] },
+    { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#1f2835" } ] },
+    { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#f3d19c" } ] },
+    { "featureType": "transit", "elementType": "geometry", "stylers": [ { "color": "#2f3948" } ] },
+    { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] },
+    { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#17263c" } ] },
+    { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#515c6d" } ] },
+    { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [ { "color": "#17263c" } ] }
+  ]
+  ''';
 
   @override
   void initState() {
@@ -407,85 +431,234 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     _setMarkersAndDrawRoute();
   }
 
-  Future<void> _setMarkersAndDrawRoute() async {
-    final source = LatLng(widget.orderModel.sourceLocationLAtLng!.latitude!,
-        widget.orderModel.sourceLocationLAtLng!.longitude!);
-    final destination = LatLng(
-        widget.orderModel.destinationLocationLAtLng!.latitude!,
-        widget.orderModel.destinationLocationLAtLng!.longitude!);
-
-    _markers.add(Marker(
-        markerId: const MarkerId('source'),
-        position: source,
-        icon:
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)));
-    _markers.add(Marker(
-        markerId: const MarkerId('destination'),
-        position: destination,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed)));
-
-    if (mounted) setState(() {});
-
-    await _drawRouteAndGetDetails(source, destination);
+  // Helper function to create custom markers of a specific size
+  Future<Uint8List> getBytesFromAsset(String path, int width) async {
+    ByteData data = await rootBundle.load(path);
+    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
+        targetWidth: width);
+    ui.FrameInfo fi = await codec.getNextFrame();
+    return (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
+        .buffer
+        .asUint8List();
   }
 
-  Future<void> _drawRouteAndGetDetails(
-      LatLng origin, LatLng destination) async {
-    if (_googleApiKey.contains("AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4")) {
-      debugPrint(
-          "Directions API Skipped: Please add your Google Maps API key.");
-      if (mounted) setState(() => _isLoadingRoute = false);
+  // Fixed: Added null safety checks and better error handling
+  Future<void> _setMarkersAndDrawRoute() async {
+    // Check if coordinates are available
+    if (widget.orderModel.sourceLocationLAtLng?.latitude == null ||
+        widget.orderModel.sourceLocationLAtLng?.longitude == null ||
+        widget.orderModel.destinationLocationLAtLng?.latitude == null ||
+        widget.orderModel.destinationLocationLAtLng?.longitude == null) {
+      print('Error: Missing coordinates for source or destination');
+      setState(() {
+        _routeDistance = 'Error: Missing coordinates';
+        _routeDuration = 'Error: Missing coordinates';
+        _isLoadingRoute = false;
+      });
       return;
     }
+
+    final source = LatLng(
+      widget.orderModel.sourceLocationLAtLng!.latitude!,
+      widget.orderModel.sourceLocationLAtLng!.longitude!,
+    );
+    final destination = LatLng(
+      widget.orderModel.destinationLocationLAtLng!.latitude!,
+      widget.orderModel.destinationLocationLAtLng!.longitude!,
+    );
+
     try {
-      PolylineResult result = await _polylinePoints.getRouteBetweenCoordinates(
-        request: PolylineRequest(
-          origin: PointLatLng(origin.latitude, origin.longitude),
-          destination: PointLatLng(destination.latitude, destination.longitude),
-          mode: TravelMode.driving,
-        ),
-        googleApiKey: _googleApiKey,
-      );
-      if (result.points.isNotEmpty) {
-        final routePoints = result.points
-            .map((point) => LatLng(point.latitude, point.longitude))
-            .toList();
+      // Try to load custom markers, fallback to default if assets don't exist
+      Uint8List? sourceIcon;
+      Uint8List? destinationIcon;
 
-        _polylines.add(Polyline(
-          polylineId: const PolylineId('route'),
-          points: routePoints,
-          color: AppColors.primary,
-          width: 4,
-        ));
-
-        // Update ETA and Distance
-        // _routeDistance = result.distance ?? 'N/A';
-        // _routeDuration = result.duration ?? 'N/A';
+      try {
+        sourceIcon = await getBytesFromAsset('assets/images/green_mark.png', 40);
+        destinationIcon = await getBytesFromAsset('assets/images/red_mark.png', 40);
+      } catch (e) {
+        print('Custom marker assets not found, using default markers: $e');
       }
+
+      _markers.add(Marker(
+        markerId: const MarkerId('source'),
+        position: source,
+        icon: sourceIcon != null 
+            ? BitmapDescriptor.fromBytes(sourceIcon)
+            : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: const InfoWindow(title: 'Pickup Location'),
+      ));
+
+      _markers.add(Marker(
+        markerId: const MarkerId('destination'),
+        position: destination,
+        icon: destinationIcon != null
+            ? BitmapDescriptor.fromBytes(destinationIcon)
+            : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: const InfoWindow(title: 'Drop-off Location'),
+      ));
+
+      if (mounted) setState(() {});
+
+      // Draw route after markers are set
+      await _drawRouteAndGetDetails();
     } catch (e) {
-      debugPrint("Error fetching polyline: $e");
-      _routeDistance = 'Error';
-      _routeDuration = 'Error';
-    } finally {
-      if (mounted) setState(() => _isLoadingRoute = false);
+      print('Error setting markers: $e');
+      setState(() {
+        _routeDistance = 'Error setting markers';
+        _routeDuration = 'Error setting markers';
+        _isLoadingRoute = false;
+      });
     }
   }
 
-  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
-    double? x0, x1, y0, y1;
-    for (LatLng latLng in list) {
-      if (x0 == null) {
-        x0 = x1 = latLng.latitude;
-        y0 = y1 = latLng.longitude;
+  /// Fixed: Better error handling and API key validation
+  Future<void> _drawRouteAndGetDetails() async {
+    final LatLng origin = LatLng(
+      widget.orderModel.sourceLocationLAtLng!.latitude!,
+      widget.orderModel.sourceLocationLAtLng!.longitude!,
+    );
+    final LatLng destination = LatLng(
+      widget.orderModel.destinationLocationLAtLng!.latitude!,
+      widget.orderModel.destinationLocationLAtLng!.longitude!,
+    );
+
+    String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+        'origin=${origin.latitude},${origin.longitude}'
+        '&destination=${destination.latitude},${destination.longitude}'
+        '&mode=driving'
+        '&key=$_googleApiKey';
+
+    try {
+      print('Making API request to: $url');
+      final response = await http.get(Uri.parse(url));
+      print('API Response Status: ${response.statusCode}');
+      print('API Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 'OK' && (data['routes'] as List).isNotEmpty) {
+          final route = data['routes'][0];
+          final leg = route['legs'][0];
+          final overviewPolyline = route['overview_polyline']['points'];
+
+          // Decode the polyline and draw it on the map
+          final List<PointLatLng> decodedPoints =
+              PolylinePoints().decodePolyline(overviewPolyline);
+          final List<LatLng> routePoints = decodedPoints
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
+
+          if (routePoints.isNotEmpty) {
+            _polylines.clear(); // Clear existing polylines
+            _polylines.add(Polyline(
+              polylineId: const PolylineId('route'),
+              points: routePoints,
+              color: AppColors.primary,
+              width: 3,
+                 patterns: [PatternItem.dash(20), PatternItem.gap(10)],// Remove any patterns for solid line
+            ));
+          }
+
+          // Update state with distance and duration from the API
+          if (mounted) {
+            setState(() {
+              _routeDistance = leg['distance']['text'] ?? 'N/A';
+              _routeDuration = leg['duration']['text'] ?? 'N/A';
+              _isLoadingRoute = false;
+            });
+          }
+
+          // Fit the map to show both markers and the route with proper padding
+          _fitMapToShowRoute();
+
+          print('Route drawn successfully. Distance: $_routeDistance, Duration: $_routeDuration');
+        } else {
+          String errorMessage = data['error_message'] ?? 'No route found';
+          print("Directions API Error: ${data['status']} - $errorMessage");
+          
+          if (mounted) {
+            setState(() {
+              _routeDistance = 'Route Error';
+              _routeDuration = 'Route Error';
+              _isLoadingRoute = false;
+            });
+          }
+        }
       } else {
-        if (latLng.latitude > x1!) x1 = latLng.latitude;
-        if (latLng.latitude < x0) x0 = latLng.latitude;
-        if (latLng.longitude > y1!) y1 = latLng.longitude;
-        if (latLng.longitude < y0!) y0 = latLng.longitude;
+        print("HTTP request failed with status: ${response.statusCode}");
+        if (mounted) {
+          setState(() {
+            _routeDistance = 'HTTP Error';
+            _routeDuration = 'HTTP Error';
+            _isLoadingRoute = false;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching directions: $e");
+      if (mounted) {
+        setState(() {
+          _routeDistance = 'Network Error';
+          _routeDuration = 'Network Error';
+          _isLoadingRoute = false;
+        });
       }
     }
+  }
+
+  // Fixed: Improved bounds calculation with proper padding
+  void _fitMapToShowRoute() {
+    if (_mapController == null) return;
+
+    // Collect all points (markers + route points)
+    List<LatLng> allPoints = [];
+    
+    // Add marker positions
+    allPoints.addAll(_markers.map((marker) => marker.position));
+    
+    // Add route points if available
+    if (_polylines.isNotEmpty) {
+      final polyline = _polylines.first;
+      allPoints.addAll(polyline.points);
+    }
+
+    if (allPoints.isEmpty) return;
+
+    // Calculate bounds
+    final bounds = _boundsFromLatLngList(allPoints);
+    
+    // Fit the map with generous padding to ensure everything is visible
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 120.0), // Increased padding
+        );
+      }
+    });
+  }
+
+  // Fixed: Improved bounds calculation
+  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
+    assert(list.isNotEmpty);
+    double minLat = list.first.latitude;
+    double maxLat = list.first.latitude;
+    double minLng = list.first.longitude;
+    double maxLng = list.first.longitude;
+
+    for (LatLng latLng in list) {
+      minLat = min(minLat, latLng.latitude);
+      maxLat = max(maxLat, latLng.latitude);
+      minLng = min(minLng, latLng.longitude);
+      maxLng = max(maxLng, latLng.longitude);
+    }
+
+    // Add some padding to the bounds
+    const double padding = 0.001; // Adjust as needed
     return LatLngBounds(
-        northeast: LatLng(x1!, y1!), southwest: LatLng(x0!, y0!));
+      southwest: LatLng(minLat - padding, minLng - padding),
+      northeast: LatLng(maxLat + padding, maxLng + padding),
+    );
   }
 
   @override
@@ -501,7 +674,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Grabber handle
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: Container(
@@ -514,9 +686,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
             ),
           ),
           const SizedBox(height: 10),
-          // Map Section
           _buildMapSection(),
-          // Details Section
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -564,27 +734,40 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   target: LatLng(
                       widget.orderModel.sourceLocationLAtLng!.latitude!,
                       widget.orderModel.sourceLocationLAtLng!.longitude!),
-                  zoom: 14,
+                  zoom: 10, // Reduced initial zoom to show more area
                 ),
-                onMapCreated: (controller) {
+                onMapCreated: (controller) async{
                   _mapController = controller;
-                  // Animate camera to show both markers
-                  Future.delayed(const Duration(milliseconds: 200), () {
-                    final bounds = _boundsFromLatLngList(
-                        _markers.map((m) => m.position).toList());
-                    _mapController?.animateCamera(
-                        CameraUpdate.newLatLngBounds(bounds, 60.0));
+                  
+        String style = await rootBundle.loadString('assets/map_style.json');
+        _mapController?.setMapStyle(style);
+
+                  // Initial fit to show both markers with lower zoom
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    if (_mapController != null && _markers.length >= 2) {
+                      final bounds = _boundsFromLatLngList(
+                          _markers.map((m) => m.position).toList());
+                      _mapController!.animateCamera(
+                          CameraUpdate.newLatLngBounds(bounds, 80.0));
+                    }
                   });
                 },
                 markers: _markers,
                 polylines: _polylines,
                 myLocationButtonEnabled: false,
                 zoomControlsEnabled: false,
+                compassEnabled: false,
+                mapToolbarEnabled: false,
+                minMaxZoomPreference: const MinMaxZoomPreference(8.0, 18.0), // Set zoom limits
               ),
               if (_isLoadingRoute)
                 Container(
-                  color: Colors.white.withOpacity(0.7),
-                  child: const Center(child: CircularProgressIndicator()),
+                  color: Colors.black.withOpacity(0.5),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -594,15 +777,22 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   }
 
   Widget _buildRouteInfoRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildInfoChip(
-            icon: Icons.timer_outlined, label: 'ETA', value: _routeDuration),
-        Container(height: 30, width: 1, color: Colors.grey.shade300),
-        _buildInfoChip(
-            icon: Icons.map_outlined, label: 'Distance', value: _routeDistance),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildInfoChip(
+              icon: Icons.timer_outlined, label: 'ETA', value: _routeDuration),
+          Container(height: 30, width: 1, color: Colors.grey.shade300),
+          _buildInfoChip(
+              icon: Icons.map_outlined, label: 'Distance', value: _routeDistance),
+        ],
+      ),
     );
   }
 
@@ -614,12 +804,12 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
             style: const TextStyle(color: Colors.grey, fontSize: 13)),
         const SizedBox(height: 4),
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 18, color: AppColors.primary),
             const SizedBox(width: 6),
             Text(value,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                style:AppTypography.headers(context)),
           ],
         )
       ],
@@ -647,11 +837,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         Expanded(
           child: ElevatedButton(
             onPressed: () {
-              // Close the bottom sheet and return 'true' to indicate acceptance
               Navigator.pop(context, true);
-              // Navigate to the OrderMapScreen
-              Get.to(() => const OrderMapScreen(),
-                  arguments: {"orderModel": widget.orderModel.id.toString()});
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -669,7 +855,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   }
 }
 
-// --- HELPER WIDGETS (UNCHANGED) from the original file ---
 class OrderItemWithTimer extends StatefulWidget {
   final OrderModel orderModel;
   const OrderItemWithTimer({Key? key, required this.orderModel})

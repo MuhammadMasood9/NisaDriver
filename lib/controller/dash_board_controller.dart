@@ -96,10 +96,7 @@ class DashBoardController extends GetxController {
       DrawerItem('Online Registration'.tr, "assets/icons/ic_document.svg"),
       DrawerItem('Vehicle Information'.tr, "assets/icons/ic_city.svg"),
       DrawerItem('Settings'.tr, "assets/icons/ic_settings.svg"),
-      if (Constant.isSubscriptionModelApplied)
-        DrawerItem('Subscription'.tr, "assets/icons/ic_subscription.svg"),
-      DrawerItem('Subscription History'.tr,
-          "assets/icons/ic_subscription_history.svg"),
+     
       DrawerItem('Log out'.tr, "assets/icons/ic_logout.svg"),
     ];
   }

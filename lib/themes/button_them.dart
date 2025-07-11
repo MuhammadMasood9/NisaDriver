@@ -59,7 +59,7 @@ class ButtonThem {
       visible: isVisible,
       child: Container(
         width: Responsive.width(100, context) * btnWidthRatio,
-        height: 40,
+        height: 35,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
           boxShadow: [

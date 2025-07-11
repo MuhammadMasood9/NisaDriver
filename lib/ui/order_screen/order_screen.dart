@@ -36,7 +36,7 @@ class OrderScreen extends StatelessWidget {
       init: OrderController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.grey100,
           body: controller.isLoading.value
               ? Constant.loader(context)
               : StreamBuilder<QuerySnapshot>(
@@ -83,21 +83,15 @@ class OrderScreen extends StatelessWidget {
                                           });
                                     },
                                     child: Padding(
-                                      padding: const EdgeInsets.all(10.0),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10.0,vertical: 5),
                                       child: _buildSectionCard(
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             // Map Section
-                                            _buildMapSection(
-                                              context,
-                                              orderModel,
-                                              markers,
-                                              polylineCoordinates,
-                                              bounds,
-                                            ),
-                                            const SizedBox(height: 16),
+                                           
+                                            const SizedBox(height: 6),
                                             UserView(
                                               userId: orderModel.userId,
                                               amount: orderModel.finalRate,
@@ -105,7 +99,9 @@ class OrderScreen extends StatelessWidget {
                                               distanceType:
                                                   orderModel.distanceType,
                                             ),
-                                            const SizedBox(height: 10),
+                                               const SizedBox(height: 5),
+                                            Divider(height: 3,color: AppColors.grey200,),
+                                            const SizedBox(height: 5),
                                             LocationView(
                                               sourceLocation: orderModel
                                                   .sourceLocationName
@@ -114,12 +110,12 @@ class OrderScreen extends StatelessWidget {
                                                   .destinationLocationName
                                                   .toString(),
                                             ),
-                                            const SizedBox(height: 10),
+                                            const SizedBox(height: 8),
                                             _buildStatusSection(orderModel),
-                                            const SizedBox(height: 10),
+                                            const SizedBox(height: 8),
                                             _buildActionButtons(context,
                                                 orderModel, controller),
-                                            const SizedBox(height: 10),
+                                            const SizedBox(height: 8),
 
                                          Visibility(
                                               visible: controller.paymentModel.value.cash!.name == orderModel.paymentType.toString() &&
@@ -252,76 +248,15 @@ class OrderScreen extends StatelessWidget {
     };
   }
 
-  Widget _buildMapSection(
-    BuildContext context,
-    OrderModel orderModel,
-    Set<Marker> markers,
-    List<LatLng> polylineCoordinates,
-    LatLngBounds? bounds,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          height: 150, // Compact map height
-          child: GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(
-                orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
-                orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
-              ),
-              zoom: 12,
-            ),
-            markers: markers,
-            polylines: {
-              Polyline(
-                polylineId: const PolylineId('route'),
-                points: polylineCoordinates,
-                color: AppColors.primary,
-                width: 6,
-                patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-              ),
-            },
-            zoomControlsEnabled: false,
-            mapType: MapType.normal,
-            onMapCreated: (GoogleMapController mapController) {
-              if (bounds != null) {
-                mapController
-                    .animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
-              }
-              mapController.setMapStyle('''
-                [
-                  {"featureType": "all", "elementType": "labels", "stylers": [{"visibility": "on"}]},
-                  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#e0e0e0"}]},
-                  {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#c4e4ff"}]}
-                ]
-              ''');
-            },
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSectionCard({
     required Widget child,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         gradient: LinearGradient(
           colors: [Colors.white, Colors.grey[50]!],
           begin: Alignment.topLeft,
@@ -380,8 +315,10 @@ class OrderScreen extends StatelessWidget {
           child: ButtonThem.buildBorderButton(
             context,
             title: "Review".tr,
-            btnHeight: 44,
+            btnHeight: 35,
             iconVisibility: false,
+            btnWidthRatio: 1,
+            
             onPress: () async {
               Get.to(const ReviewScreen(), arguments: {
                 "type": "orderModel",
@@ -390,7 +327,9 @@ class OrderScreen extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(width: 10),
+        
+         Visibility(child: const SizedBox(width: 10), 
+         visible: orderModel.status == Constant.rideComplete ? false : true,),
         Visibility(
           visible: orderModel.status == Constant.rideComplete ? false : true,
           child: Row(
