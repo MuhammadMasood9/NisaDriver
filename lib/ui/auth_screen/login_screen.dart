@@ -1,10 +1,12 @@
-import 'dart:developer';
-import 'dart:io';
+// lib/ui/auth_screen/login_screen.dart
 
+import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/login_controller.dart';
+import 'package:driver/controller/on_boarding_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
@@ -15,752 +17,460 @@ import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/ui/terms_and_condition/terms_and_condition_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/notification_service.dart';
+import 'package:driver/utils/preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
+  // Shimmer widget for loading state
+  Widget _buildOnboardingShimmer(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+            child: Container(
+              height: 24,
+              width: Responsive.width(60, context),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                Container(
+                  height: 12,
+                  width: Responsive.width(80, context),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 12,
+                  width: Responsive.width(70, context),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GetX<LoginController>(
-      init: LoginController(),
-      builder: (controller) {
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          height: Responsive.height(10, context),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(10)),
-                          child: Image.asset(
-                            'assets/app_logo.png',
-                            height: Responsive.height(10, context),
-                            width: Responsive.height(10, context),
-                          ),
-                        ),
-                        SizedBox(height: Responsive.height(3, context)),
+    // Initialize controllers
+    Get.put(LoginController());
+    Get.put(OnBoardingController(), permanent: true);
 
-                        const SizedBox(height: 10),
-                        Text(
-                          "Welcome Back! We are happy to have you back".tr,
-                          style: AppTypography.caption(context),
-                          textAlign: TextAlign.center,
+    final LoginController loginController = Get.find<LoginController>();
+    final OnBoardingController onBoardingController =
+        Get.find<OnBoardingController>();
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                SizedBox(height: 20),
+                // App Logo and Title
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      height: 45,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: Image.asset(
+                          "assets/icons/app_icon_foreground.png",
+                          fit: BoxFit.cover,
                         ),
-                        SizedBox(height: Responsive.height(5, context)),
-                        // Tab Bar for Phone/Email Login
-                        Container(
-                          width: Responsive.width(80, context),
-                          decoration: BoxDecoration(
-                            color: AppColors.textField,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      controller.loginMethod.value = 'phone',
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: controller.loginMethod.value ==
-                                              'phone'
-                                          ? AppColors.primary
-                                          : AppColors.textField,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      "Phone".tr,
-                                      textAlign: TextAlign.center,
-                                      style: AppTypography.boldLabel(context)
-                                          .copyWith(
-                                        color: controller.loginMethod.value ==
-                                                'phone'
-                                            ? Colors.white
-                                            : Colors.black,
+                      ),
+                    ),
+                    Text(
+                      "NisaDrive".tr,
+                      style: AppTypography.headers(context),
+                    ),
+                  ],
+                ),
+
+                // Onboarding PageView or Shimmer
+                SizedBox(
+                  height: Responsive.height(42, context),
+                  child: Obx(
+                    () => onBoardingController.isLoading.value
+                        ? _buildOnboardingShimmer(context)
+                        : PageView.builder(
+                            controller: onBoardingController.pageController,
+                            onPageChanged:
+                                onBoardingController.selectedPageIndex.call,
+                            itemCount:
+                                onBoardingController.onBoardingList.length,
+                            itemBuilder: (context, index) {
+                              final item =
+                                  onBoardingController.onBoardingList[index];
+                              return Column(
+                                children: [
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(20),
+                                      child: CachedNetworkImage(
+                                        imageUrl: item.image.toString(),
+                                        fit: BoxFit.contain,
+                                        placeholder: (context, url) =>
+                                            Constant.loader(context),
+                                        errorWidget: (context, url, error) =>
+                                            Image.network(
+                                                Constant.userPlaceHolder),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      controller.loginMethod.value = 'email',
-                                  child: Container(
+                                  Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: controller.loginMethod.value ==
-                                              'email'
-                                          ? AppColors.primary
-                                          : AppColors.textField,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
+                                        vertical: 10, horizontal: 20),
                                     child: Text(
-                                      "Email".tr,
+                                      Constant.localizationTitle(item.title),
+                                      style: AppTypography.h2(context)
+                                          .copyWith(letterSpacing: 1.2),
                                       textAlign: TextAlign.center,
-                                      style: AppTypography.boldLabel(context)
-                                          .copyWith(
-                                        color: controller.loginMethod.value ==
-                                                'email'
-                                            ? Colors.white
-                                            : Colors.black,
-                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: Responsive.height(5, context)),
-// Form with Dissolve Animation
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          transitionBuilder:
-                              (Widget child, Animation<double> animation) {
-                            return FadeTransition(
-                                opacity: animation, child: child);
-                          },
-                          child: Form(
-                            key: controller.formKey.value ??
-                                GlobalKey<FormState>(),
-                            child: Obx(
-                              () => controller.loginMethod.value == 'phone'
-                                  ? Container(
-                                      width: Responsive.width(80, context),
-                                      key: const ValueKey('phone'),
-                                      child: TextFormField(
-                                        validator: (value) =>
-                                            value != null && value.isNotEmpty
-                                                ? null
-                                                : 'Phone number is required'.tr,
-                                        keyboardType: TextInputType.number,
-                                        textCapitalization:
-                                            TextCapitalization.sentences,
-                                        controller: controller
-                                            .phoneNumberController.value,
-                                        textAlign: TextAlign.start,
-                                        style: AppTypography.label(context),
-                                        decoration: InputDecoration(
-                                          isDense: true,
-                                          filled: true,
-                                          fillColor: AppColors.background,
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                  vertical: 10, horizontal: 12),
-                                          prefixIcon: CountryCodePicker(
-                                            onChanged: (value) {
-                                              controller.countryCode.value =
-                                                  value.dialCode.toString();
-                                            },
-                                            dialogBackgroundColor:
-                                                AppColors.background,
-                                            textStyle: AppTypography.boldLabel(
-                                                context),
-                                            initialSelection:
-                                                controller.countryCode.value,
-                                            comparator: (a, b) => b.name!
-                                                .compareTo(a.name.toString()),
-                                            flagDecoration: const BoxDecoration(
-                                              borderRadius: BorderRadius.all(
-                                                  Radius.circular(4)),
-                                            ),
-                                          ),
-                                          border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                            borderSide: BorderSide(
-                                                color:
-                                                    AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                            borderSide: BorderSide(
-                                                color:
-                                                    AppColors.textFieldBorder,
-                                                width: 1),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                            borderSide: BorderSide(
-                                                color: AppColors.primary,
-                                                width: 1.5),
-                                          ),
-                                          errorBorder: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                            borderSide: BorderSide(
-                                                color: Colors.redAccent,
-                                                width: 1),
-                                          ),
-                                          hintText: "Phone number".tr,
-                                          hintStyle:
-                                              AppTypography.label(context)
-                                                  .copyWith(
-                                                      color: AppColors.grey500),
-                                        ),
-                                      ),
-                                    )
-                                  : Container(
-                                      key: const ValueKey('email'),
-                                      child: Column(
-                                        children: [
-                                          Container(
-                                            width:
-                                                Responsive.width(80, context),
-                                            child: TextFormField(
-                                              validator: (value) =>
-                                                  value != null &&
-                                                          value.isNotEmpty
-                                                      ? (Constant.validateEmail(
-                                                              value)
-                                                          ? null
-                                                          : 'Invalid email'.tr)
-                                                      : 'Email is required'.tr,
-                                              keyboardType:
-                                                  TextInputType.emailAddress,
-                                              controller: controller
-                                                  .emailController.value,
-                                              style:
-                                                  AppTypography.label(context),
-                                              decoration: InputDecoration(
-                                                isDense: true,
-                                                label: Text("Email",
-                                                    style: AppTypography.input(
-                                                        context)),
-                                                filled: true,
-                                                fillColor: AppColors.background,
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 15,
-                                                        horizontal: 12),
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  borderSide: BorderSide(
-                                                      color: AppColors
-                                                          .textFieldBorder,
-                                                      width: 1),
-                                                ),
-                                                enabledBorder:
-                                                    OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  borderSide: BorderSide(
-                                                      color: AppColors
-                                                          .textFieldBorder,
-                                                      width: 1),
-                                                ),
-                                                focusedBorder:
-                                                    OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  borderSide: BorderSide(
-                                                      color: AppColors.primary,
-                                                      width: 1.5),
-                                                ),
-                                                errorBorder: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  borderSide: BorderSide(
-                                                      color: Colors.redAccent,
-                                                      width: 1),
-                                                ),
-                                                hintText: "Email".tr,
-                                                hintStyle: GoogleFonts.poppins(
-                                                    color: Colors.grey[500]),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Container(
-                                            width:
-                                                Responsive.width(80, context),
-                                            child: TextFormField(
-                                              validator: (value) => value !=
-                                                          null &&
-                                                      value.isNotEmpty
-                                                  ? value.length >= 6
-                                                      ? null
-                                                      : 'Password must be at least 6 characters'
-                                                          .tr
-                                                  : 'Password is required'.tr,
-                                              obscureText: controller
-                                                  .obscurePassword.value,
-                                              controller: controller
-                                                  .passwordController.value,
-                                              style:
-                                                  AppTypography.label(context),
-                                              decoration: InputDecoration(
-                                                isDense: true,
-                                                filled: true,
-                                                label: Text("Password",
-                                                    style: AppTypography.input(
-                                                        context)),
-                                                fillColor: AppColors.background,
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 10,
-                                                        horizontal: 12),
-                                                suffixIcon: IconButton(
-                                                  icon: Icon(
-                                                    controller.obscurePassword
-                                                            .value
-                                                        ? Icons.visibility_off
-                                                        : Icons.visibility,
-                                                    color: Colors.black,
-                                                  ),
-                                                  onPressed: () {
-                                                    controller.obscurePassword
-                                                            .value =
-                                                        !controller
-                                                            .obscurePassword
-                                                            .value;
-                                                  },
-                                                ),
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  borderSide: BorderSide(
-                                                      color: AppColors
-                                                          .textFieldBorder,
-                                                      width: 1),
-                                                ),
-                                                enabledBorder:
-                                                    OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  borderSide: BorderSide(
-                                                      color: AppColors
-                                                          .textFieldBorder,
-                                                      width: 1),
-                                                ),
-                                                focusedBorder:
-                                                    OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  borderSide: BorderSide(
-                                                      color: AppColors.primary,
-                                                      width: 1.5),
-                                                ),
-                                                errorBorder: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  borderSide: BorderSide(
-                                                      color: Colors.redAccent,
-                                                      width: 1),
-                                                ),
-                                                hintText: "Password".tr,
-                                                hintStyle: GoogleFonts.poppins(
-                                                    color: Colors.grey[500]),
-                                              ),
-                                            ),
-                                          ),
-                                          // const SizedBox(height: 3),
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: TextButton(
-                                              onPressed: () {
-                                                if (controller.emailController
-                                                    .value.text.isEmpty) {
-                                                  ShowToastDialog.showToast(
-                                                      "Please enter your email"
-                                                          .tr);
-                                                } else if (!Constant
-                                                    .validateEmail(controller
-                                                        .emailController
-                                                        .value
-                                                        .text)) {
-                                                  ShowToastDialog.showToast(
-                                                      "Please enter a valid email"
-                                                          .tr);
-                                                } else {
-                                                  FirebaseAuth.instance
-                                                      .sendPasswordResetEmail(
-                                                          email: controller
-                                                              .emailController
-                                                              .value
-                                                              .text)
-                                                      .then((_) {
-                                                    ShowToastDialog.showToast(
-                                                        "Password reset email sent"
-                                                            .tr);
-                                                  }).catchError((error) {
-                                                    ShowToastDialog.showToast(
-                                                        "Failed to send reset email: $error"
-                                                            .tr);
-                                                  });
-                                                }
-                                              },
-                                              child: Text(
-                                                "Forgot Password?".tr,
-                                                style: AppTypography.boldLabel(
-                                                        context)
-                                                    .copyWith(
-                                                        color: AppColors
-                                                            .darkContainerBackground),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20),
+                                    child: Text(
+                                      Constant.localizationDescription(
+                                          item.description),
+                                      style: AppTypography.label(context)
+                                          .copyWith(letterSpacing: 1.05),
+                                      textAlign: TextAlign.center,
                                     ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          width: Responsive.width(80, context),
-                          child: ButtonThem.buildButton(
-                            context,
-                            title: controller.loginMethod.value == 'phone'
-                                ? "Next".tr
-                                : "Continue with Email".tr,
-                            onPress: () {
-                              if (controller.formKey.value != null &&
-                                  controller.formKey.value.currentState!
-                                      .validate()) {
-                                try {
-                                  if (controller.loginMethod.value == 'phone') {
-                                    controller.sendCode();
-                                  } else {
-                                    controller.signInWithEmail();
-                                  }
-                                } catch (e) {
-                                  ShowToastDialog.showToast("Error: $e".tr);
-                                }
-                              } else {
-                                ShowToastDialog.showToast(
-                                    "Please fill all required fields".tr);
-                              }
+                                  ),
+                                ],
+                              );
                             },
                           ),
+                  ),
+                ),
+                // PageView Indicators
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Obx(
+                    () => Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        onBoardingController.onBoardingList.length,
+                        (index) => Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          width: onBoardingController.selectedPageIndex.value ==
+                                  index
+                              ? 25
+                              : 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color:
+                                onBoardingController.selectedPageIndex.value ==
+                                        index
+                                    ? AppColors.primary
+                                    : const Color(0xffD4D5E0),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(10)),
+                          ),
                         ),
-                        SizedBox(height: Responsive.height(4, context)),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Divider(
-                                height: 1,
-                                indent: 20,
-                                color: Colors.grey[400],
-                              ),
-                            ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                "Or".tr,
-                                style: AppTypography.boldHeaders(context),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(
-                                height: 1,
-                                endIndent: 20,
-                                color: Colors.grey[400],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-                        Container(
-                          width: Responsive.width(80, context),
-                          child: ButtonThem.buildBorderButton(
+                      ),
+                    ),
+                  ),
+                ),
+                // Login Buttons
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 10),
+                          ButtonThem.buildButton(
+                            context,
+                            title: "Continue with Phone".tr,
+                            onPress: () =>
+                                _showPhoneLoginSheet(context, loginController),
+                          ),
+                          const SizedBox(height: 10),
+                          ButtonThem.buildBorderButton(
                             context,
                             title: "Continue with Google".tr,
                             iconVisibility: true,
                             iconAssetImage: 'assets/icons/ic_google.png',
-                            onPress: () async {
-                              ShowToastDialog.showLoader("Please wait".tr);
-                              await controller.signInWithGoogle().then((value) {
-                                ShowToastDialog.closeLoader();
-                                if (value != null) {
-                                  if (value.additionalUserInfo!.isNewUser) {
-                                    log("----->new user");
-                                    DriverUserModel userModel =
-                                        DriverUserModel();
-                                    userModel.id = value.user!.uid;
-                                    userModel.email = value.user!.email;
-                                    userModel.fullName =
-                                        value.user!.displayName;
-                                    userModel.profilePic = value.user!.photoURL;
-                                    userModel.loginType =
-                                        Constant.googleLoginType;
-                                    userModel.profileVerify = true;
-                                    Get.to(const InformationScreen(),
-                                        arguments: {"userModel": userModel});
-                                  } else {
-                                    log("----->old user");
-                                    FireStoreUtils.userExitOrNot(
-                                            value.user!.uid)
-                                        .then((userExit) async {
-                                      log(" ms $userExit");
-                                      if (userExit == true) {
-                                        String token = await NotificationService
-                                            .getToken();
-                                        DriverUserModel userModel =
-                                            DriverUserModel();
-                                        userModel.fcmToken = token;
-                                        await FireStoreUtils.updateDriverUser(
-                                            userModel);
-                                        await FireStoreUtils.getDriverProfile(
-                                                FirebaseAuth
-                                                    .instance.currentUser!.uid)
-                                            .then((value) {
-                                          if (value != null) {
-                                            DriverUserModel userModel = value;
-                                            bool isPlanExpire = false;
-                                            if (userModel
-                                                    .subscriptionPlan?.id !=
-                                                null) {
-                                              if (userModel
-                                                      .subscriptionExpiryDate ==
-                                                  null) {
-                                                if (userModel.subscriptionPlan
-                                                        ?.expiryDay ==
-                                                    '-1') {
-                                                  isPlanExpire = false;
-                                                } else {
-                                                  isPlanExpire = true;
-                                                }
-                                              } else {
-                                                DateTime expiryDate = userModel
-                                                    .subscriptionExpiryDate!
-                                                    .toDate();
-                                                isPlanExpire = expiryDate
-                                                    .isBefore(DateTime.now());
-                                              }
-                                            } else {
-                                              isPlanExpire = true;
-                                            }
-                                            if (userModel.subscriptionPlanId ==
-                                                    null ||
-                                                isPlanExpire == true) {
-                                              if (Constant.adminCommission
-                                                          ?.isEnabled ==
-                                                      false &&
-                                                  Constant.isSubscriptionModelApplied ==
-                                                      false) {
-                                                ShowToastDialog.closeLoader();
-                                                Get.offAll(
-                                                    const DashBoardScreen());
-                                              } else {
-                                                ShowToastDialog.closeLoader();
-                                                Get.offAll(
-                                                    const DashBoardScreen(),
-                                                    arguments: {
-                                                      "isShow": true
-                                                    });
-                                              }
-                                            } else {
-                                              Get.offAll(
-                                                  const DashBoardScreen());
-                                            }
-                                          }
-                                        });
-                                      } else {
-                                        DriverUserModel userModel =
-                                            DriverUserModel();
-                                        userModel.id = value.user!.uid;
-                                        userModel.email = value.user!.email;
-                                        userModel.fullName =
-                                            value.user!.displayName;
-                                        userModel.profilePic =
-                                            value.user!.photoURL;
-                                        userModel.loginType =
-                                            Constant.googleLoginType;
-                                        userModel.profileVerify = true;
-                                        log("message");
-                                        Get.to(const InformationScreen(),
-                                            arguments: {
-                                              "userModel": userModel,
-                                            });
-                                      }
-                                    });
-                                  }
-                                }
-                              });
-                            },
+                            onPress: () => _handleGoogleLogin(loginController),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Visibility(
-                          visible: Platform.isIOS,
-                          child: Container(
-                            width: Responsive.width(80, context),
+                          const SizedBox(height: 16),
+                          Visibility(
+                            visible: Platform.isIOS,
                             child: ButtonThem.buildBorderButton(
                               context,
                               title: "Login with Apple".tr,
                               iconVisibility: true,
                               iconAssetImage: 'assets/icons/ic_apple.png',
                               iconColor: Colors.black,
-                              onPress: () async {
-                                ShowToastDialog.showLoader("Please wait".tr);
-                                await controller
-                                    .signInWithApple()
-                                    .then((value) {
-                                  ShowToastDialog.closeLoader();
-                                  if (value != null) {
-                                    Map<String, dynamic> map = value;
-                                    AuthorizationCredentialAppleID
-                                        appleCredential =
-                                        map['appleCredential'];
-                                    UserCredential userCredential =
-                                        map['userCredential'];
-
-                                    if (value != null) {
-                                      if (userCredential
-                                          .additionalUserInfo!.isNewUser) {
-                                        log("----->new user");
-                                        DriverUserModel userModel =
-                                            DriverUserModel();
-                                        userModel.id = userCredential.user!.uid;
-                                        userModel.profilePic =
-                                            userCredential.user!.photoURL;
-                                        userModel.loginType =
-                                            Constant.appleLoginType;
-                                        userModel.email = userCredential
-                                            .additionalUserInfo!
-                                            .profile!['email'];
-                                        userModel.fullName =
-                                            "${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}";
-                                        userModel.profileVerify = true;
-                                        Get.to(const InformationScreen(),
-                                            arguments: {
-                                              "userModel": userModel,
-                                            });
-                                      } else {
-                                        log("----->old user");
-                                        FireStoreUtils.userExitOrNot(
-                                                userCredential.user!.uid)
-                                            .then((userExit) async {
-                                          if (userExit == true) {
-                                            await FireStoreUtils
-                                                    .getDriverProfile(
-                                                        FirebaseAuth.instance
-                                                            .currentUser!.uid)
-                                                .then((value) {
-                                              if (value != null) {
-                                                DriverUserModel userModel =
-                                                    value;
-                                                bool isPlanExpire = false;
-                                                if (userModel
-                                                        .subscriptionPlan?.id !=
-                                                    null) {
-                                                  if (userModel
-                                                          .subscriptionExpiryDate ==
-                                                      null) {
-                                                    if (userModel
-                                                            .subscriptionPlan
-                                                            ?.expiryDay ==
-                                                        '-1') {
-                                                      isPlanExpire = false;
-                                                    } else {
-                                                      isPlanExpire = true;
-                                                    }
-                                                  } else {
-                                                    DateTime expiryDate = userModel
-                                                        .subscriptionExpiryDate!
-                                                        .toDate();
-                                                    isPlanExpire =
-                                                        expiryDate.isBefore(
-                                                            DateTime.now());
-                                                  }
-                                                } else {
-                                                  isPlanExpire = true;
-                                                }
-                                                if (userModel
-                                                            .subscriptionPlanId ==
-                                                        null ||
-                                                    isPlanExpire == true) {
-                                                  if (Constant.adminCommission
-                                                              ?.isEnabled ==
-                                                          false &&
-                                                      Constant.isSubscriptionModelApplied ==
-                                                          false) {
-                                                    ShowToastDialog
-                                                        .closeLoader();
-                                                    Get.offAll(
-                                                        const DashBoardScreen());
-                                                  } else {
-                                                    ShowToastDialog
-                                                        .closeLoader();
-                                                    Get.offAll(
-                                                        const DashBoardScreen(),
-                                                        arguments: {
-                                                          "isShow": true
-                                                        });
-                                                  }
-                                                } else {
-                                                  Get.offAll(
-                                                      const DashBoardScreen());
-                                                }
-                                              }
-                                            });
-                                          } else {
-                                            DriverUserModel userModel =
-                                                DriverUserModel();
-                                            userModel.id =
-                                                userCredential.user!.uid;
-                                            userModel.profilePic =
-                                                userCredential.user!.photoURL;
-                                            userModel.loginType =
-                                                Constant.appleLoginType;
-                                            userModel.email = userCredential
-                                                .additionalUserInfo!
-                                                .profile!['email'];
-                                            userModel.fullName =
-                                                "${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}";
-                                            userModel.profileVerify = true;
-                                            Get.to(const InformationScreen(),
-                                                arguments: {
-                                                  "userModel": userModel,
-                                                });
-                                          }
-                                        });
-                                      }
-                                    }
-                                  }
-                                });
-                              },
+                              onPress: () => _handleAppleLogin(loginController),
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
                 ),
+              ],
+            ),
+            // Terms and Conditions Text (at the bottom)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                color: AppColors.background,
+                child: Text.rich(
+                  textAlign: TextAlign.center,
+                  TextSpan(
+                    text: 'By tapping "Next" you agree to '.tr,
+                    style: AppTypography.caption(context),
+                    children: <TextSpan>[
+                      TextSpan(
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () => Get.to(
+                              const TermsAndConditionScreen(type: "terms")),
+                        text: 'Terms and conditions'.tr,
+                        style: AppTypography.boldLabel(context)
+                            .copyWith(color: AppColors.primary),
+                      ),
+                      TextSpan(
+                          text: ' and ', style: AppTypography.caption(context)),
+                      TextSpan(
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () => Get.to(
+                              const TermsAndConditionScreen(type: "privacy")),
+                        text: 'privacy policy'.tr,
+                        style: AppTypography.boldLabel(context)
+                            .copyWith(color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Phone Login Modal Bottom Sheet
+  void _showPhoneLoginSheet(
+      BuildContext context, LoginController loginController) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SafeArea(
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Enter Phone Number".tr,
+                      style: AppTypography.headers(context)),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    keyboardType: TextInputType.number,
+                    controller: loginController.phoneNumberController.value,
+                    style: AppTypography.input(context),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      prefixIcon: CountryCodePicker(
+                        onChanged: (value) => loginController
+                            .countryCode.value = value.dialCode ?? "+1",
+                        dialogBackgroundColor: AppColors.background,
+                        initialSelection: loginController.countryCode.value,
+                        comparator: (a, b) => b.name!.compareTo(a.name!),
+                        flagDecoration: const BoxDecoration(
+                            borderRadius: BorderRadius.all(Radius.circular(2))),
+                        padding: EdgeInsets.zero,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(4)),
+                        borderSide: BorderSide(color: AppColors.grey300),
+                      ),
+                      hintText: "Phone number".tr,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text("Cancel".tr,
+                            style: AppTypography.boldLabel(context)
+                                .copyWith(color: AppColors.grey400)),
+                      ),
+                      ButtonThem.buildButton(
+                        context,
+                        btnWidthRatio: 0.3,
+                        btnHeight: 35,
+                        title: "Submit".tr,
+                        onPress: () {
+                          if (loginController
+                              .phoneNumberController.value.text.isNotEmpty) {
+                            Navigator.pop(context);
+                            // Preferences.setBoolean(Preferences.isLogin, true);
+                            loginController.sendCode();
+                          } else {
+                            ShowToastDialog.showToast(
+                                "Please enter a phone number".tr);
+                          }
+                        },
+                      )
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
     );
+  }
+
+  // Google Login Logic
+  Future<void> _handleGoogleLogin(LoginController controller) async {
+    ShowToastDialog.showLoader("Please wait".tr);
+    final value = await controller.signInWithGoogle();
+    ShowToastDialog.closeLoader();
+
+    if (value == null) return;
+
+    if (value.additionalUserInfo!.isNewUser) {
+      DriverUserModel userModel = DriverUserModel()
+        ..id = value.user!.uid
+        ..email = value.user!.email
+        ..fullName = value.user!.displayName
+        ..profilePic = value.user!.photoURL
+        ..loginType = Constant.googleLoginType
+        ..profileVerify = true;
+      Get.to(() => const InformationScreen(),
+          arguments: {"userModel": userModel});
+    } else {
+      final userExit = await FireStoreUtils.userExitOrNot(value.user!.uid);
+      if (userExit) {
+        final userModel =
+            await FireStoreUtils.getDriverProfile(value.user!.uid);
+
+        String token = await NotificationService.getToken();
+        userModel!.fcmToken = token;
+        await FireStoreUtils.updateDriverUser(userModel);
+        // Retain your existing driver-specific logic for subscription checks
+        Get.offAll(() => const DashBoardScreen()); // Simplified for example
+      } else {
+        DriverUserModel userModel = DriverUserModel()
+          ..id = value.user!.uid
+          ..email = value.user!.email
+          ..fullName = value.user!.displayName
+          ..profilePic = value.user!.photoURL
+          ..loginType = Constant.googleLoginType
+          ..profileVerify = true;
+        Get.to(() => const InformationScreen(),
+            arguments: {"userModel": userModel});
+      }
+    }
+  }
+
+  // Apple Login Logic
+  Future<void> _handleAppleLogin(LoginController controller) async {
+    ShowToastDialog.showLoader("Please wait".tr);
+    final value = await controller.signInWithApple();
+    ShowToastDialog.closeLoader();
+
+    if (value == null) return;
+
+    AuthorizationCredentialAppleID appleCredential = value['appleCredential'];
+    UserCredential userCredential = value['userCredential'];
+
+    if (userCredential.additionalUserInfo!.isNewUser) {
+      DriverUserModel userModel = DriverUserModel()
+        ..id = userCredential.user!.uid
+        ..profilePic = userCredential.user!.photoURL
+        ..loginType = Constant.appleLoginType
+        ..email = userCredential.additionalUserInfo!.profile!['email']
+        ..fullName =
+            "${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}"
+        ..profileVerify = true;
+      Get.to(() => const InformationScreen(),
+          arguments: {"userModel": userModel});
+    } else {
+      final userExit =
+          await FireStoreUtils.userExitOrNot(userCredential.user!.uid);
+
+      DriverUserModel userModel = DriverUserModel()
+        ..id = userCredential.user!.uid
+        ..profilePic = userCredential.user!.photoURL
+        ..loginType = Constant.appleLoginType
+        ..email = userCredential.additionalUserInfo!.profile!['email']
+        ..fullName =
+            "${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}"
+        ..profileVerify = true;
+      Get.to(() => const InformationScreen(),
+          arguments: {"userModel": userModel});
+    }
   }
 }

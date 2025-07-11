@@ -1,7 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
-import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/themes/app_colors.dart';
@@ -11,7 +9,6 @@ import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class DashBoardScreen extends StatelessWidget {
   const DashBoardScreen({super.key});
@@ -22,64 +19,63 @@ class DashBoardScreen extends StatelessWidget {
       init: DashBoardController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: const Color.fromARGB(0, 255, 255, 255),
+          backgroundColor: AppColors.background,
+          // The AppBar is now a primary part of the Scaffold
           appBar: AppBar(
             elevation: 0,
             backgroundColor: Colors.white,
-            foregroundColor: Colors.white,
-            centerTitle: true,
             surfaceTintColor: Colors.white,
             title: Text(
+              // Dynamic title based on the selected screen
               controller.selectedDrawerIndex.value == 0
                   ? 'Driver Dashboard'.tr
                   : controller.drawerItems[controller.selectedDrawerIndex.value]
                       .title.tr,
               style: AppTypography.appBar(context),
             ),
+            centerTitle: true,
+            // The leading icon now opens the drawer
             leading: Builder(
               builder: (context) {
                 return InkWell(
                   onTap: () => Scaffold.of(context).openDrawer(),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 20),
+                    padding: const EdgeInsets.all(18.0),
                     child: SvgPicture.asset(
                       'assets/icons/ic_humber.svg',
-                      color: Colors.black,
+                      colorFilter: const ColorFilter.mode(
+                        AppColors.primary,
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                 );
               },
             ),
+            // The Online/Offline switch is moved here for constant visibility
             actions: [
               Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: Obx(() {
-                  // Show a small loader while driver data is being fetched
-                  // if (controller.driverModel.value == null) {
-                  //   return const Center(
-                  //     child: SizedBox(
-                  //       width: 20,
-                  //       height: 20,
-                  //       child: CircularProgressIndicator(strokeWidth: 2),
-                  //     ),
-                  //   );
-                  // }
-                  // Once data is loaded, show the switch
-                  return Switch(
-                    splashRadius: 10,
-                    value: controller.isOnline.value,
-                    onChanged: (value) {
-                      controller.toggleOnlineStatus(value);
-                    },
-                    activeColor: AppColors.primary,
-                    inactiveThumbColor: AppColors.grey500,
-                  );
-                }),
+                padding: const EdgeInsets.only(right: 5.0),
+                // Center the switch vertically in the AppBar
+                child: Center(
+                  // Use Transform.scale to adjust the size of the Switch
+                  child: Transform.scale(
+                    // Values < 1.0 make it smaller, > 1.0 make it larger.
+                    scale: 0.8,
+                    child: Obx(() => Switch(
+                          value: controller.isOnline.value,
+                          onChanged: (value) {
+                            controller.toggleOnlineStatus(value);
+                          },
+                          activeColor: AppColors.primary,
+                          inactiveThumbColor: AppColors.grey500,
+                        )),
+                  ),
+                ),
               )
             ],
           ),
-          drawer: buildAppDrawer(context, controller),
+          drawer: _buildSimpleDrawer(context, controller),
           body: WillPopScope(
             onWillPop: controller.onWillPop,
             child: controller
@@ -90,174 +86,258 @@ class DashBoardScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showAlertDialog(BuildContext context, String type) async {
-    final controllerDashBoard = Get.find<DashBoardController>();
-
-    return showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Information'.tr),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: [
-                Text(
-                    'To start earning with NisaRide you need to fill in your personal information'
-                        .tr),
-              ],
+  /// Builds the main navigation drawer with the modern style.
+  Widget _buildSimpleDrawer(
+      BuildContext context, DashBoardController controller) {
+    return Drawer(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      width: Responsive.width(90, Get.context!),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _buildUserProfile(context, controller),
+            const SizedBox(height: 5),
+            Divider(
+              color: AppColors.grey200,
             ),
-          ),
-          actions: [
-            TextButton(
-              child: Text('No'.tr),
-              onPressed: () => Get.back(),
+            const SizedBox(height: 5),
+            Expanded(
+              child: _buildMenuItems(context, controller),
             ),
-            TextButton(
-              child: Text('Yes'.tr),
-              onPressed: () {
-                if (type == "document") {
-                  controllerDashBoard.onSelectItem(6); // Online Registration
-                } else {
-                  controllerDashBoard.onSelectItem(7); // Vehicle Information
-                }
-              },
-            ),
+            const SizedBox(height: 35),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget buildAppDrawer(BuildContext context, DashBoardController controller) {
-    var drawerOptions = <Widget>[];
-    for (var i = 0; i < controller.drawerItems.length; i++) {
-      var d = controller.drawerItems[i];
-      drawerOptions.add(InkWell(
-        onTap: () => controller.onSelectItem(i),
-        child: Padding(
-          padding: const EdgeInsets.all(6.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: i == controller.selectedDrawerIndex.value
-                  ? AppColors.primary
-                  : Colors.transparent,
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                SvgPicture.asset(
-                  d.icon,
-                  width: 15,
-                  color: i == controller.selectedDrawerIndex.value
-                      ? Colors.white
-                      : AppColors.grey500,
+  /// Builds the user profile section in the drawer header.
+  /// It includes a FutureBuilder to fetch user data and shows loading/error states.
+  Widget _buildUserProfile(
+      BuildContext context, DashBoardController controller) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+      child: FutureBuilder<DriverUserModel?>(
+        future: FireStoreUtils.getCurrentUid() != null
+            ? FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()!)
+            : Future.value(null),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _buildProfileSkeleton();
+          }
+
+          if (snapshot.hasError || !snapshot.hasData) {
+            return _buildProfileError();
+          }
+
+          DriverUserModel driverModel = snapshot.data!;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildProfileImage(driverModel.profilePic.toString()),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      driverModel.fullName.toString(),
+                      style: AppTypography.appTitle(context).copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      driverModel.email.toString(),
+                      style: AppTypography.caption(context).copyWith(
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          color: AppColors.ratingColour,
+                          size: 15,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          driverModel.reviewsSum.toString(),
+                          style: AppTypography.smBoldLabel(context).copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  d.title,
-                  style: AppTypography.smBoldLabel(context).copyWith(
-                    color: i == controller.selectedDrawerIndex.value
-                        ? Colors.white
-                        : Colors.black,
-                  ),
-                ),
-              ],
+              ),
+              // The switch has been removed from here to avoid duplication.
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Builds the circular profile image with a placeholder and error widget.
+  Widget _buildProfileImage(String imageUrl) {
+    return SizedBox(
+      width: 50,
+      height: 50,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Container(
+            color: Colors.grey[100],
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: Colors.grey[100],
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Image.network(Constant.userPlaceHolder),
             ),
           ),
         ),
-      ));
-    }
+      ),
+    );
+  }
 
-    return Drawer(
-      backgroundColor: AppColors.background,
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            child: FutureBuilder<DriverUserModel?>(
-              future: FireStoreUtils.getCurrentUid() != null
-                  ? FireStoreUtils.getDriverProfile(
-                      FireStoreUtils.getCurrentUid()!)
-                  : Future.value(null),
-              builder: (context, snapshot) {
-                switch (snapshot.connectionState) {
-                  case ConnectionState.waiting:
-                    return Constant.loader(context);
-                  case ConnectionState.done:
-                    if (snapshot.hasError) {
-                      return Text(snapshot.error.toString());
-                    } else {
-                      DriverUserModel driverModel = snapshot.data!;
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        spacing: 10,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: CachedNetworkImage(
-                              height: Responsive.width(24, context),
-                              width: Responsive.width(24, context),
-                              imageUrl: driverModel.profilePic.toString(),
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) =>
-                                  Constant.loader(context),
-                              errorWidget: (context, url, error) =>
-                                  Image.network(Constant.userPlaceHolder),
-                            ),
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            spacing: 8,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  driverModel.fullName.toString(),
-                                  style: AppTypography.boldLabel(context),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  driverModel.email.toString(),
-                                  style: AppTypography.smBoldLabel(context)
-                                      .copyWith(color: AppColors.grey500),
-                                ),
-                              ),
-                              Row(
-                                spacing: 5,
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    size: 15,
-                                    color: AppColors.ratingColour,
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 2),
-                                    child: Text(
-                                      driverModel.reviewsSum.toString(),
-                                      style: AppTypography.boldLabel(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          )
-                        ],
-                      );
-                    }
-                  default:
-                    return Text('Error'.tr);
-                }
-              },
+  /// A skeleton loader widget for the profile section.
+  Widget _buildProfileSkeleton() {
+    return Row(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 120,
+                height: 18,
+                decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4)),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: 150,
+                height: 14,
+                decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// An error widget for the profile section.
+  Widget _buildProfileError() {
+    return Row(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            Icons.error_outline,
+            color: Colors.grey[400],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Could not load profile'.tr,
+            style: AppTypography.caption(Get.context!).copyWith(
+              color: Colors.grey[600],
             ),
           ),
-          Column(children: drawerOptions),
-        ],
-      ),
+        ),
+      ],
+    );
+  }
+
+  /// Builds the list of tappable menu items for the drawer.
+  Widget _buildMenuItems(BuildContext context, DashBoardController controller) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      itemCount: controller.drawerItems.length,
+      itemBuilder: (context, index) {
+        final item = controller.drawerItems[index];
+        final isSelected = index == controller.selectedDrawerIndex.value;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 4),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => controller.onSelectItem(index),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withOpacity(0.09)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    SvgPicture.asset(
+                      item.icon,
+                      width: 16,
+                      height: 16,
+                      colorFilter: ColorFilter.mode(
+                        isSelected ? AppColors.primary : Colors.grey.shade600,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        item.title.tr,
+                        style: AppTypography.sideBar(context).copyWith(
+                          color:
+                              isSelected ? AppColors.primary : Colors.black87,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -473,8 +473,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
       Uint8List? destinationIcon;
 
       try {
-        sourceIcon = await getBytesFromAsset('assets/images/green_mark.png', 40);
-        destinationIcon = await getBytesFromAsset('assets/images/red_mark.png', 40);
+        sourceIcon =
+            await getBytesFromAsset('assets/images/green_mark.png', 40);
+        destinationIcon =
+            await getBytesFromAsset('assets/images/red_mark.png', 40);
       } catch (e) {
         print('Custom marker assets not found, using default markers: $e');
       }
@@ -482,7 +484,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
       _markers.add(Marker(
         markerId: const MarkerId('source'),
         position: source,
-        icon: sourceIcon != null 
+        icon: sourceIcon != null
             ? BitmapDescriptor.fromBytes(sourceIcon)
             : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         infoWindow: const InfoWindow(title: 'Pickup Location'),
@@ -556,7 +558,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               points: routePoints,
               color: AppColors.primary,
               width: 3,
-                 patterns: [PatternItem.dash(20), PatternItem.gap(10)],// Remove any patterns for solid line
+              patterns: [
+                PatternItem.dash(20),
+                PatternItem.gap(10)
+              ], // Remove any patterns for solid line
             ));
           }
 
@@ -572,11 +577,12 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           // Fit the map to show both markers and the route with proper padding
           _fitMapToShowRoute();
 
-          print('Route drawn successfully. Distance: $_routeDistance, Duration: $_routeDuration');
+          print(
+              'Route drawn successfully. Distance: $_routeDistance, Duration: $_routeDuration');
         } else {
           String errorMessage = data['error_message'] ?? 'No route found';
           print("Directions API Error: ${data['status']} - $errorMessage");
-          
+
           if (mounted) {
             setState(() {
               _routeDistance = 'Route Error';
@@ -613,10 +619,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
     // Collect all points (markers + route points)
     List<LatLng> allPoints = [];
-    
+
     // Add marker positions
     allPoints.addAll(_markers.map((marker) => marker.position));
-    
+
     // Add route points if available
     if (_polylines.isNotEmpty) {
       final polyline = _polylines.first;
@@ -627,7 +633,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
     // Calculate bounds
     final bounds = _boundsFromLatLngList(allPoints);
-    
+
     // Fit the map with generous padding to ensure everything is visible
     Future.delayed(const Duration(milliseconds: 800), () {
       if (_mapController != null) {
@@ -736,11 +742,12 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                       widget.orderModel.sourceLocationLAtLng!.longitude!),
                   zoom: 10, // Reduced initial zoom to show more area
                 ),
-                onMapCreated: (controller) async{
+                onMapCreated: (controller) async {
                   _mapController = controller;
-                  
-        String style = await rootBundle.loadString('assets/map_style.json');
-        _mapController?.setMapStyle(style);
+
+                  String style =
+                      await rootBundle.loadString('assets/map_style.json');
+                  _mapController?.setMapStyle(style);
 
                   // Initial fit to show both markers with lower zoom
                   Future.delayed(const Duration(milliseconds: 300), () {
@@ -758,7 +765,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                 zoomControlsEnabled: false,
                 compassEnabled: false,
                 mapToolbarEnabled: false,
-                minMaxZoomPreference: const MinMaxZoomPreference(8.0, 18.0), // Set zoom limits
+                minMaxZoomPreference:
+                    const MinMaxZoomPreference(8.0, 18.0), // Set zoom limits
               ),
               if (_isLoadingRoute)
                 Container(
@@ -790,7 +798,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               icon: Icons.timer_outlined, label: 'ETA', value: _routeDuration),
           Container(height: 30, width: 1, color: Colors.grey.shade300),
           _buildInfoChip(
-              icon: Icons.map_outlined, label: 'Distance', value: _routeDistance),
+              icon: Icons.map_outlined,
+              label: 'Distance',
+              value: _routeDistance),
         ],
       ),
     );
@@ -808,8 +818,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           children: [
             Icon(icon, size: 18, color: AppColors.primary),
             const SizedBox(width: 6),
-            Text(value,
-                style:AppTypography.headers(context)),
+            Text(value, style: AppTypography.headers(context)),
           ],
         )
       ],

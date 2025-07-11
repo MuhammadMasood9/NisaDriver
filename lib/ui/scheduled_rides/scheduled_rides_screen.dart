@@ -38,12 +38,6 @@ class ScheduledRidesScreen extends StatelessWidget {
           backgroundColor: AppColors.background,
           centerTitle: true,
           surfaceTintColor: AppColors.background,
-          title: Text("Weekly Schedules".tr, style: AppTypography.appTitle(context)),
-          leading: InkWell(
-            onTap: () => Get.back(),
-            borderRadius: BorderRadius.circular(50),
-            child: const Icon(Icons.arrow_back, color: Colors.black),
-          ),
           bottom: TabBar(
             labelColor: AppColors.primary,
             unselectedLabelColor: Colors.grey.shade600,
@@ -76,14 +70,16 @@ class ScheduledRidesScreen extends StatelessWidget {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return _buildEmptyListView('Something went wrong'.tr, Icons.error_outline);
+          return _buildEmptyListView(
+              'Something went wrong'.tr, Icons.error_outline);
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Constant.loader(context);
         }
         if (snapshot.data!.docs.isEmpty) {
           return _buildEmptyListView(
-              "No new weekly schedules available right now.".tr, Icons.explore_off_rounded);
+              "No new weekly schedules available right now.".tr,
+              Icons.explore_off_rounded);
         }
 
         return ListView.builder(
@@ -94,8 +90,10 @@ class ScheduledRidesScreen extends StatelessWidget {
                 snapshot.data!.docs[index].data() as Map<String, dynamic>);
             // MODIFIED: Wrap the card in an InkWell for navigation
             return InkWell(
-              onTap: () => Get.to(() => ScheduledRideDetailsScreen(scheduleId: scheduleModel.id!)),
-              child: _buildScheduleCard(context, scheduleModel, isAcceptable: true),
+              onTap: () => Get.to(() =>
+                  ScheduledRideDetailsScreen(scheduleId: scheduleModel.id!)),
+              child: _buildScheduleCard(context, scheduleModel,
+                  isAcceptable: true),
             );
           },
         );
@@ -115,13 +113,16 @@ class ScheduledRidesScreen extends StatelessWidget {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return _buildEmptyListView('Something went wrong'.tr, Icons.error_outline);
+          return _buildEmptyListView(
+              'Something went wrong'.tr, Icons.error_outline);
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Constant.loader(context);
         }
         if (snapshot.data!.docs.isEmpty) {
-          return _buildEmptyListView("You have not accepted any weekly schedules.".tr, Icons.work_off_rounded);
+          return _buildEmptyListView(
+              "You have not accepted any weekly schedules.".tr,
+              Icons.work_off_rounded);
         }
 
         return ListView.builder(
@@ -132,8 +133,10 @@ class ScheduledRidesScreen extends StatelessWidget {
                 snapshot.data!.docs[index].data() as Map<String, dynamic>);
             // MODIFIED: Wrap the card in an InkWell for navigation
             return InkWell(
-              onTap: () => Get.to(() => ScheduledRideDetailsScreen(scheduleId: scheduleModel.id!)),
-              child: _buildScheduleCard(context, scheduleModel, isAcceptable: false),
+              onTap: () => Get.to(() =>
+                  ScheduledRideDetailsScreen(scheduleId: scheduleModel.id!)),
+              child: _buildScheduleCard(context, scheduleModel,
+                  isAcceptable: false),
             );
           },
         );
@@ -143,9 +146,14 @@ class ScheduledRidesScreen extends StatelessWidget {
 
   // --- UI WIDGETS AND HELPERS ---
 
-  Widget _buildScheduleCard(BuildContext context, ScheduleRideModel model, {required bool isAcceptable}) {
-    String formattedStartDate = model.startDate != null ? DateFormat('MMM d').format(model.startDate!.toDate()) : '';
-    String formattedEndDate = model.endDate != null ? DateFormat('MMM d, yyyy').format(model.endDate!.toDate()) : '';
+  Widget _buildScheduleCard(BuildContext context, ScheduleRideModel model,
+      {required bool isAcceptable}) {
+    String formattedStartDate = model.startDate != null
+        ? DateFormat('MMM d').format(model.startDate!.toDate())
+        : '';
+    String formattedEndDate = model.endDate != null
+        ? DateFormat('MMM d, yyyy').format(model.endDate!.toDate())
+        : '';
     String time = model.scheduledTime ?? '';
 
     return Container(
@@ -171,7 +179,8 @@ class ScheduledRidesScreen extends StatelessWidget {
               const Spacer(),
               Text(
                 model.weeklyRate ?? 'N/A',
-                style: AppTypography.headers(context).copyWith(color: AppColors.primary),
+                style: AppTypography.headers(context)
+                    .copyWith(color: AppColors.primary),
               ),
             ],
           ),
@@ -194,7 +203,8 @@ class ScheduledRidesScreen extends StatelessWidget {
                 style: AppTypography.label(context),
               ),
               const Spacer(),
-              const Icon(Icons.access_time_filled_rounded, size: 16, color: Colors.grey),
+              const Icon(Icons.access_time_filled_rounded,
+                  size: 16, color: Colors.grey),
               const SizedBox(width: 8),
               Text(
                 time,
@@ -221,8 +231,13 @@ class ScheduledRidesScreen extends StatelessWidget {
 
   Widget _buildDaysRow(BuildContext context, List<String> days) {
     final Map<String, String> dayAbbreviations = {
-      'Monday': 'M', 'Tuesday': 'T', 'Wednesday': 'W', 'Thursday': 'T',
-      'Friday': 'F', 'Saturday': 'S', 'Sunday': 'S',
+      'Monday': 'M',
+      'Tuesday': 'T',
+      'Wednesday': 'W',
+      'Thursday': 'T',
+      'Friday': 'F',
+      'Saturday': 'S',
+      'Sunday': 'S',
     };
 
     return Row(
@@ -234,14 +249,18 @@ class ScheduledRidesScreen extends StatelessWidget {
           height: Responsive.width(8, context),
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.darkBackground : AppColors.containerBackground,
+            color: isSelected
+                ? AppColors.darkBackground
+                : AppColors.containerBackground,
             shape: BoxShape.circle,
           ),
           child: Center(
             child: Text(
               dayAbbreviations[dayName]!,
               style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.darkBackground.withOpacity(0.5),
+                color: isSelected
+                    ? Colors.white
+                    : AppColors.darkBackground.withOpacity(0.5),
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
@@ -264,7 +283,8 @@ class ScheduledRidesScreen extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTypography.headers(Get.context!).copyWith(color: Colors.grey.shade600),
+              style: AppTypography.headers(Get.context!)
+                  .copyWith(color: Colors.grey.shade600),
             ),
           ],
         ),
@@ -273,15 +293,20 @@ class ScheduledRidesScreen extends StatelessWidget {
   }
 
   // --- ACTION HANDLER ---
-  Future<void> _acceptSchedule(BuildContext context, ScheduleRideModel model) async {
+  Future<void> _acceptSchedule(
+      BuildContext context, ScheduleRideModel model) async {
     bool? confirm = await Get.dialog(AlertDialog(
       title: Text('Accept This Schedule?'.tr),
-      content: Text('You are committing to all rides for this week (${model.weeklyRate}). Are you sure?'.tr),
+      content: Text(
+          'You are committing to all rides for this week (${model.weeklyRate}). Are you sure?'
+              .tr),
       actions: [
-        TextButton(onPressed: () => Get.back(result: false), child: Text('No'.tr)),
+        TextButton(
+            onPressed: () => Get.back(result: false), child: Text('No'.tr)),
         TextButton(
           onPressed: () => Get.back(result: true),
-          child: Text('Yes, Accept'.tr, style: const TextStyle(color: AppColors.primary)),
+          child: Text('Yes, Accept'.tr,
+              style: const TextStyle(color: AppColors.primary)),
         ),
       ],
     ));
@@ -290,7 +315,9 @@ class ScheduledRidesScreen extends StatelessWidget {
 
     ShowToastDialog.showLoader("Accepting...");
 
-    final scheduleRef = FirebaseFirestore.instance.collection(CollectionName.scheduledRides).doc(model.id);
+    final scheduleRef = FirebaseFirestore.instance
+        .collection(CollectionName.scheduledRides)
+        .doc(model.id);
     final driverId = FireStoreUtils.getCurrentUid() ?? '';
 
     try {
@@ -316,7 +343,8 @@ class ScheduledRidesScreen extends StatelessWidget {
       });
 
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showToast("Schedule accepted! It's now in 'My Schedules'.");
+      ShowToastDialog.showToast(
+          "Schedule accepted! It's now in 'My Schedules'.");
 
       // TODO: Send a notification to the customer
     } catch (e) {

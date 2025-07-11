@@ -25,7 +25,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
-
 /*
   ✅ INTEGRATION STEPS (If not already done):
 
@@ -92,7 +91,8 @@ class ScheduledOrderController extends GetxController {
 
   /// Fetches the current driver's data from Firestore.
   Future<void> fetchDriverData() async {
-    final driver = await FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid() ?? '');
+    final driver = await FireStoreUtils.getDriverProfile(
+        FireStoreUtils.getCurrentUid() ?? '');
     if (driver != null) {
       driverModel.value = driver;
     }
@@ -125,9 +125,11 @@ class ScheduledOrderController extends GetxController {
   /// Handles the logic for a driver accepting a scheduled ride.
   Future<void> acceptRide(OrderModel order) async {
     // 1. Check if driver's wallet has sufficient funds
-    if (double.parse(driverModel.value.walletAmount.toString()) < double.parse(Constant.minimumDepositToRideAccept ?? '0.0')) {
+    if (double.parse(driverModel.value.walletAmount.toString()) <
+        double.parse(Constant.minimumDepositToRideAccept ?? '0.0')) {
       ShowToastDialog.showToast(
-        "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet to accept this order.".tr,
+        "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet to accept this order."
+            .tr,
       );
       return;
     }
@@ -139,13 +141,17 @@ class ScheduledOrderController extends GetxController {
 
       // 2. Prepare the data to update in Firestore
       Map<String, dynamic> updatedData = {
-        'status': Constant.rideActive, // Update status to 'active' or 'accepted'
+        'status':
+            Constant.rideActive, // Update status to 'active' or 'accepted'
         'driverId': driverId,
         'driver': driverModel.value.toJson(), // Attach driver's details
       };
 
       // 3. Update the order document
-      await FireStoreUtils.fireStore.collection(CollectionName.orders).doc(order.id).update(updatedData);
+      await FireStoreUtils.fireStore
+          .collection(CollectionName.orders)
+          .doc(order.id)
+          .update(updatedData);
 
       // 4. Notify the customer
       var customer = await FireStoreUtils.getCustomer(order.userId.toString());
@@ -178,7 +184,8 @@ class ScheduledOrderController extends GetxController {
 class ScheduledOrderScreen extends StatelessWidget {
   const ScheduledOrderScreen({Key? key}) : super(key: key);
 
-  void _showRideDetailsBottomSheet(BuildContext context, OrderModel orderModel, ScheduledOrderController controller) {
+  void _showRideDetailsBottomSheet(BuildContext context, OrderModel orderModel,
+      ScheduledOrderController controller) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -213,11 +220,15 @@ class ScheduledOrderScreen extends StatelessWidget {
                           child: controller.scheduledOrdersList.isEmpty
                               ? _buildEmptyState(context, controller)
                               : ListView.builder(
-                                  itemCount: controller.scheduledOrdersList.length,
-                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                                  itemCount:
+                                      controller.scheduledOrdersList.length,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 6, horizontal: 10),
                                   itemBuilder: (context, index) {
-                                    OrderModel order = controller.scheduledOrdersList[index];
-                                    return _buildScheduledRideCard(context, order, controller);
+                                    OrderModel order =
+                                        controller.scheduledOrdersList[index];
+                                    return _buildScheduledRideCard(
+                                        context, order, controller);
                                   },
                                 ),
                         ),
@@ -232,18 +243,16 @@ class ScheduledOrderScreen extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
       child: Text(
         "Scheduled Rides".tr,
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.bold,
-          fontSize: 24,
-        ),
+        style: AppTypography.boldHeaders(context),
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, ScheduledOrderController controller) {
+  Widget _buildEmptyState(
+      BuildContext context, ScheduledOrderController controller) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -287,9 +296,11 @@ class ScheduledOrderScreen extends StatelessWidget {
                       elevation: 1,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+                        side: BorderSide(
+                            color: AppColors.primary.withOpacity(0.5)),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                   ),
                 ],
@@ -301,10 +312,14 @@ class ScheduledOrderScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildScheduledRideCard(BuildContext context, OrderModel order, ScheduledOrderController controller) {
+  Widget _buildScheduledRideCard(BuildContext context, OrderModel order,
+      ScheduledOrderController controller) {
     final rideDate = order.createdDate?.toDate();
-    final formattedDate = rideDate != null ? DateFormat('E, d MMM yyyy').format(rideDate) : 'Date not available';
-    final formattedTime = rideDate != null ? DateFormat('h:mm a').format(rideDate) : 'Time n/a';
+    final formattedDate = rideDate != null
+        ? DateFormat('E, d MMM yyyy').format(rideDate)
+        : 'Date not available';
+    final formattedTime =
+        rideDate != null ? DateFormat('h:mm a').format(rideDate) : 'Time n/a';
 
     return InkWell(
       onTap: () => _showRideDetailsBottomSheet(context, order, controller),
@@ -330,11 +345,13 @@ class ScheduledOrderScreen extends StatelessWidget {
             // Date and Time Header
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined, color: AppColors.primary, size: 18),
+                Icon(Icons.calendar_today_outlined,
+                    color: AppColors.primary, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   '$formattedDate at $formattedTime',
-                  style: AppTypography.boldLabel(context).copyWith(color: AppColors.primary),
+                  style: AppTypography.boldLabel(context)
+                      .copyWith(color: AppColors.primary),
                 ),
               ],
             ),
@@ -365,7 +382,8 @@ class ScheduledOrderScreen extends StatelessWidget {
 
 class RideDetailBottomSheet extends StatefulWidget {
   final OrderModel orderModel;
-  const RideDetailBottomSheet({Key? key, required this.orderModel}) : super(key: key);
+  const RideDetailBottomSheet({Key? key, required this.orderModel})
+      : super(key: key);
 
   @override
   State<RideDetailBottomSheet> createState() => _RideDetailBottomSheetState();
@@ -374,7 +392,8 @@ class RideDetailBottomSheet extends StatefulWidget {
 class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   // TODO: IMPORTANT! Replace with your actual Google Maps API Key.
   // Make sure the "Directions API" is enabled in your Google Cloud Console.
-  final String _googleApiKey = "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4"; // <--- REPLACE THIS
+  final String _googleApiKey =
+      "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4"; // <--- REPLACE THIS
 
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
@@ -392,9 +411,12 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
   Future<Uint8List> getBytesFromAsset(String path, int width) async {
     ByteData data = await rootBundle.load(path);
-    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(), targetWidth: width);
+    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
+        targetWidth: width);
     ui.FrameInfo fi = await codec.getNextFrame();
-    return (await fi.image.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List();
+    return (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
+        .buffer
+        .asUint8List();
   }
 
   Future<void> _setMarkersAndDrawRoute() async {
@@ -402,7 +424,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         widget.orderModel.sourceLocationLAtLng?.longitude == null ||
         widget.orderModel.destinationLocationLAtLng?.latitude == null ||
         widget.orderModel.destinationLocationLAtLng?.longitude == null) {
-      if (kDebugMode) print('Error: Missing coordinates for source or destination');
+      if (kDebugMode)
+        print('Error: Missing coordinates for source or destination');
       if (!mounted) return;
       setState(() {
         _routeDistance = 'Error';
@@ -422,8 +445,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
 
     try {
-      Uint8List? sourceIcon = await getBytesFromAsset('assets/images/green_mark.png', 40);
-      Uint8List? destinationIcon = await getBytesFromAsset('assets/images/red_mark.png', 40);
+      Uint8List? sourceIcon =
+          await getBytesFromAsset('assets/images/green_mark.png', 40);
+      Uint8List? destinationIcon =
+          await getBytesFromAsset('assets/images/red_mark.png', 40);
 
       _markers.add(Marker(
         markerId: const MarkerId('source'),
@@ -442,7 +467,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
       if (mounted) setState(() {});
       await _drawRouteAndGetDetails();
     } catch (e) {
-      if (kDebugMode) print('Error setting markers or loading custom icons: $e');
+      if (kDebugMode)
+        print('Error setting markers or loading custom icons: $e');
       if (!mounted) return;
       setState(() {
         _isLoadingRoute = false;
@@ -479,8 +505,11 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           final leg = route['legs'][0];
           final overviewPolyline = route['overview_polyline']['points'];
 
-          final List<PointLatLng> decodedPoints = PolylinePoints().decodePolyline(overviewPolyline);
-          final List<LatLng> routePoints = decodedPoints.map((point) => LatLng(point.latitude, point.longitude)).toList();
+          final List<PointLatLng> decodedPoints =
+              PolylinePoints().decodePolyline(overviewPolyline);
+          final List<LatLng> routePoints = decodedPoints
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
 
           if (routePoints.isNotEmpty) {
             _polylines.add(Polyline(
@@ -500,11 +529,14 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           }
           _fitMapToShowRoute();
         } else {
-          if (kDebugMode) print("Directions API Error: ${data['status']} - ${data['error_message']}");
+          if (kDebugMode)
+            print(
+                "Directions API Error: ${data['status']} - ${data['error_message']}");
           if (mounted) setState(() => _isLoadingRoute = false);
         }
       } else {
-        if (kDebugMode) print("HTTP request failed with status: ${response.statusCode}");
+        if (kDebugMode)
+          print("HTTP request failed with status: ${response.statusCode}");
         if (mounted) setState(() => _isLoadingRoute = false);
       }
     } catch (e) {
@@ -515,7 +547,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
   void _fitMapToShowRoute() {
     if (_mapController == null || _markers.isEmpty) return;
-    final bounds = _boundsFromLatLngList(_markers.map((marker) => marker.position).toList());
+    final bounds = _boundsFromLatLngList(
+        _markers.map((marker) => marker.position).toList());
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100.0));
   }
 
@@ -529,7 +562,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
       minLng = min(minLng, latLng.longitude);
       maxLng = max(maxLng, latLng.longitude);
     }
-    return LatLngBounds(southwest: LatLng(minLat, minLng), northeast: LatLng(maxLat, maxLng));
+    return LatLngBounds(
+        southwest: LatLng(minLat, minLng), northeast: LatLng(maxLat, maxLng));
   }
 
   @override
@@ -537,7 +571,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20), topRight: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -547,7 +582,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
             child: Container(
               width: 40,
               height: 5,
-              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
           const SizedBox(height: 10),
@@ -564,8 +601,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                 ),
                 const Divider(height: 24),
                 LocationView(
-                  sourceLocation: widget.orderModel.sourceLocationName.toString(),
-                  destinationLocation: widget.orderModel.destinationLocationName.toString(),
+                  sourceLocation:
+                      widget.orderModel.sourceLocationName.toString(),
+                  destinationLocation:
+                      widget.orderModel.destinationLocationName.toString(),
                 ),
                 const Divider(height: 24),
                 _buildRouteInfoRow(),
@@ -602,9 +641,11 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                 ),
                 onMapCreated: (controller) async {
                   _mapController = controller;
-                  String style = await rootBundle.loadString('assets/map_style.json');
+                  String style =
+                      await rootBundle.loadString('assets/map_style.json');
                   _mapController?.setMapStyle(style);
-                  Future.delayed(const Duration(milliseconds: 300), () => _fitMapToShowRoute());
+                  Future.delayed(const Duration(milliseconds: 300),
+                      () => _fitMapToShowRoute());
                 },
                 markers: _markers,
                 polylines: _polylines,
@@ -614,7 +655,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               if (_isLoadingRoute)
                 Container(
                   color: Colors.black.withOpacity(0.5),
-                  child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+                  child: const Center(
+                      child: CircularProgressIndicator(color: Colors.white)),
                 ),
             ],
           ),
@@ -626,22 +668,29 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   Widget _buildRouteInfoRow() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+          color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildInfoChip(icon: Icons.timer_outlined, label: 'ETA', value: _routeDuration),
+          _buildInfoChip(
+              icon: Icons.timer_outlined, label: 'ETA', value: _routeDuration),
           Container(height: 30, width: 1, color: Colors.grey.shade300),
-          _buildInfoChip(icon: Icons.map_outlined, label: 'Distance', value: _routeDistance),
+          _buildInfoChip(
+              icon: Icons.map_outlined,
+              label: 'Distance',
+              value: _routeDistance),
         ],
       ),
     );
   }
 
-  Widget _buildInfoChip({required IconData icon, required String label, required String value}) {
+  Widget _buildInfoChip(
+      {required IconData icon, required String label, required String value}) {
     return Column(
       children: [
-        Text(label.tr, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        Text(label.tr,
+            style: const TextStyle(color: Colors.grey, fontSize: 13)),
         const SizedBox(height: 4),
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -664,23 +713,28 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.grey.shade800,
               side: BorderSide(color: Colors.grey.shade400),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: Text("Close".tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text("Close".tr,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: () => Navigator.pop(context, true), // Pop with `true` to indicate acceptance
+            onPressed: () => Navigator.pop(
+                context, true), // Pop with `true` to indicate acceptance
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: Text("Accept Ride".tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text("Accept Ride".tr,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ),
       ],

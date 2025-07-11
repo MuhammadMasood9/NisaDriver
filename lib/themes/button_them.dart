@@ -59,24 +59,25 @@ class ButtonThem {
       visible: isVisible,
       child: Container(
         width: Responsive.width(100, context) * btnWidthRatio,
-        height: 35,
+        height: 40,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(borderRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              offset: Offset(0, -2), // Top shadow
-              blurRadius: 2,
-              spreadRadius: 0.6,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(color: AppColors.grey200, width: 1)
+            // boxShadow: [
+            //   BoxShadow(
+            //     color: Colors.black.withOpacity(0.05),
+            //     offset: Offset(0, -2), // Top shadow
+            //     blurRadius: 2,
+            //     spreadRadius: 0.6,
+            //   ),
+            //   BoxShadow(
+            //     color: Colors.black.withOpacity(0.05),
+            //     offset: Offset(0, 2), // Bottom shadow
+            //     blurRadius: 2,
+            //     spreadRadius: 0.6,
+            //   ),
+            // ],
             ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              offset: Offset(0, 2), // Bottom shadow
-              blurRadius: 2,
-              spreadRadius: 0.6,
-            ),
-          ],
-        ),
         child: ElevatedButton(
           style: ButtonStyle(
             backgroundColor: MaterialStateProperty.all<Color>(Colors.white),
@@ -129,7 +130,7 @@ class ButtonThem {
         width: Responsive.width(100, context) * btnWidthRatio,
         child: MaterialButton(
           onPressed: onPress,
-          height: 35,
+          height: 40,
           elevation: 0.5,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),

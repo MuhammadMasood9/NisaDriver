@@ -10,6 +10,8 @@ import 'package:driver/ui/home_screens/home_screen.dart';
 import 'package:driver/ui/intercity_screen/home_intercity_screen.dart';
 import 'package:driver/ui/online_registration/online_registartion_screen.dart';
 import 'package:driver/ui/profile_screen/profile_screen.dart';
+import 'package:driver/ui/scheduled_rides/scheduled_order_screen.dart';
+import 'package:driver/ui/scheduled_rides/scheduled_rides_screen.dart';
 import 'package:driver/ui/settings_screen/setting_screen.dart';
 import 'package:driver/ui/vehicle_information/vehicle_information_screen.dart';
 // import 'package:driver/ui/vehicle_information/vehicle_information_screen.dart';
@@ -34,18 +36,20 @@ class DashBoardController extends GetxController {
       case 1:
         return const HomeIntercityScreen();
       case 2:
-        return const WalletScreen();
+        return const ScheduledRidesScreen();
       case 3:
-        return const BankDetailsScreen();
+        return const WalletScreen();
       case 4:
-        return const InboxScreen();
+        return const BankDetailsScreen();
       case 5:
-        return const ProfileScreen();
+        return const InboxScreen();
       case 6:
-        return const OnlineRegistrationScreen();
+        return const ProfileScreen();
       case 7:
-        return const VehicleInformationScreen();
+        return const OnlineRegistrationScreen();
       case 8:
+        return const VehicleInformationScreen();
+      case 9:
         return const SettingScreen();
 
       default:
@@ -89,6 +93,7 @@ class DashBoardController extends GetxController {
     drawerItems.value = [
       DrawerItem('Rides'.tr, "assets/icons/ic_city.svg"),
       DrawerItem('Parcels'.tr, "assets/icons/ic_intercity.svg"),
+      DrawerItem('Schedule'.tr, "assets/icons/ic_intercity.svg"),
       DrawerItem('My Wallet'.tr, "assets/icons/ic_wallet.svg"),
       DrawerItem('Bank Details'.tr, "assets/icons/ic_profile.svg"),
       DrawerItem('Inbox'.tr, "assets/icons/ic_inbox.svg"),
@@ -96,7 +101,6 @@ class DashBoardController extends GetxController {
       DrawerItem('Online Registration'.tr, "assets/icons/ic_document.svg"),
       DrawerItem('Vehicle Information'.tr, "assets/icons/ic_city.svg"),
       DrawerItem('Settings'.tr, "assets/icons/ic_settings.svg"),
-     
       DrawerItem('Log out'.tr, "assets/icons/ic_logout.svg"),
     ];
   }

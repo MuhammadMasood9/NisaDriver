@@ -28,7 +28,6 @@ class ActiveOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return GetBuilder<ActiveOrderController>(
       init: ActiveOrderController(),
       builder: (controller) {
@@ -60,7 +59,7 @@ class ActiveOrderScreen extends StatelessWidget {
 
             return SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.symmetric(horizontal: 14.0,vertical: 10),
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.containerBackground,
@@ -69,13 +68,6 @@ class ActiveOrderScreen extends StatelessWidget {
                       color: AppColors.containerBorder,
                       width: 0.5,
                     ),
-                    boxShadow:  [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.5),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -187,7 +179,7 @@ class ActiveOrderScreen extends StatelessWidget {
                                     height: 35,
                                     width: 35,
                                     decoration: BoxDecoration(
-                                      color:  AppColors.primary,
+                                      color: AppColors.primary,
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Icon(
@@ -210,7 +202,7 @@ class ActiveOrderScreen extends StatelessWidget {
                                     height: 35,
                                     width: 35,
                                     decoration: BoxDecoration(
-                                      color:  AppColors.primary,
+                                      color: AppColors.primary,
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Icon(

@@ -20,7 +20,7 @@ class SplashController extends GetxController {
 
   redirectScreen() async {
     if (Preferences.getBoolean(Preferences.isFinishOnBoardingKey) == false) {
-      Get.offAll(const OnBoardingScreen());
+      Get.offAll(const LoginScreen());
     } else {
       bool isLogin = await FireStoreUtils.isLogin();
       if (isLogin == true) {

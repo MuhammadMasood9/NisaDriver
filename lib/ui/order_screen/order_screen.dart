@@ -83,14 +83,15 @@ class OrderScreen extends StatelessWidget {
                                           });
                                     },
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10.0,vertical: 5),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12.0, vertical: 8),
                                       child: _buildSectionCard(
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             // Map Section
-                                           
+
                                             const SizedBox(height: 6),
                                             UserView(
                                               userId: orderModel.userId,
@@ -99,8 +100,11 @@ class OrderScreen extends StatelessWidget {
                                               distanceType:
                                                   orderModel.distanceType,
                                             ),
-                                               const SizedBox(height: 5),
-                                            Divider(height: 3,color: AppColors.grey200,),
+                                            const SizedBox(height: 5),
+                                            Divider(
+                                              height: 3,
+                                              color: AppColors.grey200,
+                                            ),
                                             const SizedBox(height: 5),
                                             LocationView(
                                               sourceLocation: orderModel
@@ -117,43 +121,64 @@ class OrderScreen extends StatelessWidget {
                                                 orderModel, controller),
                                             const SizedBox(height: 8),
 
-                                         Visibility(
-                                              visible: controller.paymentModel.value.cash!.name == orderModel.paymentType.toString() &&
-                                                  orderModel.paymentStatus == false && orderModel.status != Constant.rideComplete,
+                                            Visibility(
+                                              visible: controller.paymentModel
+                                                          .value.cash!.name ==
+                                                      orderModel.paymentType
+                                                          .toString() &&
+                                                  orderModel.paymentStatus ==
+                                                      false &&
+                                                  orderModel.status !=
+                                                      Constant.rideComplete,
                                               child: ButtonThem.buildButton(
                                                 context,
-                                                title: "Confirm cash payment".tr,
+                                                title:
+                                                    "Confirm cash payment".tr,
                                                 btnHeight: 44,
                                                 onPress: () async {
-                                                  ShowToastDialog.showLoader("Please wait..".tr);
+                                                  ShowToastDialog.showLoader(
+                                                      "Please wait..".tr);
 
                                                   // 1. Prepare the order model for completion by updating its local state.
-                                                  orderModel.paymentStatus = true;
-                                                  orderModel.status = Constant.rideComplete;
-                                                  orderModel.updateDate = Timestamp.now();
+                                                  orderModel.paymentStatus =
+                                                      true;
+                                                  orderModel.status =
+                                                      Constant.rideComplete;
+                                                  orderModel.updateDate =
+                                                      Timestamp.now();
 
                                                   // 2. Call the single, powerful function to handle everything.
                                                   // This will handle regular rides, scheduled rides, commissions, and notifications.
-                                                  bool success = await FireStoreUtils.setOrder(orderModel);
+                                                  bool success =
+                                                      await FireStoreUtils
+                                                          .setOrder(orderModel);
 
                                                   ShowToastDialog.closeLoader();
 
                                                   if (success) {
-                                                    ShowToastDialog.showToast("Payment confirmed and ride completed.".tr);
+                                                    ShowToastDialog.showToast(
+                                                        "Payment confirmed and ride completed."
+                                                            .tr);
                                                     // Optionally navigate to the review screen or refresh the list
-                                                    Get.to(() => const ReviewScreen(), arguments: {
-                                                      "type": "orderModel",
-                                                      "orderModel": orderModel,
-                                                    });
+                                                    Get.to(
+                                                        () =>
+                                                            const ReviewScreen(),
+                                                        arguments: {
+                                                          "type": "orderModel",
+                                                          "orderModel":
+                                                              orderModel,
+                                                        });
                                                   } else {
-                                                    ShowToastDialog.showToast("An error occurred. Please try again.".tr);
+                                                    ShowToastDialog.showToast(
+                                                        "An error occurred. Please try again."
+                                                            .tr);
                                                     // If the update fails, you might want to revert the local state change
                                                     // so the button remains pressable. This is handled by StreamBuilder's next rebuild.
                                                   }
                                                 },
                                               ),
                                             ),
-                                         ],
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -248,7 +273,6 @@ class OrderScreen extends StatelessWidget {
     };
   }
 
-
   Widget _buildSectionCard({
     required Widget child,
   }) {
@@ -318,7 +342,6 @@ class OrderScreen extends StatelessWidget {
             btnHeight: 35,
             iconVisibility: false,
             btnWidthRatio: 1,
-            
             onPress: () async {
               Get.to(const ReviewScreen(), arguments: {
                 "type": "orderModel",
@@ -327,9 +350,10 @@ class OrderScreen extends StatelessWidget {
             },
           ),
         ),
-        
-         Visibility(child: const SizedBox(width: 10), 
-         visible: orderModel.status == Constant.rideComplete ? false : true,),
+        Visibility(
+          child: const SizedBox(width: 10),
+          visible: orderModel.status == Constant.rideComplete ? false : true,
+        ),
         Visibility(
           visible: orderModel.status == Constant.rideComplete ? false : true,
           child: Row(

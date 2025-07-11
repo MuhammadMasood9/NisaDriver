@@ -127,7 +127,7 @@ class Constant {
     }
   }
 
-  static String timestampToDateTime(Timestamp timestamp) {
+  static String timestampToDateTime(Timestamp timestamp, {required String format}) {
     DateTime dateTime = timestamp.toDate();
     return DateFormat('MMM dd,yyyy hh:mm aa').format(dateTime);
   }
