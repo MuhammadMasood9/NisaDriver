@@ -23,38 +23,54 @@ class ScheduledRidesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // By removing the AppBar, we create a more seamless UI where the tabs
+    // are integrated directly into the body.
     return DefaultTabController(
       length: 2, // New Schedules, My Schedules
       child: Scaffold(
         backgroundColor: AppColors.grey50.withOpacity(0.6),
-        appBar: AppBar(
-          systemOverlayStyle: const SystemUiOverlayStyle(
+        // The AppBar is removed to bring the tabs to the top of the screen content.
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          // We manually apply the SystemUiOverlayStyle that the AppBar previously handled.
+          // This ensures the status bar icons are dark, fitting the light background.
+          value: const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
             systemNavigationBarColor: Colors.white,
             statusBarIconBrightness: Brightness.dark,
             systemNavigationBarIconBrightness: Brightness.dark,
           ),
-          elevation: 0,
-          backgroundColor: AppColors.background,
-          centerTitle: true,
-          surfaceTintColor: AppColors.background,
-          bottom: TabBar(
-            labelColor: AppColors.primary,
-            unselectedLabelColor: Colors.grey.shade600,
-            indicatorColor: AppColors.primary,
-            indicatorWeight: 3.0,
-            labelStyle: AppTypography.boldLabel(context),
-            tabs: [
-              Tab(text: 'New Schedules'.tr),
-              Tab(text: 'My Schedules'.tr),
-            ],
+          child: SafeArea(
+            bottom: false, // Only apply padding to the top, not the bottom.
+            child: Column(
+              children: [
+                // This container provides the background for the TabBar.
+                Container(
+                  color: AppColors.background,
+                  child: TabBar(
+                    labelColor: AppColors.primary,
+                    unselectedLabelColor: Colors.grey.shade600,
+                    indicatorColor: AppColors.primary,
+                    indicatorWeight: 3.0,
+                    labelStyle: AppTypography.boldLabel(context),
+                    tabs: [
+                      Tab(text: 'New Schedules'.tr),
+                      Tab(text: 'My Schedules'.tr),
+                    ],
+                  ),
+                ),
+                // The TabBarView must be wrapped in an Expanded widget to fill the remaining
+                // vertical space within the Column.
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildNewSchedulesView(context),
+                      _buildMySchedulesView(context),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildNewSchedulesView(context),
-            _buildMySchedulesView(context),
-          ],
         ),
       ),
     );

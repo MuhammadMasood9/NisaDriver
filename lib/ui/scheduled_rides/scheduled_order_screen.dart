@@ -25,39 +25,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
-/*
-  ✅ INTEGRATION STEPS (If not already done):
-
-  1. Add this method to your `lib/utils/fire_store_utils.dart` file:
-  --------------------------------------------------------------------------------
-    static Future<List<OrderModel>> getScheduledOrders() async {
-      List<OrderModel> rideList = [];
-      try {
-        cloud_firestore.QuerySnapshot<Map<String, dynamic>> rideSnapshot = await firestore
-            .collection(CollectionName.orders)
-            .where('isScheduledRide', isEqualTo: true)
-            .where('status', isEqualTo: 'scheduled')
-            .orderBy('createdDate', descending: true)
-            .get();
-
-        for (var document in rideSnapshot.docs) {
-          OrderModel ride = OrderModel.fromJson(document.data());
-          rideList.add(ride);
-        }
-      } catch (e, s) {
-        if (kDebugMode) {
-          print('-----------GET-SCHEDULED-ORDERS-ERROR-----------');
-          print(e);
-          print(s);
-        }
-      }
-      return rideList;
-    }
-  --------------------------------------------------------------------------------
-
-  2. In your `lib/controller/home_controller.dart`, add this screen to your `widgetOptions`.
-  3. In your `lib/ui/home_screen.dart`, add a new navigation item for "Scheduled" rides.
-*/
 
 /// Controller for fetching and managing scheduled ride data.
 class ScheduledOrderController extends GetxController {
@@ -101,6 +68,7 @@ class ScheduledOrderController extends GetxController {
   /// Fetches scheduled orders from Firestore and filters out any rejected by the current driver.
   Future<void> fetchScheduledOrders() async {
     try {
+      // This function now efficiently fetches only rides with acceptances.
       List<OrderModel> orders = await FireStoreUtils.getScheduledOrders();
       String currentDriverId = FireStoreUtils.getCurrentUid() ?? '';
 
@@ -215,7 +183,7 @@ class ScheduledOrderScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildHeader(context),
+                     
                         Expanded(
                           child: controller.scheduledOrdersList.isEmpty
                               ? _buildEmptyState(context, controller)
@@ -241,15 +209,7 @@ class ScheduledOrderScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-      child: Text(
-        "Scheduled Rides".tr,
-        style: AppTypography.boldHeaders(context),
-      ),
-    );
-  }
+
 
   Widget _buildEmptyState(
       BuildContext context, ScheduledOrderController controller) {
@@ -391,9 +351,8 @@ class RideDetailBottomSheet extends StatefulWidget {
 
 class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   // TODO: IMPORTANT! Replace with your actual Google Maps API Key.
-  // Make sure the "Directions API" is enabled in your Google Cloud Console.
   final String _googleApiKey =
-      "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4"; // <--- REPLACE THIS
+      "YOUR_GOOGLE_MAPS_API_KEY"; // <--- REPLACE THIS
 
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};

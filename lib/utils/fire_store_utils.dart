@@ -38,6 +38,7 @@ import 'package:driver/model/zone_model.dart';
 import 'package:driver/widget/geoflutterfire/src/geoflutterfire.dart';
 import 'package:driver/widget/geoflutterfire/src/models/point.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get_utils/get_utils.dart';
 import 'package:uuid/uuid.dart';
 
@@ -186,29 +187,33 @@ class FireStoreUtils {
     }
   }
 
-  static Future<List<OrderModel>> getScheduledOrders() async {
-      List<OrderModel> rideList = [];
-      try {
-        QuerySnapshot<Map<String, dynamic>> rideSnapshot = await fireStore
-            .collection(CollectionName.orders)
-            .where('isScheduledRide', isEqualTo: true)
-            .where('status', isEqualTo: 'scheduled')
-            .orderBy('createdDate', descending: true)
-            .get();
+ // In your DRIVER app's lib/utils/fire_store_utils.dart file
 
-        for (var document in rideSnapshot.docs) {
-          OrderModel ride = OrderModel.fromJson(document.data());
-          rideList.add(ride);
-        }
-      } catch (e, s) {
-        print('-----------GET-SCHEDULED-ORDERS-ERROR-----------');
-        print(e);
-        print(s);
-      }
-      return rideList;
+static Future<List<OrderModel>> getScheduledOrders() async {
+  List<OrderModel> rideList = [];
+  try {
+    // MODIFIED QUERY: Now uses the 'hasAcceptedDrivers' flag for efficiency.
+    QuerySnapshot<Map<String, dynamic>> rideSnapshot = await fireStore
+        .collection(CollectionName.orders)
+        .where('isScheduledRide', isEqualTo: true)
+        .where('status', isEqualTo: 'scheduled')
+        .where('hasAcceptedDrivers', isEqualTo: true) // The efficient new filter!
+        .orderBy('createdDate', descending: true)
+        .get();
+
+    for (var document in rideSnapshot.docs) {
+      OrderModel ride = OrderModel.fromJson(document.data());
+      rideList.add(ride);
     }
-// In your DRIVER app's fire_store_utils.dart file
-
+  } catch (e, s) {
+    if (kDebugMode) {
+      print('-----------GET-SCHEDULED-ORDERS-ERROR-----------');
+      print(e);
+      print(s);
+    }
+  }
+  return rideList;
+}
 static Future<void> acceptScheduledRide({required String scheduleId, required String driverId}) async {
   final docRef = fireStore.collection(CollectionName.scheduledRides).doc(scheduleId);
 

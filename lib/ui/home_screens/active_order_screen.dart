@@ -28,325 +28,333 @@ class ActiveOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<ActiveOrderController>(
-      init: ActiveOrderController(),
-      builder: (controller) {
-        return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection(CollectionName.orders)
-              .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
-              .where('status', whereIn: [
-                Constant.rideInProgress,
-                Constant.rideActive,
-              ])
-              .limit(1) // Limit to one active ride
-              .snapshots(),
-          builder:
-              (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-            if (snapshot.hasError) {
-              return Text('Something went wrong'.tr);
-            }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Constant.loader(context);
-            }
-            if (snapshot.data!.docs.isEmpty) {
-              return Center(child: Text("No active rides found".tr));
-            }
+    // MODIFIED: Wrap the entire screen content in a Container to set the background color.
+    return Container(
+      color: AppColors.grey100,
+      child: GetBuilder<ActiveOrderController>(
+        init: ActiveOrderController(),
+        builder: (controller) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection(CollectionName.orders)
+                .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
+                .where('status', whereIn: [
+                  Constant.rideInProgress,
+                  Constant.rideActive,
+                ])
+                .limit(1) // Limit to one active ride
+                .snapshots(),
+            builder:
+                (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Something went wrong'.tr));
+              }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Constant.loader(context);
+              }
+              if (snapshot.data!.docs.isEmpty) {
+                return Center(child: Text("No active rides found".tr));
+              }
 
-            // Get the single active ride
-            OrderModel orderModel = OrderModel.fromJson(
-                snapshot.data!.docs.first.data() as Map<String, dynamic>);
+              // Get the single active ride
+              OrderModel orderModel = OrderModel.fromJson(
+                  snapshot.data!.docs.first.data() as Map<String, dynamic>);
 
-            return SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14.0,vertical: 10),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.containerBackground,
-                    borderRadius: const BorderRadius.all(Radius.circular(10)),
-                    border: Border.all(
-                      color: AppColors.containerBorder,
-                      width: 0.5,
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14.0, vertical: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      // REVERTED: The card's color is set back to its original value.
+                      color: AppColors.containerBackground,
+                      borderRadius: const BorderRadius.all(Radius.circular(10)),
+                      border: Border.all(
+                        color: AppColors.containerBorder,
+                        width: 0.5,
+                      ),
                     ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 10),
-                    child: Column(
-                      children: [
-                        UserView(
-                          userId: orderModel.userId,
-                          amount: orderModel.finalRate,
-                          distance: orderModel.distance,
-                          distanceType: orderModel.distanceType,
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 5),
-                          child: Divider(),
-                        ),
-                        LocationView(
-                          sourceLocation:
-                              orderModel.sourceLocationName.toString(),
-                          destinationLocation:
-                              orderModel.destinationLocationName.toString(),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: orderModel.status ==
-                                      Constant.rideInProgress
-                                  ? ButtonThem.buildBorderButton(
-                                      context,
-                                      title: "Complete Ride".tr,
-                                      btnHeight: 44,
-                                      iconVisibility: false,
-                                      onPress: () async {
-                                        orderModel.status =
-                                            Constant.rideComplete;
-                                        await FireStoreUtils.getCustomer(
-                                                orderModel.userId.toString())
-                                            .then((value) async {
-                                          if (value != null &&
-                                              value.fcmToken != null) {
-                                            Map<String, dynamic> playLoad =
-                                                <String, dynamic>{
-                                              "type": "city_order_complete",
-                                              "orderId": orderModel.id,
-                                            };
-                                            await SendNotification
-                                                .sendOneNotification(
-                                              token: value.fcmToken.toString(),
-                                              title: 'Ride complete!'.tr,
-                                              body:
-                                                  'Please complete your payment.'
-                                                      .tr,
-                                              payload: playLoad,
-                                            );
-                                          }
-                                        });
-                                        await FireStoreUtils.setOrder(
-                                                orderModel)
-                                            .then((value) {
-                                          if (value == true) {
-                                            ShowToastDialog.showToast(
-                                                "Ride completed successfully"
-                                                    .tr);
-                                            controller.homeController
-                                                .selectedIndex.value = 3;
-                                          }
-                                        });
-                                      },
-                                    )
-                                  : ButtonThem.buildBorderButton(
-                                      context,
-                                      title: "Pickup Customer".tr,
-                                      btnHeight: 35,
-                                      iconVisibility: false,
-                                      onPress: () async {
-                                        showDialog(
-                                          context: context,
-                                          builder: (BuildContext context) =>
-                                              otpDialog(context, controller,
-                                                  orderModel),
-                                        );
-                                      },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 10),
+                      child: Column(
+                        children: [
+                          UserView(
+                            userId: orderModel.userId,
+                            amount: orderModel.finalRate,
+                            distance: orderModel.distance,
+                            distanceType: orderModel.distanceType,
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 5),
+                            child: Divider(),
+                          ),
+                          LocationView(
+                            sourceLocation:
+                                orderModel.sourceLocationName.toString(),
+                            destinationLocation:
+                                orderModel.destinationLocationName.toString(),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: orderModel.status ==
+                                        Constant.rideInProgress
+                                    ? ButtonThem.buildBorderButton(
+                                        context,
+                                        title: "Complete Ride".tr,
+                                        btnHeight: 44,
+                                        iconVisibility: false,
+                                        onPress: () async {
+                                          orderModel.status =
+                                              Constant.rideComplete;
+                                          await FireStoreUtils.getCustomer(
+                                                  orderModel.userId.toString())
+                                              .then((value) async {
+                                            if (value != null &&
+                                                value.fcmToken != null) {
+                                              Map<String, dynamic> playLoad =
+                                                  <String, dynamic>{
+                                                "type": "city_order_complete",
+                                                "orderId": orderModel.id,
+                                              };
+                                              await SendNotification
+                                                  .sendOneNotification(
+                                                token:
+                                                    value.fcmToken.toString(),
+                                                title: 'Ride complete!'.tr,
+                                                body:
+                                                    'Please complete your payment.'
+                                                        .tr,
+                                                payload: playLoad,
+                                              );
+                                            }
+                                          });
+                                          await FireStoreUtils.setOrder(
+                                                  orderModel)
+                                              .then((value) {
+                                            if (value == true) {
+                                              ShowToastDialog.showToast(
+                                                  "Ride completed successfully"
+                                                      .tr);
+                                              controller.homeController
+                                                  .selectedIndex.value = 3;
+                                            }
+                                          });
+                                        },
+                                      )
+                                    : ButtonThem.buildBorderButton(
+                                        context,
+                                        title: "Pickup Customer".tr,
+                                        btnHeight: 35,
+                                        iconVisibility: false,
+                                        onPress: () async {
+                                          showDialog(
+                                            context: context,
+                                            builder: (BuildContext context) =>
+                                                otpDialog(context, controller,
+                                                    orderModel),
+                                          );
+                                        },
+                                      ),
+                              ),
+                              const SizedBox(width: 10),
+                              Row(
+                                children: [
+                                  InkWell(
+                                    onTap: () async {
+                                      UserModel? customer =
+                                          await FireStoreUtils.getCustomer(
+                                              orderModel.userId.toString());
+                                      DriverUserModel? driver =
+                                          await FireStoreUtils
+                                              .getDriverProfile(orderModel
+                                                  .driverId
+                                                  .toString());
+                                      Get.to(ChatScreens(
+                                        driverId: driver!.id,
+                                        customerId: customer!.id,
+                                        customerName: customer.fullName,
+                                        customerProfileImage:
+                                            customer.profilePic,
+                                        driverName: driver.fullName,
+                                        driverProfileImage: driver.profilePic,
+                                        orderId: orderModel.id,
+                                        token: customer.fcmToken,
+                                      ));
+                                    },
+                                    child: Container(
+                                      height: 35,
+                                      width: 35,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: const Icon(
+                                        Icons.chat,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                     ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  InkWell(
+                                    onTap: () async {
+                                      UserModel? customer =
+                                          await FireStoreUtils.getCustomer(
+                                              orderModel.userId.toString());
+                                      Constant.makePhoneCall(
+                                          "${customer!.countryCode}${customer.phoneNumber}");
+                                    },
+                                    child: Container(
+                                      height: 35,
+                                      width: 35,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: const Icon(
+                                        Icons.call,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // Cancel Ride Button
+                          Row(children: [
+                            Expanded(
+                              child: ButtonThem.buildBorderButton(
+                                context,
+                                title: "Cancel Ride".tr,
+                                btnHeight: 44,
+                                iconVisibility: false,
+                                onPress: () async {
+                                  bool? confirmCancel = await showDialog<bool>(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: Text("Confirm Cancel".tr),
+                                        content: Text(
+                                            "Are you sure you want to cancel this ride?"
+                                                .tr),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: Text("No".tr),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: Text("Yes".tr),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+
+                                  if (confirmCancel == true) {
+                                    ShowToastDialog.showLoader(
+                                        "Cancelling ride...".tr);
+                                    orderModel.status = Constant.rideCanceled;
+                                    await FireStoreUtils.getCustomer(
+                                            orderModel.userId.toString())
+                                        .then((value) async {
+                                      if (value != null &&
+                                          value.fcmToken != null) {
+                                        Map<String, dynamic> playLoad =
+                                            <String, dynamic>{
+                                          "type": "city_order_cancelled",
+                                          "orderId": orderModel.id,
+                                        };
+                                        await SendNotification
+                                            .sendOneNotification(
+                                          token: value.fcmToken.toString(),
+                                          title: 'Ride Cancelled'.tr,
+                                          body:
+                                              'Your ride has been cancelled by the driver.'
+                                                  .tr,
+                                          payload: playLoad,
+                                        );
+                                      }
+                                    });
+                                    await FireStoreUtils.setOrder(orderModel)
+                                        .then((value) {
+                                      if (value == true) {
+                                        ShowToastDialog.closeLoader();
+                                        ShowToastDialog.showToast(
+                                            "Ride cancelled successfully".tr);
+                                        controller
+                                            .homeController.selectedIndex.value = 3;
+                                      }
+                                    });
+                                  }
+                                },
+                              ),
                             ),
                             const SizedBox(width: 10),
-                            Row(
-                              children: [
-                                InkWell(
-                                  onTap: () async {
-                                    UserModel? customer =
-                                        await FireStoreUtils.getCustomer(
-                                            orderModel.userId.toString());
-                                    DriverUserModel? driver =
-                                        await FireStoreUtils.getDriverProfile(
-                                            orderModel.driverId.toString());
-                                    Get.to(ChatScreens(
-                                      driverId: driver!.id,
-                                      customerId: customer!.id,
-                                      customerName: customer.fullName,
-                                      customerProfileImage: customer.profilePic,
-                                      driverName: driver.fullName,
-                                      driverProfileImage: driver.profilePic,
-                                      orderId: orderModel.id,
-                                      token: customer.fcmToken,
-                                    ));
-                                  },
-                                  child: Container(
-                                    height: 35,
-                                    width: 35,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    child: Icon(
-                                      Icons.chat,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                InkWell(
-                                  onTap: () async {
-                                    UserModel? customer =
-                                        await FireStoreUtils.getCustomer(
-                                            orderModel.userId.toString());
-                                    Constant.makePhoneCall(
-                                        "${customer!.countryCode}${customer.phoneNumber}");
-                                  },
-                                  child: Container(
-                                    height: 35,
-                                    width: 35,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    child: Icon(
-                                      Icons.call,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        // Cancel Ride Button
-                        Row(spacing: 10, children: [
-                          Expanded(
-                            child: ButtonThem.buildBorderButton(
-                              context,
-                              title: "Cancel Ride".tr,
-                              btnHeight: 44,
-                              // btnColor: Colors.redAccent,
-                              // btnBorderColor: Colors.redAccent,
-                              // textColor: Colors.white,
-                              iconVisibility: false,
-                              onPress: () async {
-                                bool? confirmCancel = await showDialog<bool>(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: Text("Confirm Cancel".tr),
-                                      content: Text(
-                                          "Are you sure you want to cancel this ride?"
-                                              .tr),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: Text("No".tr),
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: Text("Yes".tr),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-
-                                if (confirmCancel == true) {
-                                  ShowToastDialog.showLoader(
-                                      "Cancelling ride...".tr);
-                                  orderModel.status = Constant.rideCanceled;
-                                  await FireStoreUtils.getCustomer(
-                                          orderModel.userId.toString())
-                                      .then((value) async {
-                                    if (value != null &&
-                                        value.fcmToken != null) {
-                                      Map<String, dynamic> playLoad =
-                                          <String, dynamic>{
-                                        "type": "city_order_cancelled",
-                                        "orderId": orderModel.id,
-                                      };
-                                      await SendNotification
-                                          .sendOneNotification(
-                                        token: value.fcmToken.toString(),
-                                        title: 'Ride Cancelled'.tr,
-                                        body:
-                                            'Your ride has been cancelled by the driver.'
-                                                .tr,
-                                        payload: playLoad,
+                            // Navigate to LiveTrackingScreen
+                            Expanded(
+                              child: ButtonThem.buildButton(
+                                context,
+                                title: "Track Ride".tr,
+                                btnHeight: 44,
+                                onPress: () {
+                                  if (Constant.mapType == "inappmap") {
+                                    if (orderModel.status ==
+                                            Constant.rideActive ||
+                                        orderModel.status ==
+                                            Constant.rideInProgress) {
+                                      Get.to(const LiveTrackingScreen(),
+                                          arguments: {
+                                            "orderModel": orderModel,
+                                            "type": "orderModel",
+                                          });
+                                    }
+                                  } else {
+                                    if (orderModel.status ==
+                                        Constant.rideInProgress) {
+                                      Utils.redirectMap(
+                                        latitude: orderModel
+                                            .destinationLocationLAtLng!
+                                            .latitude!,
+                                        longLatitude: orderModel
+                                            .destinationLocationLAtLng!
+                                            .longitude!,
+                                        name: orderModel.destinationLocationName
+                                            .toString(),
+                                      );
+                                    } else {
+                                      Utils.redirectMap(
+                                        latitude: orderModel
+                                            .sourceLocationLAtLng!.latitude!,
+                                        longLatitude: orderModel
+                                            .sourceLocationLAtLng!.longitude!,
+                                        name: orderModel.destinationLocationName
+                                            .toString(),
                                       );
                                     }
-                                  });
-                                  await FireStoreUtils.setOrder(orderModel)
-                                      .then((value) {
-                                    if (value == true) {
-                                      ShowToastDialog.closeLoader();
-                                      ShowToastDialog.showToast(
-                                          "Ride cancelled successfully".tr);
-                                      controller.homeController.selectedIndex
-                                          .value = 3;
-                                    }
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-
-                          // Navigate to LiveTrackingScreen
-                          Expanded(
-                            child: ButtonThem.buildButton(
-                              context,
-                              title: "Track Ride".tr,
-                              btnHeight: 44,
-                              onPress: () {
-                                if (Constant.mapType == "inappmap") {
-                                  if (orderModel.status ==
-                                          Constant.rideActive ||
-                                      orderModel.status ==
-                                          Constant.rideInProgress) {
-                                    Get.to(const LiveTrackingScreen(),
-                                        arguments: {
-                                          "orderModel": orderModel,
-                                          "type": "orderModel",
-                                        });
                                   }
-                                } else {
-                                  if (orderModel.status ==
-                                      Constant.rideInProgress) {
-                                    Utils.redirectMap(
-                                      latitude: orderModel
-                                          .destinationLocationLAtLng!.latitude!,
-                                      longLatitude: orderModel
-                                          .destinationLocationLAtLng!
-                                          .longitude!,
-                                      name: orderModel.destinationLocationName
-                                          .toString(),
-                                    );
-                                  } else {
-                                    Utils.redirectMap(
-                                      latitude: orderModel
-                                          .sourceLocationLAtLng!.latitude!,
-                                      longLatitude: orderModel
-                                          .sourceLocationLAtLng!.longitude!,
-                                      name: orderModel.destinationLocationName
-                                          .toString(),
-                                    );
-                                  }
-                                }
-                              },
-                            ),
-                          )
-                        ])
-                      ],
+                                },
+                              ),
+                            )
+                          ])
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 

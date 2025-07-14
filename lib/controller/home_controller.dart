@@ -9,9 +9,9 @@ import 'package:driver/model/order/location_lat_lng.dart';
 import 'package:driver/model/order/positions.dart';
 import 'package:driver/ui/home_screens/accepted_orders.dart';
 import 'package:driver/ui/home_screens/active_order_screen.dart';
-import 'package:driver/ui/home_screens/new_orders_screen.dart';
 import 'package:driver/ui/order_screen/order_screen.dart';
-import 'package:driver/ui/scheduled_rides/scheduled_order_screen.dart';
+import 'package:driver/ui/home_screens/new_orders_screen.dart' as home;
+import 'package:driver/ui/scheduled_rides/scheduled_order_screen.dart' as scheduled;
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/geoflutterfire/src/geoflutterfire.dart';
 import 'package:driver/widget/geoflutterfire/src/models/point.dart';
@@ -22,8 +22,8 @@ import 'package:location/location.dart';
 class HomeController extends GetxController {
   RxInt selectedIndex = 0.obs;
   List<Widget> widgetOptions = <Widget>[
-    const NewOrderScreen(),
-    const ScheduledOrderScreen(),
+    const home.NewOrderScreen(),
+    const scheduled.ScheduledOrderScreen(),
     const ActiveOrderScreen(),
     const OrderScreen()
   ];
