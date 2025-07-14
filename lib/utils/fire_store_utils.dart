@@ -187,57 +187,65 @@ class FireStoreUtils {
     }
   }
 
- // In your DRIVER app's lib/utils/fire_store_utils.dart file
+  // In your DRIVER app's lib/utils/fire_store_utils.dart file
 
-static Future<List<OrderModel>> getScheduledOrders() async {
-  List<OrderModel> rideList = [];
-  try {
-    // MODIFIED QUERY: Now uses the 'hasAcceptedDrivers' flag for efficiency.
-    QuerySnapshot<Map<String, dynamic>> rideSnapshot = await fireStore
-        .collection(CollectionName.orders)
-        .where('isScheduledRide', isEqualTo: true)
-        .where('status', isEqualTo: 'scheduled')
-        .where('hasAcceptedDrivers', isEqualTo: true) // The efficient new filter!
-        .orderBy('createdDate', descending: true)
-        .get();
+  static Future<List<OrderModel>> getScheduledOrders(String driverId) async {
+    List<OrderModel> rideList = [];
+    try {
+      // MODIFIED QUERY: Now uses the 'hasAcceptedDrivers' flag for efficiency.
+      QuerySnapshot<Map<String, dynamic>> assignedRidesSnapshot =
+          await fireStore
+              .collection(CollectionName.orders)
+              .where('isScheduledRide', isEqualTo: true)
+              .where('status', isEqualTo: 'scheduled')
+              .where('driverId',
+                  isEqualTo:
+                      driverId) // Key filter: driver is in the accepted list
+              .get();
 
-    for (var document in rideSnapshot.docs) {
-      OrderModel ride = OrderModel.fromJson(document.data());
-      rideList.add(ride);
+      for (var document in assignedRidesSnapshot.docs) {
+        OrderModel ride = OrderModel.fromJson(document.data());
+        rideList.add(ride);
+      }
+    } catch (e, s) {
+      if (kDebugMode) {
+        print('-----------GET-SCHEDULED-ORDERS-ERROR-----------');
+        print(e);
+        print(s);
+      }
     }
-  } catch (e, s) {
-    if (kDebugMode) {
-      print('-----------GET-SCHEDULED-ORDERS-ERROR-----------');
-      print(e);
-      print(s);
-    }
+    return rideList;
   }
-  return rideList;
-}
-static Future<void> acceptScheduledRide({required String scheduleId, required String driverId}) async {
-  final docRef = fireStore.collection(CollectionName.scheduledRides).doc(scheduleId);
 
-  await fireStore.runTransaction((transaction) async {
-    // Get the latest document data
-    final snapshot = await transaction.get(docRef);
+  static Future<void> acceptScheduledRide(
+      {required String scheduleId, required String driverId}) async {
+    final docRef =
+        fireStore.collection(CollectionName.scheduledRides).doc(scheduleId);
 
-    if (!snapshot.exists) {
-      throw Exception("Schedule does not exist!");
-    }
+    await fireStore.runTransaction((transaction) async {
+      // Get the latest document data
+      final snapshot = await transaction.get(docRef);
 
-    // Check if the schedule is still 'pending'
-    final model = ScheduleRideModel.fromJson(snapshot.data() as Map<String, dynamic>);
-    if (model.status != 'pending') {
-      throw Exception("This schedule has already been accepted or cancelled.");
-    }
+      if (!snapshot.exists) {
+        throw Exception("Schedule does not exist!");
+      }
 
-    // If it's still pending, update it with the driver's ID and change status to 'active'
-    transaction.update(docRef, {
-      'status': 'active',
-      'driverId': driverId,
+      // Check if the schedule is still 'pending'
+      final model =
+          ScheduleRideModel.fromJson(snapshot.data() as Map<String, dynamic>);
+      if (model.status != 'pending') {
+        throw Exception(
+            "This schedule has already been accepted or cancelled.");
+      }
+
+      // If it's still pending, update it with the driver's ID and change status to 'active'
+      transaction.update(docRef, {
+        'status': 'active',
+        'driverId': driverId,
+      });
     });
-  });
-}
+  }
+
   static Future<DriverUserModel?> getDriverProfile(String uuid) async {
     DriverUserModel? driverModel;
     await fireStore
@@ -624,15 +632,19 @@ static Future<void> acceptScheduledRide({required String scheduleId, required St
         orderModel.scheduleId != null &&
         orderModel.status == Constant.rideComplete) {
       // ---- This is a SCHEDULED RIDE completion. Use a transaction. ----
-      final orderRef = fireStore.collection(CollectionName.orders).doc(orderModel.id);
-      final scheduleRef = fireStore.collection(CollectionName.scheduledRides).doc(orderModel.scheduleId);
+      final orderRef =
+          fireStore.collection(CollectionName.orders).doc(orderModel.id);
+      final scheduleRef = fireStore
+          .collection(CollectionName.scheduledRides)
+          .doc(orderModel.scheduleId);
 
       try {
         await fireStore.runTransaction((transaction) async {
           // Get the schedule to ensure it exists. This makes the transaction safer.
           final scheduleSnapshot = await transaction.get(scheduleRef);
           if (!scheduleSnapshot.exists) {
-            throw Exception("Parent schedule document with ID ${orderModel.scheduleId} not found!");
+            throw Exception(
+                "Parent schedule document with ID ${orderModel.scheduleId} not found!");
           }
 
           // 1. Update the Order document to mark it as complete.
@@ -745,7 +757,6 @@ static Future<void> acceptScheduledRide({required String scheduleId, required St
       await updateReferralAmount(orderModel);
     }
   }
-
 
   static Future<bool?> bankDetailsIsAvailable() async {
     bool isAdded = false;

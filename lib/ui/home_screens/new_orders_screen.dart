@@ -127,17 +127,20 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
-  void _showRideDetailsBottomSheet(OrderModel orderModel) {
+  void _showRideDetailsBottomSheet(OrderModel orderModel,
+      {bool isAlreadyAccepted = false}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => RideDetailBottomSheet(orderModel: orderModel),
+      builder: (context) => RideDetailBottomSheet(
+        orderModel: orderModel,
+        isAlreadyAccepted: isAlreadyAccepted,
+      ),
     ).then((value) {
+      // This logic will now run for both new and accepted rides
+      // when "Accept Ride" is clicked in the bottom sheet.
       if (value != null && value == true) {
-        // You should have a function here to officially accept the ride in your backend/Firestore
-        // Example: controller.acceptRide(orderModel);
-
         Get.to(() => const OrderMapScreen(),
             arguments: {"orderModel": orderModel.id.toString()});
       }
@@ -236,9 +239,14 @@ class _NewOrderScreenState extends State<NewOrderScreen>
               itemBuilder: (context, index) {
                 OrderModel orderModel = OrderModel.fromJson(
                     snapshot.data!.docs[index].data() as Map<String, dynamic>);
-                return OrderItemWithTimer(
-                    key: ValueKey("accepted-${orderModel.id}"),
-                    orderModel: orderModel);
+
+                return InkWell(
+                  onTap: () => _showRideDetailsBottomSheet(orderModel,
+                      isAlreadyAccepted: true),
+                  child: OrderItemWithTimer(
+                      key: ValueKey("accepted-${orderModel.id}"),
+                      orderModel: orderModel),
+                );
               },
             ),
             const Padding(
@@ -381,8 +389,13 @@ class _NewOrderScreenState extends State<NewOrderScreen>
 
 class RideDetailBottomSheet extends StatefulWidget {
   final OrderModel orderModel;
-  const RideDetailBottomSheet({Key? key, required this.orderModel})
-      : super(key: key);
+  final bool isAlreadyAccepted;
+
+  const RideDetailBottomSheet({
+    Key? key,
+    required this.orderModel,
+    this.isAlreadyAccepted = false,
+  }) : super(key: key);
 
   @override
   State<RideDetailBottomSheet> createState() => _RideDetailBottomSheetState();
@@ -390,7 +403,6 @@ class RideDetailBottomSheet extends StatefulWidget {
 
 class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   // TODO: IMPORTANT! Replace with your actual Google Maps API Key.
-  // Make sure the "Directions API" is enabled in your Google Cloud Console.
   final String _googleApiKey = "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4";
 
   GoogleMapController? _mapController;
@@ -401,37 +413,12 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   String _routeDistance = '...';
   String _routeDuration = '...';
 
-  // Custom map style (dark mode)
-  static const _darkMapStyle = '''
-  [
-    { "elementType": "geometry", "stylers": [ { "color": "#242f3e" } ] },
-    { "elementType": "labels.text.fill", "stylers": [ { "color": "#746855" } ] },
-    { "elementType": "labels.text.stroke", "stylers": [ { "color": "#242f3e" } ] },
-    { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] },
-    { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] },
-    { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#263c3f" } ] },
-    { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#6b9a76" } ] },
-    { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#38414e" } ] },
-    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [ { "color": "#212a37" } ] },
-    { "featureType": "road", "elementType": "labels.text.fill", "stylers": [ { "color": "#9ca5b3" } ] },
-    { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#746855" } ] },
-    { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#1f2835" } ] },
-    { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#f3d19c" } ] },
-    { "featureType": "transit", "elementType": "geometry", "stylers": [ { "color": "#2f3948" } ] },
-    { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] },
-    { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#17263c" } ] },
-    { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#515c6d" } ] },
-    { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [ { "color": "#17263c" } ] }
-  ]
-  ''';
-
   @override
   void initState() {
     super.initState();
     _setMarkersAndDrawRoute();
   }
 
-  // Helper function to create custom markers of a specific size
   Future<Uint8List> getBytesFromAsset(String path, int width) async {
     ByteData data = await rootBundle.load(path);
     ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
@@ -442,9 +429,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         .asUint8List();
   }
 
-  // Fixed: Added null safety checks and better error handling
   Future<void> _setMarkersAndDrawRoute() async {
-    // Check if coordinates are available
     if (widget.orderModel.sourceLocationLAtLng?.latitude == null ||
         widget.orderModel.sourceLocationLAtLng?.longitude == null ||
         widget.orderModel.destinationLocationLAtLng?.latitude == null ||
@@ -468,7 +453,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
 
     try {
-      // Try to load custom markers, fallback to default if assets don't exist
       Uint8List? sourceIcon;
       Uint8List? destinationIcon;
 
@@ -501,7 +485,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
       if (mounted) setState(() {});
 
-      // Draw route after markers are set
       await _drawRouteAndGetDetails();
     } catch (e) {
       print('Error setting markers: $e');
@@ -513,7 +496,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     }
   }
 
-  /// Fixed: Better error handling and API key validation
   Future<void> _drawRouteAndGetDetails() async {
     final LatLng origin = LatLng(
       widget.orderModel.sourceLocationLAtLng!.latitude!,
@@ -531,10 +513,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         '&key=$_googleApiKey';
 
     try {
-      print('Making API request to: $url');
       final response = await http.get(Uri.parse(url));
-      print('API Response Status: ${response.statusCode}');
-      print('API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -543,8 +522,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           final route = data['routes'][0];
           final leg = route['legs'][0];
           final overviewPolyline = route['overview_polyline']['points'];
-
-          // Decode the polyline and draw it on the map
           final List<PointLatLng> decodedPoints =
               PolylinePoints().decodePolyline(overviewPolyline);
           final List<LatLng> routePoints = decodedPoints
@@ -552,20 +529,15 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               .toList();
 
           if (routePoints.isNotEmpty) {
-            _polylines.clear(); // Clear existing polylines
+            _polylines.clear();
             _polylines.add(Polyline(
               polylineId: const PolylineId('route'),
               points: routePoints,
               color: AppColors.primary,
               width: 3,
-              patterns: [
-                PatternItem.dash(20),
-                PatternItem.gap(10)
-              ], // Remove any patterns for solid line
             ));
           }
 
-          // Update state with distance and duration from the API
           if (mounted) {
             setState(() {
               _routeDistance = leg['distance']['text'] ?? 'N/A';
@@ -573,16 +545,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               _isLoadingRoute = false;
             });
           }
-
-          // Fit the map to show both markers and the route with proper padding
           _fitMapToShowRoute();
-
-          print(
-              'Route drawn successfully. Distance: $_routeDistance, Duration: $_routeDuration');
         } else {
           String errorMessage = data['error_message'] ?? 'No route found';
           print("Directions API Error: ${data['status']} - $errorMessage");
-
           if (mounted) {
             setState(() {
               _routeDistance = 'Route Error';
@@ -613,38 +579,21 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     }
   }
 
-  // Fixed: Improved bounds calculation with proper padding
   void _fitMapToShowRoute() {
-    if (_mapController == null) return;
+    if (_mapController == null || _markers.length < 2) return;
 
-    // Collect all points (markers + route points)
-    List<LatLng> allPoints = [];
+    final bounds = _boundsFromLatLngList(
+        _markers.map((marker) => marker.position).toList());
 
-    // Add marker positions
-    allPoints.addAll(_markers.map((marker) => marker.position));
-
-    // Add route points if available
-    if (_polylines.isNotEmpty) {
-      final polyline = _polylines.first;
-      allPoints.addAll(polyline.points);
-    }
-
-    if (allPoints.isEmpty) return;
-
-    // Calculate bounds
-    final bounds = _boundsFromLatLngList(allPoints);
-
-    // Fit the map with generous padding to ensure everything is visible
-    Future.delayed(const Duration(milliseconds: 800), () {
+    Future.delayed(const Duration(milliseconds: 50), () {
       if (_mapController != null) {
         _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, 120.0), // Increased padding
+          CameraUpdate.newLatLngBounds(bounds, 80.0), // Padding
         );
       }
     });
   }
 
-  // Fixed: Improved bounds calculation
   LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
     assert(list.isNotEmpty);
     double minLat = list.first.latitude;
@@ -659,11 +608,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
       maxLng = max(maxLng, latLng.longitude);
     }
 
-    // Add some padding to the bounds
-    const double padding = 0.001; // Adjust as needed
     return LatLngBounds(
-      southwest: LatLng(minLat - padding, minLng - padding),
-      northeast: LatLng(maxLat + padding, maxLng + padding),
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
     );
   }
 
@@ -740,7 +687,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   target: LatLng(
                       widget.orderModel.sourceLocationLAtLng!.latitude!,
                       widget.orderModel.sourceLocationLAtLng!.longitude!),
-                  zoom: 10, // Reduced initial zoom to show more area
+                  zoom: 10,
                 ),
                 onMapCreated: (controller) async {
                   _mapController = controller;
@@ -748,16 +695,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   String style =
                       await rootBundle.loadString('assets/map_style.json');
                   _mapController?.setMapStyle(style);
-
-                  // Initial fit to show both markers with lower zoom
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    if (_mapController != null && _markers.length >= 2) {
-                      final bounds = _boundsFromLatLngList(
-                          _markers.map((m) => m.position).toList());
-                      _mapController!.animateCamera(
-                          CameraUpdate.newLatLngBounds(bounds, 80.0));
-                    }
-                  });
+                  _fitMapToShowRoute();
                 },
                 markers: _markers,
                 polylines: _polylines,
@@ -765,8 +703,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                 zoomControlsEnabled: false,
                 compassEnabled: false,
                 mapToolbarEnabled: false,
-                minMaxZoomPreference:
-                    const MinMaxZoomPreference(8.0, 18.0), // Set zoom limits
               ),
               if (_isLoadingRoute)
                 Container(
@@ -825,6 +761,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
   }
 
+  // MODIFICATION: Removed the condition to always show the "Accept Ride" button
   Widget _buildActionButtons() {
     return Row(
       children: [
@@ -846,6 +783,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         Expanded(
           child: ElevatedButton(
             onPressed: () {
+              // Pop with 'true' to indicate acceptance/navigation
               Navigator.pop(context, true);
             },
             style: ElevatedButton.styleFrom(
@@ -855,6 +793,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
+            // The button text can be dynamic if you want, but "Accept Ride" works
+            // as it leads to the acceptance/negotiation screen.
             child: Text("Accept Ride".tr,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
@@ -876,12 +816,10 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
   final RxInt _remainingSeconds = 30.obs;
   final RxBool _isExpired = false.obs;
   Timer? _timer;
-  DriverIdAcceptReject? _driverIdAcceptReject;
 
   @override
   void initState() {
     super.initState();
-    _loadDriverData();
     _startTimer();
   }
 
@@ -889,15 +827,6 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadDriverData() async {
-    String? currentUid = FireStoreUtils.getCurrentUid();
-    if (currentUid != null) {
-      _driverIdAcceptReject = await FireStoreUtils.getAcceptedOrders(
-          widget.orderModel.id.toString(), currentUid);
-      if (mounted) setState(() {});
-    }
   }
 
   void _startTimer() {
@@ -965,10 +894,12 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          _buildUserHeader(
-                            userId: widget.orderModel.userId,
-                            offerRate: _driverIdAcceptReject?.offerAmount,
-                          ),
+                          // _buildUserHeader(
+                          //     userId: widget.orderModel.userId,
+                          //     // BUG FIX: Use finalRate but provide a default value to prevent null error.
+                          //     offerRate: widget.orderModel.finalRate,
+                          //     distance: widget.orderModel.distance,
+                          //     distanceType: widget.orderModel.distanceType),
                           const Divider(height: 24, color: AppColors.grey200),
                           _buildLocationDetailRow(
                             source:
@@ -982,7 +913,7 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               icon: const Icon(Icons.cancel_outlined),
-                              label: Text('Cancel'.tr),
+                              label: Text('Cancel Offer'.tr),
                               onPressed: _cancelRide,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red.shade50,
@@ -1005,23 +936,29 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     );
   }
 
-  Widget _buildUserHeader({String? userId, String? offerRate}) => Row(
+  // MODIFICATION: Changed how this widget is built to be more robust.
+  Widget _buildUserHeader(
+          {String? userId,
+          String? offerRate,
+          String? distance,
+          String? distanceType}) =>
+      Row(
         children: [
           Expanded(
             child: UserView(
               userId: userId,
-              distance: widget.orderModel.distance,
-              distanceType: widget.orderModel.distanceType,
-              amount: offerRate,
+              distance: distance,
+              distanceType: distanceType,
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text("Your Offer".tr,
-                  style: AppTypography.headers(context)
+                  style: AppTypography.caption(context)
                       .copyWith(color: Colors.grey)),
-              Text(Constant.amountShow(amount: offerRate),
+              // BUG FIX: Provide a default value for amount to avoid parse errors.
+              Text(Constant.amountShow(amount: offerRate ?? "0.0"),
                   style: AppTypography.appTitle(context)
                       .copyWith(color: AppColors.primary)),
             ],

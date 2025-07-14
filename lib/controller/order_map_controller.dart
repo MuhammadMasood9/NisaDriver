@@ -258,9 +258,9 @@ class OrderMapController extends GetxController {
 
   Future<void> addMarkerSetup() async {
     final Uint8List departure =
-        await Constant().getBytesFromAsset('assets/images/pickup.png', 100);
+        await Constant().getBytesFromAsset('assets/images/red_mark.png', 70);
     final Uint8List destination =
-        await Constant().getBytesFromAsset('assets/images/dropoff.png', 100);
+        await Constant().getBytesFromAsset('assets/images/green_mark.png', 70);
     departureIcon = BitmapDescriptor.fromBytes(departure);
     destinationIcon = BitmapDescriptor.fromBytes(destination);
   }
@@ -307,7 +307,11 @@ class OrderMapController extends GetxController {
       polylineId: id,
       points: polylineCoordinates,
       width: 6,
-      color: AppColors.primary, // Pink from AppColors
+      color: AppColors.primary,
+      patterns: [
+        PatternItem.dash(20),
+        PatternItem.gap(10)
+      ], // Pink from AppColors
     );
     polyLines[id] = polyline;
   }

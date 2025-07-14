@@ -26,7 +26,8 @@ class CompleteOrderScreen extends StatefulWidget {
   State<CompleteOrderScreen> createState() => _CompleteOrderScreenState();
 }
 
-class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTickerProviderStateMixin {
+class _CompleteOrderScreenState extends State<CompleteOrderScreen>
+    with SingleTickerProviderStateMixin {
   final CompleteOrderController controller = Get.put(CompleteOrderController());
 
   // --- State Variables ---
@@ -54,7 +55,8 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(parent: _animationController!, curve: Curves.easeInOut);
+    _fadeAnimation =
+        CurvedAnimation(parent: _animationController!, curve: Curves.easeInOut);
     _animationController!.forward();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,9 +84,12 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
 
   Future<BitmapDescriptor> getMarkerIcon(String path, int width) async {
     ByteData data = await rootBundle.load(path);
-    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(), targetWidth: width);
+    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
+        targetWidth: width);
     ui.FrameInfo fi = await codec.getNextFrame();
-    final bytes = (await fi.image.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List();
+    final bytes = (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
+        .buffer
+        .asUint8List();
     return BitmapDescriptor.fromBytes(bytes);
   }
 
@@ -107,13 +112,15 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
         markerId: const MarkerId('source'),
         position: sourceLatLng,
         icon: iconStart,
-        infoWindow: InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
+        infoWindow:
+            InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
       ),
       Marker(
         markerId: const MarkerId('destination'),
         position: destinationLatLng,
         icon: iconEnd,
-        infoWindow: InfoWindow(title: 'Drop-off: ${orderModel.destinationLocationName}'),
+        infoWindow: InfoWindow(
+            title: 'Drop-off: ${orderModel.destinationLocationName}'),
       ),
     };
   }
@@ -129,7 +136,8 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
       orderModel.destinationLocationLAtLng?.longitude ?? 67.063066,
     );
 
-    const String apiKey = 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4'; // Replace with your API key
+    const String apiKey =
+        'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4'; // Replace with your API key
     final String url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=${source.latitude},${source.longitude}&destination=${destination.latitude},${destination.longitude}&key=$apiKey';
 
@@ -141,22 +149,28 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
           final route = data['routes'][0];
           final leg = route['legs'][0];
           final overviewPolyline = route['overview_polyline']['points'];
-          final decodedPoints = PolylinePoints().decodePolyline(overviewPolyline);
+          final decodedPoints =
+              PolylinePoints().decodePolyline(overviewPolyline);
 
           if (mounted) {
             setState(() {
               _routeDistance = leg['distance']['text'];
               _routeDuration = leg['duration']['text'];
-              _polylineCoordinates = decodedPoints.map((p) => LatLng(p.latitude, p.longitude)).toList();
+              _polylineCoordinates = decodedPoints
+                  .map((p) => LatLng(p.latitude, p.longitude))
+                  .toList();
               final boundsData = route['bounds'];
               _bounds = LatLngBounds(
-                southwest: LatLng(boundsData['southwest']['lat'], boundsData['southwest']['lng']),
-                northeast: LatLng(boundsData['northeast']['lat'], boundsData['northeast']['lng']),
+                southwest: LatLng(boundsData['southwest']['lat'],
+                    boundsData['southwest']['lng']),
+                northeast: LatLng(boundsData['northeast']['lat'],
+                    boundsData['northeast']['lng']),
               );
             });
           }
         } else {
-          debugPrint("Directions API Error: ${data['error_message'] ?? data['status']}");
+          debugPrint(
+              "Directions API Error: ${data['error_message'] ?? data['status']}");
           ShowToastDialog.showToast("Could not fetch route details.");
         }
       } else {
@@ -189,15 +203,12 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
             leading: IconButton(
               icon: const CircleAvatar(
                 backgroundColor: Colors.white,
-                child: Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 20),
+                child: Icon(Icons.arrow_back_ios_new,
+                    color: AppColors.primary, size: 20),
               ),
               onPressed: () => Get.back(),
             ),
             centerTitle: true,
-            title: Text(
-              "Ride Details".tr,
-              style: AppTypography.appTitle(context).copyWith(color: Colors.black87, fontWeight: FontWeight.bold),
-            ),
           ),
           body: controller.isLoading.value
               ? Constant.loader(context)
@@ -206,8 +217,12 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
                     GoogleMap(
                       initialCameraPosition: CameraPosition(
                         target: LatLng(
-                          controller.orderModel.value.sourceLocationLAtLng?.latitude ?? 24.905702,
-                          controller.orderModel.value.sourceLocationLAtLng?.longitude ?? 67.072256,
+                          controller.orderModel.value.sourceLocationLAtLng
+                                  ?.latitude ??
+                              24.905702,
+                          controller.orderModel.value.sourceLocationLAtLng
+                                  ?.longitude ??
+                              67.072256,
                         ),
                         zoom: 12,
                       ),
@@ -223,11 +238,13 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
                       },
                       myLocationButtonEnabled: false,
                       zoomControlsEnabled: false,
-                      onMapCreated: (GoogleMapController mapController)async {
-                          String style = await rootBundle.loadString('assets/map_style.json');
-        mapController?.setMapStyle(style);
+                      onMapCreated: (GoogleMapController mapController) async {
+                        String style = await rootBundle
+                            .loadString('assets/map_style.json');
+                        mapController?.setMapStyle(style);
                         if (_bounds != null) {
-                          mapController.animateCamera(CameraUpdate.newLatLngBounds(_bounds!, 60));
+                          mapController.animateCamera(
+                              CameraUpdate.newLatLngBounds(_bounds!, 60));
                         }
                       },
                     ),
@@ -235,10 +252,11 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
                       initialChildSize: 0.45,
                       minChildSize: 0.45,
                       maxChildSize: 0.9,
-                      builder: (BuildContext context, ScrollController scrollController) {
+                      builder: (BuildContext context,
+                          ScrollController scrollController) {
                         return Container(
                           decoration: const BoxDecoration(
-                            color: AppColors.grey50,
+                            color: AppColors.grey100,
                             borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(28),
                               topRight: Radius.circular(28),
@@ -255,7 +273,8 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
                                 FadeTransition(
                                   opacity: _fadeAnimation!,
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14),
                                     child: Column(
                                       children: [
                                         _buildOrderIdSection(context),
@@ -329,17 +348,21 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
     return _buildInfoCard(
       child: Row(
         children: [
-          const Icon(Icons.receipt_long_outlined, color: AppColors.primary, size: 24),
+          const Icon(Icons.receipt_long_outlined,
+              color: AppColors.primary, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Ride ID".tr, style: AppTypography.appTitle(context).copyWith(color: AppColors.grey800)),
+                Text("Ride ID".tr,
+                    style: AppTypography.appTitle(context)
+                        .copyWith(color: AppColors.grey800)),
                 const SizedBox(height: 2),
                 Text(
                   "#${controller.orderModel.value.id!.toUpperCase()}",
-                  style: AppTypography.caption(context)!.copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.caption(context)!
+                      .copyWith(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -348,12 +371,14 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
           const SizedBox(width: 6),
           InkWell(
             onTap: () {
-              FlutterClipboard.copy(controller.orderModel.value.id.toString()).then((_) => ShowToastDialog.showToast("Ride ID copied".tr));
+              FlutterClipboard.copy(controller.orderModel.value.id.toString())
+                  .then((_) => ShowToastDialog.showToast("Ride ID copied".tr));
             },
             borderRadius: BorderRadius.circular(12),
             child: const Padding(
               padding: EdgeInsets.all(8.0),
-              child: Icon(Icons.copy_rounded, size: 22, color: AppColors.primary),
+              child:
+                  Icon(Icons.copy_rounded, size: 22, color: AppColors.primary),
             ),
           ),
         ],
@@ -367,7 +392,8 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildCardHeader(context, "User Details".tr),
-          const Divider(color: AppColors.grey200, height: 1, indent: 5, endIndent: 5),
+          const Divider(
+              color: AppColors.grey200, height: 1, indent: 5, endIndent: 5),
           const SizedBox(height: 10),
           UserDriverView(
             userId: controller.orderModel.value.userId.toString(),
@@ -387,17 +413,22 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
           const Divider(color: AppColors.grey200, height: 1),
           const SizedBox(height: 10),
           LocationView(
-            sourceLocation: controller.orderModel.value.sourceLocationName.toString(),
-            destinationLocation: controller.orderModel.value.destinationLocationName.toString(),
+            sourceLocation:
+                controller.orderModel.value.sourceLocationName.toString(),
+            destinationLocation:
+                controller.orderModel.value.destinationLocationName.toString(),
           ),
           const Divider(height: 12, color: AppColors.grey100),
           if (_isLoadingRoute)
-            const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            const Center(
+                child: CircularProgressIndicator(color: AppColors.primary))
           else
             Row(
               children: [
-                _buildRouteStatItem(context, Icons.route_outlined, "Distance".tr, _routeDistance),
-                _buildRouteStatItem(context, Icons.timer_outlined, "Est. Time".tr, _routeDuration),
+                _buildRouteStatItem(context, Icons.route_outlined,
+                    "Distance".tr, _routeDistance),
+                _buildRouteStatItem(context, Icons.timer_outlined,
+                    "Est. Time".tr, _routeDuration),
               ],
             )
         ],
@@ -405,7 +436,8 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
     );
   }
 
-  Widget _buildRouteStatItem(BuildContext context, IconData icon, String title, String value) {
+  Widget _buildRouteStatItem(
+      BuildContext context, IconData icon, String title, String value) {
     return Expanded(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -416,7 +448,9 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: AppTypography.appTitle(context)),
-              Text(value, style: AppTypography.caption(context)!.copyWith(fontWeight: FontWeight.bold)),
+              Text(value,
+                  style: AppTypography.caption(context)!
+                      .copyWith(fontWeight: FontWeight.bold)),
             ],
           )
         ],
@@ -435,16 +469,19 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Payment Method".tr, style: AppTypography.boldLabel(context)),
+              Text("Payment Method".tr,
+                  style: AppTypography.boldLabel(context)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   controller.orderModel.value.paymentType.toString(),
-                  style: AppTypography.boldLabel(context).copyWith(color: AppColors.primary),
+                  style: AppTypography.boldLabel(context)
+                      .copyWith(color: AppColors.primary),
                 ),
               ),
             ],
@@ -452,13 +489,16 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
           const Divider(height: 20, thickness: 1, color: AppColors.grey100),
           _buildSummaryRow(
             title: "Ride Amount".tr,
-            value: Constant.amountShow(amount: controller.orderModel.value.finalRate.toString()),
+            value: Constant.amountShow(
+                amount: controller.orderModel.value.finalRate.toString()),
           ),
           const SizedBox(height: 8),
           _buildSummaryRow(
             title: "Discount".tr,
-            value: "(-${Constant.amountShow(amount: controller.couponAmount.value)})",
-            valueStyle: AppTypography.boldLabel(context).copyWith(color: Colors.red),
+            value:
+                "(-${Constant.amountShow(amount: controller.couponAmount.value)})",
+            valueStyle:
+                AppTypography.boldLabel(context).copyWith(color: Colors.red),
           ),
           const SizedBox(height: 8),
           if (controller.orderModel.value.taxList != null)
@@ -466,12 +506,16 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: _buildSummaryRow(
-                  title: "${taxModel.title} (${taxModel.type == "fix" ? Constant.amountShow(amount: taxModel.tax) : "${taxModel.tax}%"})",
+                  title:
+                      "${taxModel.title} (${taxModel.type == "fix" ? Constant.amountShow(amount: taxModel.tax) : "${taxModel.tax}%"})",
                   value: Constant.amountShow(
                     amount: Constant()
                         .calculateTax(
-                          amount: (double.parse(controller.orderModel.value.finalRate.toString()) -
-                                  double.parse(controller.couponAmount.value.toString()))
+                          amount: (double.parse(controller
+                                      .orderModel.value.finalRate
+                                      .toString()) -
+                                  double.parse(
+                                      controller.couponAmount.value.toString()))
                               .toString(),
                           taxModel: taxModel,
                         )
@@ -483,9 +527,11 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
           const Divider(height: 16, thickness: 1, color: AppColors.grey200),
           _buildSummaryRow(
             title: "Your Earning".tr,
-            value: Constant.amountShow(amount: controller.calculateAmount().toString()),
+            value: Constant.amountShow(
+                amount: controller.calculateAmount().toString()),
             titleStyle: AppTypography.appTitle(context),
-            valueStyle: AppTypography.appTitle(context).copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+            valueStyle: AppTypography.appTitle(context).copyWith(
+                color: AppColors.primary, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -502,13 +548,17 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
           const SizedBox(height: 10),
           _buildSummaryRow(
             title: "Admin commission".tr,
-            value: "(-${Constant.amountShow(amount: Constant.calculateAdminCommission(amount: (double.parse(controller.orderModel.value.finalRate.toString()) - double.parse(controller.couponAmount.value.toString())).toString(), adminCommission: controller.orderModel.value.adminCommission).toString())})",
-            valueStyle: AppTypography.boldLabel(context).copyWith(color: Colors.red, fontWeight: FontWeight.w600),
+            value:
+                "(-${Constant.amountShow(amount: Constant.calculateAdminCommission(amount: (double.parse(controller.orderModel.value.finalRate.toString()) - double.parse(controller.couponAmount.value.toString())).toString(), adminCommission: controller.orderModel.value.adminCommission).toString())})",
+            valueStyle: AppTypography.boldLabel(context)
+                .copyWith(color: Colors.red, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           Text(
-            "Note: Admin commission will be debited from your wallet balance. Admin commission will apply on Ride Amount minus Discount (if applicable).".tr,
-            style: AppTypography.label(context)!.copyWith(color: AppColors.primary.withOpacity(0.9), fontSize: 12),
+            "Note: Admin commission will be debited from your wallet balance. Admin commission will apply on Ride Amount minus Discount (if applicable)."
+                .tr,
+            style: AppTypography.label(context)!.copyWith(
+                color: AppColors.primary.withOpacity(0.9), fontSize: 12),
           ),
         ],
       ),
@@ -526,8 +576,14 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen> with SingleTi
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: titleStyle ?? AppTypography.boldLabel(context).copyWith(color: AppColors.grey500)),
-          Text(value, style: valueStyle ?? AppTypography.boldLabel(context).copyWith(fontWeight: FontWeight.w600)),
+          Text(title,
+              style: titleStyle ??
+                  AppTypography.boldLabel(context)
+                      .copyWith(color: AppColors.grey500)),
+          Text(value,
+              style: valueStyle ??
+                  AppTypography.boldLabel(context)
+                      .copyWith(fontWeight: FontWeight.w600)),
         ],
       ),
     );

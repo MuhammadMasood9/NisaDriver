@@ -25,7 +25,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
-
 /// Controller for fetching and managing scheduled ride data.
 class ScheduledOrderController extends GetxController {
   RxBool isLoading = true.obs;
@@ -65,14 +64,19 @@ class ScheduledOrderController extends GetxController {
     }
   }
 
-  /// Fetches scheduled orders from Firestore and filters out any rejected by the current driver.
+  /// Fetches scheduled orders from Firestore and filters them to show only
+  /// those available to the current driver.
   Future<void> fetchScheduledOrders() async {
     try {
-      // This function now efficiently fetches only rides with acceptances.
-      List<OrderModel> orders = await FireStoreUtils.getScheduledOrders();
       String currentDriverId = FireStoreUtils.getCurrentUid() ?? '';
+      if (currentDriverId.isEmpty) {
+        scheduledOrdersList.clear();
+        return;
+      }
+      List<OrderModel> orders =
+          await FireStoreUtils.getScheduledOrders(currentDriverId);
 
-      // Filter out orders that this driver has already rejected
+      // We still need to filter out rides the driver has explicitly rejected.
       scheduledOrdersList.value = orders.where((order) {
         final rejectedIds = order.rejectedDriverId ?? [];
         return !rejectedIds.contains(currentDriverId);
@@ -90,8 +94,9 @@ class ScheduledOrderController extends GetxController {
     }
   }
 
-  /// Handles the logic for a driver accepting a scheduled ride.
-  Future<void> acceptRide(OrderModel order) async {
+  /// Handles the logic for a driver accepting a specific scheduled ride.
+  Future<void> acceptRide(OrderModel orderToAccept) async {
+    // Renamed for clarity
     // 1. Check if driver's wallet has sufficient funds
     if (double.parse(driverModel.value.walletAmount.toString()) <
         double.parse(Constant.minimumDepositToRideAccept ?? '0.0')) {
@@ -115,25 +120,26 @@ class ScheduledOrderController extends GetxController {
         'driver': driverModel.value.toJson(), // Attach driver's details
       };
 
-      // 3. Update the order document
+      // 3. Update the specific order document using its unique ID
       await FireStoreUtils.fireStore
           .collection(CollectionName.orders)
-          .doc(order.id)
+          .doc(orderToAccept.id) // <--- Uses the ID of the specific order
           .update(updatedData);
 
       // 4. Notify the customer
-      var customer = await FireStoreUtils.getCustomer(order.userId.toString());
+      var customer =
+          await FireStoreUtils.getCustomer(orderToAccept.userId.toString());
       if (customer != null && customer.fcmToken != null) {
         await SendNotification.sendOneNotification(
           token: customer.fcmToken!,
           title: 'Ride Secured!'.tr,
           body: 'Your driver is assigned for the scheduled ride.'.tr,
-          payload: {'orderId': order.id},
+          payload: {'orderId': orderToAccept.id},
         );
       }
 
       // 5. Update the local list to remove the accepted ride from the screen instantly
-      scheduledOrdersList.removeWhere((o) => o.id == order.id);
+      scheduledOrdersList.removeWhere((o) => o.id == orderToAccept.id);
       scheduledOrdersList.refresh();
 
       ShowToastDialog.closeLoader();
@@ -162,6 +168,7 @@ class ScheduledOrderScreen extends StatelessWidget {
     ).then((accepted) {
       // If the bottom sheet returns true, it means "Accept Ride" was pressed
       if (accepted != null && accepted == true) {
+        // The controller's acceptRide function is called with the specific orderModel
         controller.acceptRide(orderModel);
       }
     });
@@ -183,7 +190,6 @@ class ScheduledOrderScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                     
                         Expanded(
                           child: controller.scheduledOrdersList.isEmpty
                               ? _buildEmptyState(context, controller)
@@ -193,6 +199,7 @@ class ScheduledOrderScreen extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(
                                       vertical: 6, horizontal: 10),
                                   itemBuilder: (context, index) {
+                                    // Each card is built with a specific 'order' object
                                     OrderModel order =
                                         controller.scheduledOrdersList[index];
                                     return _buildScheduledRideCard(
@@ -208,8 +215,6 @@ class ScheduledOrderScreen extends StatelessWidget {
       },
     );
   }
-
-
 
   Widget _buildEmptyState(
       BuildContext context, ScheduledOrderController controller) {
@@ -282,6 +287,7 @@ class ScheduledOrderScreen extends StatelessWidget {
         rideDate != null ? DateFormat('h:mm a').format(rideDate) : 'Time n/a';
 
     return InkWell(
+      // The tap gesture passes the specific 'order' to the next step
       onTap: () => _showRideDetailsBottomSheet(context, order, controller),
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -302,7 +308,6 @@ class ScheduledOrderScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date and Time Header
             Row(
               children: [
                 Icon(Icons.calendar_today_outlined,
@@ -316,15 +321,13 @@ class ScheduledOrderScreen extends StatelessWidget {
               ],
             ),
             const Divider(height: 16),
-            // User and Fare Info
             UserView(
               userId: order.userId,
-              amount: order.finalRate, // Use finalRate for scheduled rides
+              amount: order.finalRate,
               distance: order.distance,
               distanceType: order.distanceType,
             ),
             const Divider(height: 12, color: AppColors.grey200),
-            // Location Info
             LocationView(
               sourceLocation: order.sourceLocationName.toString(),
               destinationLocation: order.destinationLocationName.toString(),
@@ -350,9 +353,8 @@ class RideDetailBottomSheet extends StatefulWidget {
 }
 
 class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
-  // TODO: IMPORTANT! Replace with your actual Google Maps API Key.
   final String _googleApiKey =
-      "YOUR_GOOGLE_MAPS_API_KEY"; // <--- REPLACE THIS
+      "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4"; // <--- REPLACE THIS
 
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
@@ -405,9 +407,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
     try {
       Uint8List? sourceIcon =
-          await getBytesFromAsset('assets/images/green_mark.png', 40);
+          await getBytesFromAsset('assets/images/green_mark.png', 80);
       Uint8List? destinationIcon =
-          await getBytesFromAsset('assets/images/red_mark.png', 40);
+          await getBytesFromAsset('assets/images/red_mark.png', 80);
 
       _markers.add(Marker(
         markerId: const MarkerId('source'),
@@ -475,7 +477,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               polylineId: const PolylineId('route'),
               points: routePoints,
               color: AppColors.primary,
-              width: 4,
+              width: 5,
             ));
           }
 
@@ -508,7 +510,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     if (_mapController == null || _markers.isEmpty) return;
     final bounds = _boundsFromLatLngList(
         _markers.map((marker) => marker.position).toList());
-    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100.0));
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80.0));
   }
 
   LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
@@ -603,7 +605,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   String style =
                       await rootBundle.loadString('assets/map_style.json');
                   _mapController?.setMapStyle(style);
-                  Future.delayed(const Duration(milliseconds: 300),
+                  Future.delayed(const Duration(milliseconds: 200),
                       () => _fitMapToShowRoute());
                 },
                 markers: _markers,

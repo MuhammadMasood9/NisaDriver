@@ -22,15 +22,11 @@ class HomeIntercityScreen extends StatelessWidget {
       },
       builder: (controller) {
         return Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA),
+          backgroundColor: AppColors.grey100,
           body: controller.isLoading.value
               ? Constant.loader(context)
               : SafeArea(
                   child: Obx(() {
-                    // Check if profile is not verified
-                    if (controller.driverModel.value.profileVerify != true) {
-                      return _buildProfileNotVerified(context);
-                    }
                     // Check intercity service availability
                     if (controller.selectedService.value.intercityType ==
                             null ||
@@ -38,86 +34,16 @@ class HomeIntercityScreen extends StatelessWidget {
                             false) {
                       return _buildDisabledScreen(context, controller);
                     }
-                    // Main screen for verified profile and active intercity service
+                    // Main screen for active intercity service
                     return _buildMainScreen(context, controller);
                   }),
                 ),
           bottomNavigationBar:
-              controller.driverModel.value.profileVerify == true &&
-                      controller.selectedService.value.intercityType == true
+              controller.selectedService.value.intercityType == true
                   ? _buildResponsiveBottomNav(context, controller)
                   : null,
         );
       },
-    );
-  }
-
-  Widget _buildProfileNotVerified(BuildContext context) {
-    final controllerDashBoard = Get.find<DashBoardController>();
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.warning_amber_rounded,
-                size: 60,
-                color: Colors.orange.shade700,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              "Profile Not Verified".tr,
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.darkBackground,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "Please verify your phone number to access rides and features."
-                  .tr,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // Navigate to profile verification screen
-                  controllerDashBoard.onSelectItem(5);
-                },
-                icon: const Icon(Icons.verified_user, size: 18),
-                label: Text(
-                  "Verify Phone Number".tr,
-                  style: AppTypography.buttonlight(context),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange.shade600,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -309,7 +235,7 @@ class HomeIntercityScreen extends StatelessWidget {
         double.parse(Constant.minimumDepositToRideAccept ?? '0.0');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppColors.grey100,
       body: SafeArea(
         child: Column(
           children: [
@@ -320,26 +246,15 @@ class HomeIntercityScreen extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.grey100,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    topRight: Radius.circular(28),
+                    topLeft: Radius.circular(0),
+                    topRight: Radius.circular(0),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    topRight: Radius.circular(28),
-                  ),
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 4, left: 10, right: 10),
+                    padding: const EdgeInsets.only(top: 0, left: 6, right: 6),
                     child: controller.widgetOptions
                         .elementAt(controller.selectedIndex.value),
                   ),
@@ -392,16 +307,7 @@ class HomeIntercityScreen extends StatelessWidget {
               'New',
               0,
               isCompact,
-              isEnabled: controller.driverModel.value.profileVerify == true),
-          _buildResponsiveNavItem(
-              context,
-              controller,
-              controller.selectedIndex.value == 1,
-              Icons.check_circle_rounded,
-              'Accepted',
-              1,
-              isCompact,
-              isEnabled: controller.driverModel.value.profileVerify == true),
+              isEnabled: true),
           _buildResponsiveNavItem(
               context,
               controller,
@@ -411,7 +317,7 @@ class HomeIntercityScreen extends StatelessWidget {
               2,
               isCompact,
               badgeCount: controller.isActiveValue.value,
-              isEnabled: controller.driverModel.value.profileVerify == true),
+              isEnabled: true),
           _buildResponsiveNavItem(
               context,
               controller,
@@ -420,7 +326,7 @@ class HomeIntercityScreen extends StatelessWidget {
               'Completed',
               3,
               isCompact,
-              isEnabled: controller.driverModel.value.profileVerify == true),
+              isEnabled: true),
         ],
       ),
     );

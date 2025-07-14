@@ -12,6 +12,7 @@ import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:get/get.dart';
@@ -51,7 +52,10 @@ class OrderMapScreen extends StatelessWidget {
                 polylines: Set<Polyline>.of(controller.polyLines.values),
                 markers: Set<Marker>.of(controller.markers.values),
                 padding: const EdgeInsets.only(bottom: 200.0),
-                onMapCreated: (GoogleMapController mapController) {
+                onMapCreated: (GoogleMapController mapController) async {
+                  String style =
+                      await rootBundle.loadString('assets/map_style.json');
+                  mapController?.setMapStyle(style);
                   controller.mapController.complete(mapController);
                 },
                 initialCameraPosition: CameraPosition(
@@ -255,13 +259,16 @@ class OrderMapScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 20),
+                                // MODIFICATION: Replaced the simple button with a FutureBuilder
                                 FutureBuilder<bool>(
                                   future: FireStoreUtils.hasActiveRide(),
                                   builder: (context, snapshot) {
+                                    // While checking, show a loader
                                     if (snapshot.connectionState ==
                                         ConnectionState.waiting) {
                                       return Constant.loader(context);
                                     }
+                                    // If there's an error, show a disabled button
                                     if (snapshot.hasError ||
                                         !snapshot.hasData) {
                                       return ButtonThem.buildButton(
@@ -275,30 +282,43 @@ class OrderMapScreen extends StatelessWidget {
                                         },
                                       );
                                     }
+
+                                    // Get the result: true if driver has an active ride, false otherwise
                                     bool hasActiveRide = snapshot.data!;
+
+                                    // Build the button based on the driver's status
                                     return ButtonThem.buildButton(
                                       context,
                                       title:
                                           "Accept Fare on ${Constant.amountShow(amount: controller.newAmount.value)}"
                                               .tr,
                                       btnHeight: 50,
+                                      // Button is grey if a ride is active, otherwise dark
                                       bgColors: hasActiveRide
                                           ? Colors.grey
                                           : AppColors.darkBackground,
-                                      onPress:  () async {
-                                              if (controller.newAmount.value
-                                                      .isNotEmpty &&
-                                                  double.parse(controller
-                                                          .newAmount.value
-                                                          .toString()) >
-                                                      0) {
-                                                await controller.acceptOrder();
-                                              } else {
-                                                ShowToastDialog.showToast(
-                                                    "Please enter a valid offer rate"
-                                                        .tr);
-                                              }
-                                            },
+                                      onPress: () async {
+                                        // CONDITION: Check for active ride before proceeding
+                                        if (hasActiveRide) {
+                                          ShowToastDialog.showToast(
+                                              "You can only have one active ride at a time."
+                                                  .tr);
+                                          return;
+                                        }
+
+                                        if (controller
+                                                .newAmount.value.isNotEmpty &&
+                                            double.parse(controller
+                                                    .newAmount.value
+                                                    .toString()) >
+                                                0) {
+                                          await controller.acceptOrder();
+                                        } else {
+                                          ShowToastDialog.showToast(
+                                              "Please enter a valid offer rate"
+                                                  .tr);
+                                        }
+                                      },
                                     );
                                   },
                                 ),

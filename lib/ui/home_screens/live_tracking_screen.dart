@@ -82,10 +82,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                     ),
                     onMapCreated: (GoogleMapController mapController) async {
                       controller.mapController = mapController;
-                      try {
-                        await mapController.setMapStyle(_mapStyle);
-                      } catch (e) {
-                        print('Error applying map style: $e');
+                      if (_mapStyle != null) {
+                        try {
+                          await mapController.setMapStyle(_mapStyle);
+                        } catch (e) {
+                          print('Error applying map style: $e');
+                        }
                       }
                       ShowToastDialog.closeLoader();
                       if (controller.isFollowingDriver.value) {
@@ -102,8 +104,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                             Constant.currentLocation?.longitude ??
                             -122.677433,
                       ),
-                      tilt: 30.0,
-                      bearing: controller.deviceBearing.value,
+                      tilt: 0.0, // <-- FIXED: Set to 0.0 for 2D view
+                      bearing: controller.mapBearing
+                          .value, // <-- FIXED: Use map bearing for camera
                     ),
                     onCameraMove: (CameraPosition position) {
                       controller.navigationZoom.value = position.zoom;
@@ -315,7 +318,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
@@ -414,7 +417,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
       right: 16,
       child: Obx(() => Column(
             mainAxisSize: MainAxisSize.min,
-            spacing: 10,
             children: [
               _buildControlButton(
                 icon: Icons.volume_up_rounded,
@@ -422,12 +424,14 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 isActive: controller.isVoiceEnabled.value,
                 onPressed: () => controller.toggleVoiceGuidance(),
               ),
+              const SizedBox(height: 10),
               _buildControlButton(
                 icon: Icons.wb_sunny_rounded,
                 iconOff: Icons.nights_stay_rounded,
                 isActive: controller.isNightMode.value,
                 onPressed: () => controller.toggleNightMode(),
               ),
+              const SizedBox(height: 10),
               _buildControlButton(
                 icon: Icons.add_rounded,
                 onPressed: () {
@@ -436,6 +440,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                       ?.animateCamera(CameraUpdate.zoomIn());
                 },
               ),
+              const SizedBox(height: 10),
               _buildControlButton(
                 icon: Icons.remove_rounded,
                 onPressed: () {
@@ -444,6 +449,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                       ?.animateCamera(CameraUpdate.zoomOut());
                 },
               ),
+              const SizedBox(height: 10),
               _buildControlButton(
                 icon: Icons.my_location_rounded,
                 iconOff: Icons.location_searching_rounded,
@@ -774,16 +780,17 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                                       await FireStoreUtils.getDriverProfile(
                                           controller.orderModel.value.driverId
                                               .toString());
-                                  Get.to(ChatScreens(
-                                    driverId: driver!.id,
-                                    customerId: customer!.id,
-                                    customerName: customer.fullName,
-                                    customerProfileImage: customer.profilePic,
-                                    driverName: driver.fullName,
-                                    driverProfileImage: driver.profilePic,
-                                    orderId: controller.orderModel.value.id,
-                                    token: customer.fcmToken,
-                                  ));
+                                  Get.to(() => ChatScreens(
+                                        driverId: driver!.id,
+                                        customerId: customer!.id,
+                                        customerName: customer.fullName,
+                                        customerProfileImage:
+                                            customer.profilePic,
+                                        driverName: driver.fullName,
+                                        driverProfileImage: driver.profilePic,
+                                        orderId: controller.orderModel.value.id,
+                                        token: customer.fcmToken,
+                                      ));
                                 },
                                 child: Container(
                                   height: 34,
@@ -792,7 +799,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                                     color: AppColors.darkBackground,
                                     borderRadius: BorderRadius.circular(5),
                                   ),
-                                  child: Icon(
+                                  child: const Icon(
                                     Icons.chat,
                                     color: Colors.white,
                                   ),
@@ -805,8 +812,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                                       await FireStoreUtils.getCustomer(
                                           controller.orderModel.value.userId
                                               .toString());
-                                  Constant.makePhoneCall(
-                                      "${customer!.countryCode}${customer.phoneNumber}");
+                                  if (customer != null) {
+                                    Constant.makePhoneCall(
+                                        "${customer.countryCode}${customer.phoneNumber}");
+                                  }
                                 },
                                 child: Container(
                                   height: 34,
@@ -815,7 +824,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                                     color: AppColors.darkBackground,
                                     borderRadius: BorderRadius.circular(5),
                                   ),
-                                  child: Icon(
+                                  child: const Icon(
                                     Icons.call,
                                     color: Colors.white,
                                   ),
@@ -964,8 +973,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
 
   Dialog _otpDialog(BuildContext context, LiveTrackingController controller,
       OrderModel orderModel, InterCityOrderModel interOrderModel) {
-    String currentOtp = ""; // Add this variable to store the current OTP
-    bool isOtpComplete = false; // Track if OTP is complete
+    String currentOtp = "";
 
     return Dialog(
       backgroundColor: AppColors.background,
@@ -1003,22 +1011,11 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                 cursorColor: AppColors.primary,
                 controller: controller.otpController.value,
                 onCompleted: (v) {
-                  currentOtp = v; // Store the completed OTP
-
-                  isOtpComplete = true;
-                  print("OTP Completed: $currentOtp");
-                  // Add a small delay to ensure the value is properly set
-                  // Future.delayed(Duration(milliseconds: 100), () {
-                  //   currentOtp = v;
-                  // });
+                  currentOtp = v;
                 },
-                // onChanged: (value) {
-                //   currentOtp = value; // Update currentOtp on every change
-                //   isOtpComplete = value.length == 6; // Check if OTP is complete
-                //   otpController.text = value;
-                //   print("OTP Changed: $value");
-                //   print("OTP Changed22: ${otpController.text}");
-                // },
+                onChanged: (value) {
+                  currentOtp = value;
+                },
               ),
             ),
             const SizedBox(height: 10),
@@ -1027,36 +1024,26 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
               title: "OTP verify".tr,
               onPress: () async {
                 try {
-                  // Add a small delay to ensure the OTP value is captured
-                  // await Future.delayed(Duration(milliseconds: 50));
-                  print("OTP in button ${currentOtp.trim()}");
-                  // Use currentOtp, but also check controller.text as fallback
-                  final inputOtp = controller.otpController.value.text;
+                  final inputOtp = currentOtp.trim();
 
-                  // // If both are empty or incomplete, show error
-                  // if (inputOtp.isEmpty || inputOtp.length != 5) {
-                  //   ShowToastDialog.showToast("Please enter complete OTP".tr,
-                  //       position: EasyLoadingToastPosition.center);
-                  //   return;
-                  // }
-                  print(
-                      "OTP after button ${controller.otpController.value.text}");
+                  if (inputOtp.length < 6) {
+                    ShowToastDialog.showToast("Please enter complete OTP".tr,
+                        position: EasyLoadingToastPosition.center);
+                    return;
+                  }
 
                   String modelOtp = controller.type.value == "orderModel"
                       ? orderModel.otp ?? ''
                       : interOrderModel.otp ?? '';
 
-                  print(
-                      "OTP Verification - Model OTP: '$modelOtp', Input OTP: '$inputOtp'");
-
                   if (modelOtp == inputOtp) {
                     Get.back();
                     ShowToastDialog.showLoader("Starting ride...".tr);
-                    OrderModel orderModel = controller.orderModel.value;
-                    orderModel.status = Constant.rideInProgress;
+                    OrderModel currentOrderModel = controller.orderModel.value;
+                    currentOrderModel.status = Constant.rideInProgress;
 
                     await FireStoreUtils.getCustomer(
-                            orderModel.userId.toString())
+                            currentOrderModel.userId.toString())
                         .then((value) async {
                       if (value != null && value.fcmToken != null) {
                         await SendNotification.sendOneNotification(
@@ -1070,7 +1057,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                       }
                     });
 
-                    await FireStoreUtils.setOrder(orderModel).then((value) {
+                    await FireStoreUtils.setOrder(currentOrderModel)
+                        .then((value) {
                       if (value == true) {
                         ShowToastDialog.closeLoader();
                         ShowToastDialog.showToast(
@@ -1082,14 +1070,11 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                   } else {
                     ShowToastDialog.showToast("Invalid OTP".tr,
                         position: EasyLoadingToastPosition.center);
-                    print(
-                        "OTP Comparison - Model OTP: '$modelOtp', Input OTP: '$inputOtp'");
                   }
                 } catch (e) {
                   ShowToastDialog.closeLoader();
                   ShowToastDialog.showToast("Error: ${e.toString()}".tr,
                       position: EasyLoadingToastPosition.center);
-                  print("Error in OTP verification: ${e.toString()}");
                 }
               },
             ),
@@ -1216,8 +1201,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
       case 'turn-right':
         return Icons.turn_right_rounded;
       case 'slight-left':
+      case 'turn-slight-left':
         return Icons.turn_slight_left_rounded;
       case 'slight-right':
+      case 'turn-slight-right':
         return Icons.turn_slight_right_rounded;
       case 'sharp-left':
         return Icons.turn_sharp_left_rounded;
@@ -1231,6 +1218,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
       case 'merge':
         return Icons.merge_rounded;
       case 'roundabout':
+      case 'roundabout-left':
         return Icons.roundabout_left_rounded;
       default:
         return Icons.navigation_rounded;

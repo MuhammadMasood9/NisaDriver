@@ -34,7 +34,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
         init: ActiveInterCityOrderController(),
         builder: (controller) {
           return Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: AppColors.grey100,
             body: Column(
               children: [
                 const SizedBox(height: 10),
@@ -42,7 +42,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.grey100,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(28),
                         topRight: Radius.circular(28),

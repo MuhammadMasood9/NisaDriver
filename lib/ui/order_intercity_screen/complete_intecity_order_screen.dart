@@ -1,23 +1,24 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:clipboard/clipboard.dart';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/intercity_order_model.dart';
 import 'package:driver/model/order/complete_intercity_order_controller.dart';
 import 'package:driver/model/tax_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_order_view.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'dart:math';
-import 'dart:ui';
+import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 
 class CompleteIntercityOrderScreen extends StatefulWidget {
   const CompleteIntercityOrderScreen({Key? key}) : super(key: key);
@@ -32,15 +33,22 @@ class _CompleteIntercityOrderScreenState
     with SingleTickerProviderStateMixin {
   final CompleteInterCityOrderController controller =
       Get.put(CompleteInterCityOrderController());
-  final PolylinePoints polylinePoints = PolylinePoints();
+
+  // --- State Variables ---
   Set<Marker> _markers = {};
-  Set<Polyline> _polylines = {};
   List<LatLng> _polylineCoordinates = [];
   LatLngBounds? _bounds;
+  String _routeDistance = '...';
+  String _routeDuration = '...';
+  bool _isLoadingRoute = true;
+
   AnimationController? _animationController;
   Animation<double>? _fadeAnimation;
-  GoogleMapController? _mapController;
-  bool _isMapReady = false;
+
+  // --- Constants for consistent UI ---
+  static const double _cardBorderRadius = 8.0;
+  static const EdgeInsets _cardPadding = EdgeInsets.all(18.0);
+  static const SizedBox _verticalSpacing = SizedBox(height: 16.0);
 
   @override
   void initState() {
@@ -59,218 +67,117 @@ class _CompleteIntercityOrderScreenState
   }
 
   Future<void> initializeMapData() async {
-    try {
-      await addMarkersAndPolylines();
-      if (mounted) {
-        setState(() {
-          _isMapReady = true;
-        });
-      }
-    } catch (e) {
-      print('Error initializing map data: $e');
+    if (!mounted) return;
+    setState(() => _isLoadingRoute = true);
+    await _addMarkers();
+    await _getDirectionsAndRouteInfo();
+    if (mounted) {
+      setState(() => _isLoadingRoute = false);
     }
   }
 
-  Future<void> addMarkersAndPolylines() async {
+  Future<BitmapDescriptor> getMarkerIcon(String path, int width) async {
+    ByteData data = await rootBundle.load(path);
+    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
+        targetWidth: width);
+    ui.FrameInfo fi = await codec.getNextFrame();
+    final bytes = (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
+        .buffer
+        .asUint8List();
+    return BitmapDescriptor.fromBytes(bytes);
+  }
+
+  Future<void> _addMarkers() async {
     final orderModel = controller.orderModel.value;
-
-    if (orderModel == null) {
-      print('Order model is null');
-      return;
-    }
-
-    double sourceLat =
-        orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074;
-    double sourceLng =
-        orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064;
-    double destLat =
-        orderModel.destinationLocationLAtLng?.latitude ?? 24.94478876378326;
-    double destLng =
-        orderModel.destinationLocationLAtLng?.longitude ?? 67.06306681036949;
-
-    if (sourceLat.isNaN || sourceLng.isNaN || destLat.isNaN || destLng.isNaN) {
-      print('Invalid coordinates detected');
-      sourceLat = 24.905702181412074;
-      sourceLng = 67.07225639373064;
-      destLat = 24.94478876378326;
-      destLng = 67.06306681036949;
-    }
-
-    final LatLng sourceLatLng = LatLng(sourceLat, sourceLng);
-    final LatLng destinationLatLng = LatLng(destLat, destLng);
-
-    print('Source: $sourceLatLng, Destination: $destinationLatLng');
-
-    _bounds = LatLngBounds(
-      southwest: LatLng(
-        min(sourceLatLng.latitude, destinationLatLng.latitude) - 0.01,
-        min(sourceLatLng.longitude, destinationLatLng.longitude) - 0.01,
-      ),
-      northeast: LatLng(
-        max(sourceLatLng.latitude, destinationLatLng.latitude) + 0.01,
-        max(sourceLatLng.longitude, destinationLatLng.longitude) + 0.01,
-      ),
+    final LatLng sourceLatLng = LatLng(
+      orderModel.sourceLocationLAtLng?.latitude ?? 24.905702,
+      orderModel.sourceLocationLAtLng?.longitude ?? 67.072256,
+    );
+    final LatLng destinationLatLng = LatLng(
+      orderModel.destinationLocationLAtLng?.latitude ?? 24.944788,
+      orderModel.destinationLocationLAtLng?.longitude ?? 67.063066,
     );
 
-    BitmapDescriptor pickupIcon =
-        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-    BitmapDescriptor dropoffIcon =
-        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-
-    try {
-      final customPickupIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(48, 48)),
-        'assets/images/green_mark.png',
-      );
-      final customDropoffIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(48, 48)),
-        'assets/images/red_mark.png',
-      );
-      pickupIcon = customPickupIcon;
-      dropoffIcon = customDropoffIcon;
-      print('Custom marker icons loaded successfully');
-    } catch (e) {
-      print('Using default marker icons due to error: $e');
-    }
-
-    final Set<Marker> newMarkers = {
-      Marker(
-        markerId: const MarkerId('pickup_location'),
-        position: sourceLatLng,
-        icon: pickupIcon,
-        infoWindow: InfoWindow(
-          title: 'Pickup Location',
-          snippet: orderModel.sourceLocationName ?? 'Source location',
-        ),
-        consumeTapEvents: true,
-        onTap: () {
-          print('Pickup marker tapped');
-        },
-      ),
-      Marker(
-        markerId: const MarkerId('dropoff_location'),
-        position: destinationLatLng,
-        icon: dropoffIcon,
-        infoWindow: InfoWindow(
-          title: 'Drop-off Location',
-          snippet: orderModel.destinationLocationName ?? 'Destination location',
-        ),
-        consumeTapEvents: true,
-        onTap: () {
-          print('Dropoff marker tapped');
-        },
-      ),
-    };
-
-    print('Created ${newMarkers.length} markers');
+    final iconStart = await getMarkerIcon('assets/images/green_mark.png', 70);
+    final iconEnd = await getMarkerIcon('assets/images/red_mark.png', 70);
 
     if (mounted) {
       setState(() {
-        _markers = newMarkers;
-      });
-    }
-
-    try {
-      _polylineCoordinates =
-          await _getPolylinePoints(sourceLatLng, destinationLatLng);
-
-      if (_polylineCoordinates.isNotEmpty) {
-        final Set<Polyline> newPolylines = {
-          Polyline(
-            polylineId: const PolylineId('ride_route'),
-            points: _polylineCoordinates,
-            color: AppColors.primary,
-            width: 4,
-            patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-            startCap: Cap.roundCap,
-            endCap: Cap.roundCap,
+        _markers = {
+          Marker(
+            markerId: const MarkerId('source'),
+            position: sourceLatLng,
+            icon: iconStart,
+            infoWindow:
+                InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
+          ),
+          Marker(
+            markerId: const MarkerId('destination'),
+            position: destinationLatLng,
+            icon: iconEnd,
+            infoWindow: InfoWindow(
+                title: 'Drop-off: ${orderModel.destinationLocationName}'),
           ),
         };
-
-        if (mounted) {
-          setState(() {
-            _polylines = newPolylines;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error getting polyline: $e');
+      });
     }
   }
 
-  Future<List<LatLng>> _getPolylinePoints(
-      LatLng source, LatLng destination) async {
-    List<LatLng> polylineCoordinates = [];
+  Future<void> _getDirectionsAndRouteInfo() async {
+    final orderModel = controller.orderModel.value;
+    final LatLng source = LatLng(
+      orderModel.sourceLocationLAtLng?.latitude ?? 24.905702,
+      orderModel.sourceLocationLAtLng?.longitude ?? 67.072256,
+    );
+    final LatLng destination = LatLng(
+      orderModel.destinationLocationLAtLng?.latitude ?? 24.944788,
+      orderModel.destinationLocationLAtLng?.longitude ?? 67.063066,
+    );
+
+    const String apiKey =
+        'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4'; // Replace with your API key
+    final String url =
+        'https://maps.googleapis.com/maps/api/directions/json?origin=${source.latitude},${source.longitude}&destination=${destination.latitude},${destination.longitude}&key=$apiKey';
 
     try {
-      PolylineRequest request = PolylineRequest(
-        origin: PointLatLng(source.latitude, source.longitude),
-        destination: PointLatLng(destination.latitude, destination.longitude),
-        mode: TravelMode.driving,
-      );
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && (data['routes'] as List).isNotEmpty) {
+          final route = data['routes'][0];
+          final leg = route['legs'][0];
+          final overviewPolyline = route['overview_polyline']['points'];
+          final decodedPoints =
+              PolylinePoints().decodePolyline(overviewPolyline);
 
-      PolylineResult result = (await polylinePoints.getRouteBetweenCoordinates(
-        request: request,
-        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      )) as PolylineResult;
-
-      if (result.points.isNotEmpty) {
-        polylineCoordinates = result.points
-            .map((point) => LatLng(point.latitude, point.longitude))
-            .toList();
-        print('Polyline points loaded: ${polylineCoordinates.length} points');
+          if (mounted) {
+            setState(() {
+              _routeDistance = leg['distance']['text'];
+              _routeDuration = leg['duration']['text'];
+              _polylineCoordinates = decodedPoints
+                  .map((p) => LatLng(p.latitude, p.longitude))
+                  .toList();
+              final boundsData = route['bounds'];
+              _bounds = LatLngBounds(
+                southwest: LatLng(boundsData['southwest']['lat'],
+                    boundsData['southwest']['lng']),
+                northeast: LatLng(boundsData['northeast']['lat'],
+                    boundsData['northeast']['lng']),
+              );
+            });
+          }
+        } else {
+          debugPrint(
+              "Directions API Error: ${data['error_message'] ?? data['status']}");
+          ShowToastDialog.showToast("Could not fetch route details.");
+        }
       } else {
-        print('No polyline results found, using straight line');
-        polylineCoordinates = [source, destination];
+        debugPrint("HTTP Error fetching directions: ${response.statusCode}");
+        ShowToastDialog.showToast("Error connecting to routing service.");
       }
     } catch (e) {
-      print('Error fetching polyline: $e');
-      polylineCoordinates = [source, destination];
-    }
-
-    return polylineCoordinates;
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
-
-    _mapController!.setMapStyle('''
-      [
-        {
-          "featureType": "all",
-          "elementType": "labels",
-          "stylers": [{"visibility": "on"}]
-        },
-        {
-          "featureType": "road",
-          "elementType": "geometry",
-          "stylers": [{"color": "#e0e0e0"}]
-        },
-        {
-          "featureType": "water",
-          "elementType": "geometry",
-          "stylers": [{"color": "#c4e4ff"}]
-        },
-        {
-          "featureType": "poi",
-          "elementType": "labels",
-          "stylers": [{"visibility": "simplified"}]
-        }
-      ]
-    ''');
-
-    if (_bounds != null && _markers.isNotEmpty) {
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        if (_mapController != null && mounted) {
-          try {
-            _mapController!.animateCamera(
-              CameraUpdate.newLatLngBounds(_bounds!, 100),
-            );
-          } catch (e) {
-            print('Error fitting bounds: $e');
-          }
-        }
-      });
+      debugPrint("Exception fetching directions: $e");
+      ShowToastDialog.showToast("An unexpected error occurred.");
     }
   }
 
@@ -285,318 +192,139 @@ class _CompleteIntercityOrderScreenState
     return GetX<CompleteInterCityOrderController>(
       builder: (controller) {
         return Scaffold(
+          extendBodyBehindAppBar: true,
+          backgroundColor: AppColors.background,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
             elevation: 0,
-            leading: InkWell(
-              onTap: () => Get.back(),
-              child: const Icon(Icons.arrow_back, color: Colors.black),
+            leading: IconButton(
+              icon: const CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.arrow_back_ios_new,
+                    color: AppColors.primary, size: 20),
+              ),
+              onPressed: () => Get.back(),
             ),
             centerTitle: true,
-            title: Text(
-              "Ride Details".tr,
-              style: AppTypography.appTitle(context),
-            ),
           ),
-          backgroundColor: AppColors.background,
           body: controller.isLoading.value
               ? Constant.loader(context)
-              : FadeTransition(
-                  opacity: _fadeAnimation!,
-                  child: SingleChildScrollView(
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          spacing: 15,
-                          children: [
-                            _buildMapSection(context),
-                            _buildSectionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                spacing: 5,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    spacing: 5,
-                                    children: [
-                                      Text(
-                                        "Ride ID".tr,
-                                        style:
-                                            AppTypography.headers(Get.context!),
-                                      ),
-                                      GestureDetector(
-                                        onTap: () {
-                                          FlutterClipboard.copy(controller
-                                                  .orderModel.value.id
-                                                  .toString())
-                                              .then((value) {
-                                            ShowToastDialog.showToast(
-                                                "OrderId copied".tr);
-                                          });
-                                        },
-                                        child: DottedBorder(
-                                          borderType: BorderType.RRect,
-                                          radius: const Radius.circular(12),
-                                          dashPattern: const [6, 6],
-                                          color: AppColors.textFieldBorder,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 10, vertical: 4),
-                                            child: Text(
-                                              "Copy".tr,
-                                              style: GoogleFonts.poppins(
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.primary,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Text(
-                                    "#${controller.orderModel.value.id!.toUpperCase()}",
-                                    style: AppTypography.label(Get.context!),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            _buildSectionHeader("User Details".tr),
-                            _buildSectionCard(
-                              child: UserDriverView(
-                                userId: controller.orderModel.value.userId
-                                    .toString(),
-                                amount: controller.orderModel.value.finalRate
-                                    .toString(),
-                              ),
-                            ),
-                            _buildSectionHeader(
-                                "Pickup and drop-off locations".tr),
-                            _buildSectionCard(
-                              child: LocationView(
-                                sourceLocation: controller
-                                    .orderModel.value.sourceLocationName
-                                    .toString(),
-                                destinationLocation: controller
-                                    .orderModel.value.destinationLocationName
-                                    .toString(),
-                              ),
-                            ),
-                            _buildSectionHeader("Ride Status".tr),
-                            _buildSectionCard(
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    controller.orderModel.value.status
-                                        .toString(),
-                                    style:
-                                        AppTypography.boldLabel(Get.context!),
-                                  ),
-                                  Text(
-                                    Constant().formatTimestamp(controller
-                                        .orderModel.value.createdDate),
-                                    style: AppTypography.label(Get.context!),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            _buildSectionHeader("Booking Summary".tr),
-                            _buildSectionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Booking Summary".tr,
-                                    style:
-                                        AppTypography.boldLabel(Get.context!),
-                                  ),
-                                  const Divider(height: 24, thickness: 1),
-                                  _buildSummaryRow(
-                                    title: "Ride Amount".tr,
-                                    value: Constant.amountShow(
-                                        amount: controller
-                                            .orderModel.value.finalRate
-                                            .toString()),
-                                  ),
-                                  const Divider(height: 24, thickness: 1),
-                                  if (controller.orderModel.value.taxList !=
-                                      null)
-                                    ...controller.orderModel.value.taxList!
-                                        .asMap()
-                                        .entries
-                                        .map((entry) {
-                                      TaxModel taxModel = entry.value;
-                                      return Column(
-                                        children: [
-                                          _buildSummaryRow(
-                                            title:
-                                                "${taxModel.title} (${taxModel.type == "fix" ? Constant.amountShow(amount: taxModel.tax) : "${taxModel.tax}%"})",
-                                            value: Constant.amountShow(
-                                              amount: Constant()
-                                                  .calculateTax(
-                                                    amount: (double.parse(
-                                                                controller
-                                                                    .orderModel
-                                                                    .value
-                                                                    .finalRate
-                                                                    .toString()) -
-                                                            double.parse(
-                                                                controller
-                                                                    .couponAmount
-                                                                    .value
-                                                                    .toString()))
-                                                        .toString(),
-                                                    taxModel: taxModel,
-                                                  )
-                                                  .toString(),
-                                            ),
-                                          ),
-                                          const Divider(
-                                              height: 24, thickness: 1),
-                                        ],
-                                      );
-                                    }).toList(),
-                                  _buildSummaryRow(
-                                    title: "Discount".tr,
-                                    value:
-                                        "(-${controller.couponAmount.value == "0.0" ? Constant.amountShow(amount: "0.0") : Constant.amountShow(amount: controller.couponAmount.value)})",
-                                    valueColor: Colors.red,
-                                  ),
-                                  const Divider(height: 24, thickness: 1),
-                                  _buildSummaryRow(
-                                    title: "Payable Amount".tr,
-                                    value: Constant.amountShow(
-                                        amount: controller
-                                            .calculateAmount()
-                                            .toString()),
-                                    titleStyle: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14),
-                                    valueStyle: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                        color: AppColors.primary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            _buildSectionHeader("Admin Commission".tr),
-                            _buildSectionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Admin Commission".tr,
-                                    style:
-                                        AppTypography.boldLabel(Get.context!),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  _buildSummaryRow(
-                                    title: "Admin commission".tr,
-                                    value:
-                                        "(-${Constant.amountShow(amount: Constant.calculateAdminCommission(amount: (double.parse(controller.orderModel.value.finalRate.toString()) - double.parse(controller.couponAmount.value.toString())).toString(), adminCommission: controller.orderModel.value.adminCommission).toString())})",
-                                    valueColor: Colors.red,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    "Note: Admin commission will be debited from your wallet balance. \nAdmin commission will apply on Ride Amount minus Discount (if applicable)."
-                                        .tr,
-                                    style:
-                                        AppTypography.smBoldLabel(Get.context!)
-                                            .copyWith(color: AppColors.primary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
+              : Stack(
+                  children: [
+                    GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: LatLng(
+                          controller.orderModel.value.sourceLocationLAtLng
+                                  ?.latitude ??
+                              24.905702,
+                          controller.orderModel.value.sourceLocationLAtLng
+                                  ?.longitude ??
+                              67.072256,
                         ),
+                        zoom: 12,
                       ),
+                      markers: _markers,
+                      polylines: {
+                        Polyline(
+                          polylineId: const PolylineId('route'),
+                          points: _polylineCoordinates,
+                          color: AppColors.primary,
+                          width: 3,
+                          patterns: [PatternItem.dash(15), PatternItem.gap(10)],
+                        ),
+                      },
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: false,
+                      onMapCreated: (GoogleMapController mapController) async {
+                        String style = await rootBundle
+                            .loadString('assets/map_style.json');
+                        mapController.setMapStyle(style);
+                        if (_bounds != null) {
+                          mapController.animateCamera(
+                              CameraUpdate.newLatLngBounds(_bounds!, 60));
+                        }
+                      },
                     ),
-                  ),
+                    DraggableScrollableSheet(
+                      initialChildSize: 0.45,
+                      minChildSize: 0.45,
+                      maxChildSize: 0.9,
+                      builder: (BuildContext context,
+                          ScrollController scrollController) {
+                        return Container(
+                          decoration: const BoxDecoration(
+                            color: AppColors.grey100,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(28),
+                              topRight: Radius.circular(28),
+                            ),
+                            boxShadow: [
+                              BoxShadow(blurRadius: 20, color: Colors.black12),
+                            ],
+                          ),
+                          child: SingleChildScrollView(
+                            controller: scrollController,
+                            child: Column(
+                              children: [
+                                _buildDragHandle(),
+                                FadeTransition(
+                                  opacity: _fadeAnimation!,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14),
+                                    child: Column(
+                                      children: [
+                                        _buildOrderIdSection(context),
+                                        _verticalSpacing,
+                                        _buildUserSection(context),
+                                        _verticalSpacing,
+                                        _buildLocationSection(context),
+                                        _verticalSpacing,
+                                        _buildBookingSummarySection(context),
+                                        _verticalSpacing,
+                                        _buildAdminCommissionSection(context),
+                                        const SizedBox(height: 50),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
         );
       },
     );
   }
 
-  Widget _buildMapSection(BuildContext context) {
+  Widget _buildDragHandle() {
     return Container(
+      width: 45,
+      height: 5,
+      margin: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          height: Responsive.height(30, context),
-          child: GoogleMap(
-            onMapCreated: _onMapCreated,
-            initialCameraPosition: CameraPosition(
-              target: LatLng(
-                controller.orderModel.value.sourceLocationLAtLng?.latitude ??
-                    24.905702181412074,
-                controller.orderModel.value.sourceLocationLAtLng?.longitude ??
-                    67.07225639373064,
-              ),
-              zoom: 12,
-            ),
-            markers: _markers,
-            polylines: _polylines,
-            zoomControlsEnabled: false,
-            mapType: MapType.normal,
-            myLocationButtonEnabled: false,
-            compassEnabled: true,
-            mapToolbarEnabled: false,
-            onTap: (LatLng location) {
-              print('Map tapped at: $location');
-            },
-          ),
-        ),
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(12),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 1),
-      child: Text(
-        title,
-        style: AppTypography.headers(Get.context!),
-      ),
-    );
-  }
-
-  Widget _buildSectionCard({required Widget child}) {
+  Widget _buildInfoCard({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: _cardPadding,
       decoration: BoxDecoration(
-        color:  Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        gradient: LinearGradient(
-                colors: [Colors.white, Colors.grey[50]!],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(_cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            spreadRadius: 2,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -604,28 +332,256 @@ class _CompleteIntercityOrderScreenState
     );
   }
 
+  Widget _buildCardHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        title,
+        style: AppTypography.appTitle(context),
+      ),
+    );
+  }
+
+  Widget _buildOrderIdSection(BuildContext context) {
+    return _buildInfoCard(
+      child: Row(
+        children: [
+          const Icon(Icons.receipt_long_outlined,
+              color: AppColors.primary, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Ride ID".tr,
+                    style: AppTypography.appTitle(context)
+                        .copyWith(color: AppColors.grey800)),
+                const SizedBox(height: 2),
+                Text(
+                  "#${controller.orderModel.value.id!.toUpperCase()}",
+                  style: AppTypography.caption(context)!
+                      .copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: () {
+              FlutterClipboard.copy(controller.orderModel.value.id.toString())
+                  .then((_) => ShowToastDialog.showToast("Ride ID copied".tr));
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child:
+                  Icon(Icons.copy_rounded, size: 22, color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserSection(BuildContext context) {
+    return _buildInfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCardHeader(context, "User Details".tr),
+          const Divider(
+              color: AppColors.grey200, height: 1, indent: 5, endIndent: 5),
+          const SizedBox(height: 10),
+          UserDriverView(
+            userId: controller.orderModel.value.userId.toString(),
+            amount: controller.orderModel.value.finalRate.toString(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSection(BuildContext context) {
+    return _buildInfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCardHeader(context, "Route Details".tr),
+          const Divider(color: AppColors.grey200, height: 1),
+          const SizedBox(height: 10),
+          LocationView(
+            sourceLocation:
+                controller.orderModel.value.sourceLocationName.toString(),
+            destinationLocation:
+                controller.orderModel.value.destinationLocationName.toString(),
+          ),
+          const Divider(height: 12, color: AppColors.grey100),
+          if (_isLoadingRoute)
+            const Center(
+                child: CircularProgressIndicator(color: AppColors.primary))
+          else
+            Row(
+              children: [
+                _buildRouteStatItem(context, Icons.route_outlined,
+                    "Distance".tr, _routeDistance),
+                _buildRouteStatItem(context, Icons.timer_outlined,
+                    "Est. Time".tr, _routeDuration),
+              ],
+            )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRouteStatItem(
+      BuildContext context, IconData icon, String title, String value) {
+    return Expanded(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColors.primary, size: 20),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: AppTypography.appTitle(context)),
+              Text(value,
+                  style: AppTypography.caption(context)!
+                      .copyWith(fontWeight: FontWeight.bold)),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookingSummarySection(BuildContext context) {
+    return _buildInfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCardHeader(context, "Booking Summary".tr),
+          const Divider(color: AppColors.grey200, height: 1),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Payment Method".tr,
+                  style: AppTypography.boldLabel(context)),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  controller.orderModel.value.paymentType.toString(),
+                  style: AppTypography.boldLabel(context)
+                      .copyWith(color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20, thickness: 1, color: AppColors.grey100),
+          _buildSummaryRow(
+            title: "Ride Amount".tr,
+            value: Constant.amountShow(
+                amount: controller.orderModel.value.finalRate.toString()),
+          ),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            title: "Discount".tr,
+            value:
+                "(-${Constant.amountShow(amount: controller.couponAmount.value)})",
+            valueStyle:
+                AppTypography.boldLabel(context).copyWith(color: Colors.red),
+          ),
+          const SizedBox(height: 8),
+          if (controller.orderModel.value.taxList != null)
+            ...controller.orderModel.value.taxList!.map((taxModel) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: _buildSummaryRow(
+                  title:
+                      "${taxModel.title} (${taxModel.type == "fix" ? Constant.amountShow(amount: taxModel.tax) : "${taxModel.tax}%"})",
+                  value: Constant.amountShow(
+                    amount: Constant()
+                        .calculateTax(
+                          amount: (double.parse(controller
+                                      .orderModel.value.finalRate
+                                      .toString()) -
+                                  double.parse(
+                                      controller.couponAmount.value.toString()))
+                              .toString(),
+                          taxModel: taxModel,
+                        )
+                        .toString(),
+                  ),
+                ),
+              );
+            }).toList(),
+          const Divider(height: 16, thickness: 1, color: AppColors.grey200),
+          _buildSummaryRow(
+            title: "Your Earning".tr,
+            value: Constant.amountShow(
+                amount: controller.calculateAmount().toString()),
+            titleStyle: AppTypography.appTitle(context),
+            valueStyle: AppTypography.appTitle(context).copyWith(
+                color: AppColors.primary, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminCommissionSection(BuildContext context) {
+    return _buildInfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCardHeader(context, "Admin Commission".tr),
+          const Divider(color: AppColors.grey200, height: 1),
+          const SizedBox(height: 10),
+          _buildSummaryRow(
+            title: "Admin commission".tr,
+            value:
+                "(-${Constant.amountShow(amount: Constant.calculateAdminCommission(amount: (double.parse(controller.orderModel.value.finalRate.toString()) - double.parse(controller.couponAmount.value.toString())).toString(), adminCommission: controller.orderModel.value.adminCommission).toString())})",
+            valueStyle: AppTypography.boldLabel(context)
+                .copyWith(color: Colors.red, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            "Note: Admin commission will be debited from your wallet balance. Admin commission will apply on Ride Amount minus Discount (if applicable)."
+                .tr,
+            style: AppTypography.label(context)!.copyWith(
+                color: AppColors.primary.withOpacity(0.9), fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummaryRow({
     required String title,
     required String value,
-    Color? valueColor,
     TextStyle? titleStyle,
     TextStyle? valueStyle,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: titleStyle ??
-                AppTypography.boldLabel(Get.context!)
-                    .copyWith(color: AppColors.grey500),
-          ),
-          Text(
-            value,
-            style: valueStyle ?? AppTypography.boldLabel(Get.context!),
-          ),
+          Text(title,
+              style: titleStyle ??
+                  AppTypography.boldLabel(context)
+                      .copyWith(color: AppColors.grey500)),
+          Text(value,
+              style: valueStyle ??
+                  AppTypography.boldLabel(context)
+                      .copyWith(fontWeight: FontWeight.w600)),
         ],
       ),
     );

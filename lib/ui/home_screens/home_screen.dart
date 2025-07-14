@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
       },
       builder: (controller) {
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.grey100,
           body: controller.isLoading.value
               ? Constant.loader(context)
               : SafeArea(
@@ -100,7 +100,7 @@ class HomeScreen extends StatelessWidget {
                           child: Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: AppColors.grey100,
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.05),

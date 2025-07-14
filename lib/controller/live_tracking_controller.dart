@@ -58,9 +58,10 @@ class LiveTrackingController extends GetxController {
   Rx<InterCityOrderModel> intercityOrderModel = InterCityOrderModel().obs;
 
   Rx<Position?> currentPosition = Rx<Position?>(null);
-  RxDouble deviceBearing = 0.0.obs;
-  RxDouble lastProcessedBearing = 0.0.obs;
-  StreamSubscription<MagnetometerEvent>? _magnetometerSubscription;
+  RxDouble compassHeading =
+      0.0.obs; // Bearing from device compass for marker rotation
+  RxDouble mapBearing =
+      0.0.obs; // Bearing for map camera rotation (direction of travel)
   RxBool isLocationPermissionGranted = false.obs;
   Rx<TextEditingController> otpController = TextEditingController().obs;
   RxBool isLoading = true.obs;
@@ -106,7 +107,6 @@ class LiveTrackingController extends GetxController {
   RxBool isNavigationView = true.obs;
   RxDouble navigationZoom = 16.0.obs;
   RxInt nextRoutePointIndex = 0.obs;
-  Timer? _bearingUpdateTimer;
   Position? _previousPosition;
   DateTime? _previousTime;
 
@@ -118,28 +118,14 @@ class LiveTrackingController extends GetxController {
 
   @override
   void onInit() {
+    super.onInit();
     addMarkerSetup();
     initializeTTS();
-    initializeLocationServices();
+    initializeLocationServices(); // This now also starts location tracking
+    _initializeCompass();
     getArgument();
     isFollowingDriver.value = true;
     isNavigationView.value = true;
-
-    // Initialize map with traffic layer and night mode
-    _magnetometerSubscription = magnetometerEventStream().listen(
-      (MagnetometerEvent event) {
-        double rawBearing = atan2(event.y, event.x) * (180.0 / pi);
-        if (rawBearing < 0) rawBearing += 360.0;
-        deviceBearing.value = 0.7 * deviceBearing.value + 0.3 * rawBearing;
-      },
-    );
-
-    _bearingUpdateTimer = Timer.periodic(Duration(milliseconds: 50), (timer) {
-      if (isFollowingDriver.value && isNavigationView.value) {
-        updateNavigationView();
-        addDeviceMarker();
-      }
-    });
 
     // Fetch initial location and center immediately
     getCurrentLocation().then((_) {
@@ -148,12 +134,9 @@ class LiveTrackingController extends GetxController {
       updateMarkersAndPolyline();
     });
 
-    startLocationTracking();
     startEstimationUpdates();
     startAutoNavigation();
     startTrafficUpdates();
-
-    super.onInit();
   }
 
   @override
@@ -163,8 +146,7 @@ class LiveTrackingController extends GetxController {
     _autoNavigationTimer?.cancel();
     _trafficUpdateTimer?.cancel();
     _positionStream?.cancel();
-    _magnetometerSubscription?.cancel();
-    _bearingUpdateTimer?.cancel();
+    _compassSubscription?.cancel();
     mapController?.dispose();
     _flutterTts?.stop();
     ShowToastDialog.closeLoader();
@@ -220,22 +202,39 @@ class LiveTrackingController extends GetxController {
     }
 
     isLocationPermissionGranted.value = true;
+    _startLocationUpdates(); // Start tracking once permissions are confirmed
   }
 
-  void startLocationTracking() {
-    if (!isLocationPermissionGranted.value) {
-      initializeLocationServices().then((_) {
-        if (isLocationPermissionGranted.value) {
-          _startPositionStream();
+  void _initializeCompass() {
+    _compassSubscription = FlutterCompass.events?.listen((CompassEvent event) {
+      if (event.heading != null) {
+        compassHeading.value = event.heading!;
+        // Update marker rotation in real-time for responsiveness
+        if (markers.containsKey(const MarkerId("Device"))) {
+          final Marker marker = markers[const MarkerId("Device")]!;
+          markers[const MarkerId("Device")] = marker.copyWith(
+            rotationParam: compassHeading.value,
+          );
         }
-      });
-    } else {
-      _startPositionStream();
-    }
+      }
+    });
   }
 
-  void _startPositionStream() {
-    optimizePerformance();
+  void _startLocationUpdates() {
+    _positionStream?.cancel();
+    final LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: currentSpeed.value > 50 ? 5 : 2, // Optimized filter
+    );
+
+    _positionStream =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+      (Position position) => updateDeviceLocation(position),
+      onError: (error) {
+        ShowToastDialog.showToast("Error tracking location. Please check GPS.");
+        Future.delayed(Duration(seconds: 5), () => _startLocationUpdates());
+      },
+    );
   }
 
   void updateDeviceLocation(Position position) {
@@ -245,7 +244,10 @@ class LiveTrackingController extends GetxController {
     _previousPosition = position;
     _previousTime = DateTime.now();
 
-    addDeviceMarker();
+    _updateMapBearing(); // Calculate bearing for the map camera
+
+    addDeviceMarker(); // Update marker position and initial bearing
+
     if (isFollowingDriver.value && isNavigationView.value) {
       updateNavigationView();
     }
@@ -261,42 +263,41 @@ class LiveTrackingController extends GetxController {
 
   void addDeviceMarker() {
     if (currentPosition.value == null) return;
-
     markers.removeWhere((key, value) => key.value == "Device");
-
-    LatLng devicePos = LatLng(
-        currentPosition.value!.latitude, currentPosition.value!.longitude);
-    double rotation = _getSmoothedBearing();
-
     addMarker(
       latitude: currentPosition.value!.latitude,
       longitude: currentPosition.value!.longitude,
       id: "Device",
       descriptor: driverIcon!,
-      rotation: rotation,
+      rotation: compassHeading.value, // Use compass bearing for marker
     );
   }
 
-  double _getSmoothedBearing() {
-    if (currentPosition.value == null) return lastProcessedBearing.value;
+  void _updateMapBearing() {
+    if (currentPosition.value == null) return;
 
-    double newBearing = 0.0;
+    double newBearing;
 
+    // Prioritize GPS heading if moving and accurate
     if (currentSpeed.value > 5.0 &&
         currentPosition.value!.headingAccuracy < 45.0 &&
         currentPosition.value!.heading >= 0) {
       newBearing = currentPosition.value!.heading;
-    } else if (routePoints.isNotEmpty) {
+    }
+    // Otherwise, calculate bearing towards the next route point
+    else if (routePoints.isNotEmpty) {
       LatLng devicePos = LatLng(
           currentPosition.value!.latitude, currentPosition.value!.longitude);
       LatLng nextPoint = getNextRoutePoint(devicePos);
       newBearing = _calculateBearing(devicePos, nextPoint);
     }
+    // Fallback to the last known bearing
+    else {
+      newBearing = mapBearing.value;
+    }
 
-    double smoothedBearing =
-        _smoothBearing(lastProcessedBearing.value, newBearing);
-    lastProcessedBearing.value = smoothedBearing;
-    return smoothedBearing;
+    // Smooth the transition for the map camera
+    mapBearing.value = _smoothBearing(mapBearing.value, newBearing);
   }
 
   double _smoothBearing(double oldBearing, double newBearing) {
@@ -319,8 +320,7 @@ class LiveTrackingController extends GetxController {
         sin(startLat) * cos(endLat) * cos(deltaLng);
     double bearing = atan2(y, x) * 180 / pi;
 
-    bearing = (bearing + 360) % 360;
-    return bearing;
+    return (bearing + 360) % 360;
   }
 
   LatLng getNextRoutePoint(LatLng devicePos) {
@@ -473,8 +473,8 @@ class LiveTrackingController extends GetxController {
           CameraPosition(
             target: devicePos,
             zoom: navigationZoom.value,
-            tilt: 45.0, // Customer app-like 3D tilt
-            bearing: _getSmoothedBearing(),
+            tilt: 0.0, // Set to 0.0 for 2D view
+            bearing: mapBearing.value, // Use map bearing for camera rotation
           ),
         ),
       );
@@ -704,8 +704,8 @@ class LiveTrackingController extends GetxController {
         CameraPosition(
           target: deviceLocation,
           zoom: navigationZoom.value,
-          tilt: 45.0, // Customer app-like 3D tilt
-          bearing: _getSmoothedBearing(),
+          tilt: 0.0, // Set to 0.0 for 2D view
+          bearing: mapBearing.value, // Use map bearing for camera rotation
         ),
       ),
     );
@@ -1299,23 +1299,6 @@ class LiveTrackingController extends GetxController {
           "https://maps.google.com/?q=${currentPosition.value!.latitude},${currentPosition.value!.longitude}";
       ShowToastDialog.showToast("Location shared: $locationUrl");
     }
-  }
-
-  void optimizePerformance() {
-    _positionStream?.cancel();
-    final LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: currentSpeed.value > 50 ? 2 : 1,
-    );
-
-    _positionStream =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-      (Position position) => updateDeviceLocation(position),
-      onError: (error) {
-        ShowToastDialog.showToast("Error tracking location. Please check GPS.");
-        Future.delayed(Duration(seconds: 5), () => optimizePerformance());
-      },
-    );
   }
 
   Future<double?> testLiveBearing() async {
