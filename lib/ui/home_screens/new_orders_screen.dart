@@ -7,14 +7,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/home_controller.dart';
-import 'package:driver/model/order/driverId_accept_reject.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/home_screens/order_map_screen.dart';
 import 'package:driver/ui/home_screens/zone_ride_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
-import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -74,7 +72,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     super.build(context);
 
     return Scaffold(
-      backgroundColor: AppColors.grey100,
+      backgroundColor: AppColors.grey50,
       body: SafeArea(
         child: Obx(() {
           if (controller.isLoading.value) {
@@ -118,6 +116,9 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                     ),
                   ),
                   _buildNewOrdersSection(context, controller),
+                  const SizedBox(
+                    height: 80,
+                  )
                 ],
               ),
             ),
@@ -138,8 +139,6 @@ class _NewOrderScreenState extends State<NewOrderScreen>
         isAlreadyAccepted: isAlreadyAccepted,
       ),
     ).then((value) {
-      // This logic will now run for both new and accepted rides
-      // when "Accept Ride" is clicked in the bottom sheet.
       if (value != null && value == true) {
         Get.to(() => const OrderMapScreen(),
             arguments: {"orderModel": orderModel.id.toString()});
@@ -152,10 +151,10 @@ class _NewOrderScreenState extends State<NewOrderScreen>
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       child: InkWell(
         onTap: () => Get.to(() => const RouteMatchingScreen()),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
               colors: [AppColors.primary, AppColors.darkModePrimary],
               begin: Alignment.topLeft,
@@ -163,14 +162,14 @@ class _NewOrderScreenState extends State<NewOrderScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.darkBackground.withOpacity(0.3),
+                color: AppColors.primary.withOpacity(0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
                 const Icon(Icons.radar, color: Colors.white, size: 40),
@@ -180,16 +179,16 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Route Matching Ride Finder".tr,
+                        "Drive Your Way, Get Paid".tr,
                         style: AppTypography.boldHeaders(context).copyWith(
                           color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Set your destination and find rides along your route."
+                        "Set your destination and we'll find passengers who need a ride along your route."
                             .tr,
-                        style: AppTypography.boldLabel(context).copyWith(
+                        style: AppTypography.smBoldLabel(context).copyWith(
                           color: Colors.white.withOpacity(0.9),
                         ),
                       ),
@@ -222,16 +221,14 @@ class _NewOrderScreenState extends State<NewOrderScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Divider(),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 6.0, vertical: 8.0),
               child: Text(
-                "Accepted - Awaiting Confirmation".tr,
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600, fontSize: 18),
+                "Active Orders".tr,
+                style: AppTypography.boldHeaders(context),
               ),
             ),
-            const SizedBox(height: 8),
             ListView.builder(
               itemCount: snapshot.data!.docs.length,
               physics: const NeverScrollableScrollPhysics(),
@@ -250,8 +247,8 @@ class _NewOrderScreenState extends State<NewOrderScreen>
               },
             ),
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 6),
-              child: Divider(thickness: 1.5),
+              padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 6),
+              child: Divider(),
             ),
           ],
         );
@@ -290,33 +287,108 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
-  Widget _buildNewRideRequestCard(OrderModel orderModel, {Key? key}) => InkWell(
-      key: key,
-      onTap: () => _showRideDetailsBottomSheet(orderModel),
-      child: _buildRideCardContainer(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _buildUserHeader(
-            userId: orderModel.userId,
-            offerRate: orderModel.offerRate,
-            distance: orderModel.distance,
-            distanceType: orderModel.distanceType),
-        const Divider(height: 12, color: AppColors.grey200),
-        _buildLocationDetailRow(
-          source: orderModel.sourceLocationName.toString(),
-          destination: orderModel.destinationLocationName.toString(),
-        ),
-      ])));
+  // MODIFIED: This card now follows the design of the "Order History" screen.
+  Widget _buildNewRideRequestCard(OrderModel orderModel, {Key? key}) {
+    return InkWell(
+        key: key,
+        onTap: () => _showRideDetailsBottomSheet(orderModel),
+        child: _buildRideCardContainer(
+          child: Column(
+            children: [
+              // Pickup point and Payment row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.arrow_circle_down,
+                      size: 22, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(orderModel.sourceLocationName.toString(),
+                            style: AppTypography.boldLabel(context).copyWith(
+                                fontWeight: FontWeight.w500, height: 1.3)),
+                        Text("Pickup point".tr,
+                            style: AppTypography.caption(context)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      Constant.amountShow(
+                          amount: orderModel.offerRate.toString()),
+                      style: AppTypography.boldLabel(context)
+                          .copyWith(color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+              // Dotted line connecting the points
+              Row(
+                children: [
+                  Container(
+                    width: 22,
+                    alignment: Alignment.center,
+                    child: Container(
+                        height: 20, width: 1.5, color: AppColors.grey200),
+                  ),
+                  Expanded(child: Container()),
+                ],
+              ),
+              // Destination and Distance row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on, size: 22, color: Colors.black),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(orderModel.destinationLocationName.toString(),
+                            style: AppTypography.boldLabel(context).copyWith(
+                                fontWeight: FontWeight.w500, height: 1.3)),
+                        Text("Destination".tr,
+                            style: AppTypography.caption(context)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text("Distance".tr,
+                          style: AppTypography.caption(context)),
+                      Text(
+                        "${(double.parse(orderModel.distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${orderModel.distanceType}",
+                        style: AppTypography.boldLabel(context),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ],
+          ),
+        ));
+  }
 
   Widget _buildRideCardContainer({required Widget child}) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.background,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
+              color: Colors.grey.withOpacity(0.1),
               spreadRadius: 1,
               blurRadius: 20,
               offset: const Offset(0, 5),
@@ -325,27 +397,6 @@ class _NewOrderScreenState extends State<NewOrderScreen>
         ),
         child: child,
       );
-
-  Widget _buildUserHeader(
-          {String? userId,
-          String? offerRate,
-          String? distance,
-          String? distanceType}) =>
-      Row(
-        children: [
-          Expanded(
-              child: UserView(
-            userId: userId,
-            distance: distance,
-            distanceType: distanceType,
-            amount: offerRate,
-          )),
-        ],
-      );
-
-  Widget _buildLocationDetailRow(
-          {required String source, required String destination}) =>
-      LocationView(sourceLocation: source, destinationLocation: destination);
 
   Widget _buildInfoMessage(String title, String subtitle,
           {IconData? icon, Color? color}) =>
@@ -403,7 +454,8 @@ class RideDetailBottomSheet extends StatefulWidget {
 
 class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   // TODO: IMPORTANT! Replace with your actual Google Maps API Key.
-  final String _googleApiKey = "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4";
+  final String _googleApiKey =
+      "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4"; // IMPORTANT
 
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
@@ -435,11 +487,13 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         widget.orderModel.destinationLocationLAtLng?.latitude == null ||
         widget.orderModel.destinationLocationLAtLng?.longitude == null) {
       print('Error: Missing coordinates for source or destination');
-      setState(() {
-        _routeDistance = 'Error: Missing coordinates';
-        _routeDuration = 'Error: Missing coordinates';
-        _isLoadingRoute = false;
-      });
+      if (mounted) {
+        setState(() {
+          _routeDistance = 'Error';
+          _routeDuration = 'Error';
+          _isLoadingRoute = false;
+        });
+      }
       return;
     }
 
@@ -453,46 +507,35 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
 
     try {
-      Uint8List? sourceIcon;
-      Uint8List? destinationIcon;
-
-      try {
-        sourceIcon =
-            await getBytesFromAsset('assets/images/green_mark.png', 40);
-        destinationIcon =
-            await getBytesFromAsset('assets/images/red_mark.png', 40);
-      } catch (e) {
-        print('Custom marker assets not found, using default markers: $e');
-      }
+      final Uint8List sourceIcon =
+          await getBytesFromAsset('assets/images/green_mark.png', 30);
+      final Uint8List destinationIcon =
+          await getBytesFromAsset('assets/images/red_mark.png', 30);
 
       _markers.add(Marker(
-        markerId: const MarkerId('source'),
-        position: source,
-        icon: sourceIcon != null
-            ? BitmapDescriptor.fromBytes(sourceIcon)
-            : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: const InfoWindow(title: 'Pickup Location'),
-      ));
+          markerId: const MarkerId('source'),
+          position: source,
+          icon: BitmapDescriptor.fromBytes(sourceIcon),
+          anchor: const Offset(0.5, 0.5)));
 
       _markers.add(Marker(
-        markerId: const MarkerId('destination'),
-        position: destination,
-        icon: destinationIcon != null
-            ? BitmapDescriptor.fromBytes(destinationIcon)
-            : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: const InfoWindow(title: 'Drop-off Location'),
-      ));
+          markerId: const MarkerId('destination'),
+          position: destination,
+          icon: BitmapDescriptor.fromBytes(destinationIcon),
+          anchor: const Offset(0.5, 0.5)));
 
       if (mounted) setState(() {});
 
       await _drawRouteAndGetDetails();
     } catch (e) {
       print('Error setting markers: $e');
-      setState(() {
-        _routeDistance = 'Error setting markers';
-        _routeDuration = 'Error setting markers';
-        _isLoadingRoute = false;
-      });
+      if (mounted) {
+        setState(() {
+          _routeDistance = 'Error';
+          _routeDuration = 'Error';
+          _isLoadingRoute = false;
+        });
+      }
     }
   }
 
@@ -531,11 +574,14 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           if (routePoints.isNotEmpty) {
             _polylines.clear();
             _polylines.add(Polyline(
-              polylineId: const PolylineId('route'),
-              points: routePoints,
-              color: AppColors.primary,
-              width: 3,
-            ));
+                polylineId: const PolylineId('route'),
+                points: routePoints,
+                color: AppColors.primary,
+                width: 2,
+                patterns: <PatternItem>[
+                  PatternItem.dash(20),
+                  PatternItem.gap(10)
+                ]));
           }
 
           if (mounted) {
@@ -586,9 +632,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         _markers.map((marker) => marker.position).toList());
 
     Future.delayed(const Duration(milliseconds: 50), () {
-      if (_mapController != null) {
+      if (_mapController != null && mounted) {
         _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, 80.0), // Padding
+          CameraUpdate.newLatLngBounds(bounds, 40.0), // Padding
         );
       }
     });
@@ -616,6 +662,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // NEW: The whole sheet is built with a new method to match the image.
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -650,16 +697,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   distance: widget.orderModel.distance,
                   distanceType: widget.orderModel.distanceType,
                 ),
-                const Divider(height: 24),
-                LocationView(
-                  sourceLocation:
-                      widget.orderModel.sourceLocationName.toString(),
-                  destinationLocation:
-                      widget.orderModel.destinationLocationName.toString(),
-                ),
-                const Divider(height: 24),
-                _buildRouteInfoRow(),
-                const SizedBox(height: 20),
+                const Divider(
+                    height: 22, thickness: 1, color: AppColors.grey200),
+                _buildDetailsCard(),
+                const SizedBox(height: 10),
                 _buildActionButtons(),
               ],
             ),
@@ -692,15 +733,19 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                 onMapCreated: (controller) async {
                   _mapController = controller;
 
-                  String style =
-                      await rootBundle.loadString('assets/map_style.json');
-                  _mapController?.setMapStyle(style);
+                  try {
+                    String style =
+                        await rootBundle.loadString('assets/map_style.json');
+                    _mapController?.setMapStyle(style);
+                  } catch (e) {
+                    debugPrint("Error loading map style: $e");
+                  }
                   _fitMapToShowRoute();
                 },
                 markers: _markers,
                 polylines: _polylines,
                 myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
+                zoomControlsEnabled: true,
                 compassEnabled: false,
                 mapToolbarEnabled: false,
               ),
@@ -709,7 +754,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   color: Colors.black.withOpacity(0.5),
                   child: const Center(
                     child: CircularProgressIndicator(
-                      color: Colors.white,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   ),
                 ),
@@ -720,49 +765,88 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
   }
 
-  Widget _buildRouteInfoRow() {
+  // NEW: A detailed card that mimics the grid from the example image.
+  Widget _buildDetailsCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: AppColors.grey50,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildInfoChip(
-              icon: Icons.timer_outlined, label: 'ETA', value: _routeDuration),
-          Container(height: 30, width: 1, color: Colors.grey.shade300),
-          _buildInfoChip(
-              icon: Icons.map_outlined,
-              label: 'Distance',
-              value: _routeDistance),
+          _buildDetailItem(
+            'Ride Fare'.tr,
+            Constant.amountShow(amount: widget.orderModel.offerRate),
+            AppColors.primary,
+          ),
+          _buildDetailItem(
+            'Distance'.tr,
+            _isLoadingRoute ? '...' : _routeDistance,
+            Colors.black87,
+          ),
+          _buildDetailItem(
+            'Duration'.tr,
+            _isLoadingRoute ? '...' : _routeDuration,
+            Colors.black87,
+          ),
+          _buildDetailItem(
+            'Payment'.tr,
+            widget.orderModel.paymentType.toString(),
+            Colors.black87,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoChip(
-      {required IconData icon, required String label, required String value}) {
-    return Column(
-      children: [
-        Text(label.tr,
-            style: const TextStyle(color: Colors.grey, fontSize: 13)),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(width: 6),
-            Text(value, style: AppTypography.headers(context)),
-          ],
-        )
-      ],
+  Widget _buildDetailItem(String title, String value, Color valueColor) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: AppTypography.caption(context).copyWith(
+              color: Colors.grey.shade600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTypography.appTitle(context).copyWith(
+              color: valueColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
-  // MODIFICATION: Removed the condition to always show the "Accept Ride" button
+  // NEW: Styled action buttons
   Widget _buildActionButtons() {
+    if (widget.isAlreadyAccepted) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () => Navigator.pop(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: Text("Close".tr,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      );
+    }
     return Row(
       children: [
         Expanded(
@@ -775,7 +859,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: Text("Close".tr,
+            child: Text("Decline".tr,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ),
@@ -783,7 +867,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         Expanded(
           child: ElevatedButton(
             onPressed: () {
-              // Pop with 'true' to indicate acceptance/navigation
+              // Passing true signals to accept the ride
               Navigator.pop(context, true);
             },
             style: ElevatedButton.styleFrom(
@@ -793,8 +877,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            // The button text can be dynamic if you want, but "Accept Ride" works
-            // as it leads to the acceptance/negotiation screen.
             child: Text("Accept Ride".tr,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
@@ -859,24 +941,17 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
     }
   }
 
-  Future<void> _cancelRide() async {
-    _timer?.cancel();
-    if (mounted) {
-      _isExpired.value = true;
-    }
-    await _handleExpiredTimer();
-  }
-
+  // MODIFIED: This widget now follows the consistent "Order History" card design.
   @override
   Widget build(BuildContext context) {
     return Obx(
       () => _isExpired.value
           ? const SizedBox.shrink()
           : Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
               decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.08),
@@ -885,90 +960,83 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                       offset: const Offset(0, 5),
                     )
                   ]),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Column(
-                  children: [
-                    TimerIndicator(remainingSeconds: _remainingSeconds),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          // _buildUserHeader(
-                          //     userId: widget.orderModel.userId,
-                          //     // BUG FIX: Use finalRate but provide a default value to prevent null error.
-                          //     offerRate: widget.orderModel.finalRate,
-                          //     distance: widget.orderModel.distance,
-                          //     distanceType: widget.orderModel.distanceType),
-                          const Divider(height: 24, color: AppColors.grey200),
-                          _buildLocationDetailRow(
-                            source:
-                                widget.orderModel.sourceLocationName.toString(),
-                            destination: widget
-                                .orderModel.destinationLocationName
-                                .toString(),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.cancel_outlined),
-                              label: Text('Cancel Offer'.tr),
-                              onPressed: _cancelRide,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red.shade50,
-                                foregroundColor: Colors.red.shade700,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: BorderSide(color: Colors.red.shade200),
-                                ),
+              child: Column(
+                children: [
+                  TimerIndicator(remainingSeconds: _remainingSeconds),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        // NEW: Location and payment block for accepted orders.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.arrow_circle_down,
+                                size: 22, color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      widget.orderModel.sourceLocationName
+                                          .toString(),
+                                      style: AppTypography.boldLabel(context)
+                                          .copyWith(
+                                              fontWeight: FontWeight.w500,
+                                              height: 1.3)),
+                                  Text("Pickup point".tr,
+                                      style: AppTypography.caption(context)),
+                                ],
                               ),
                             ),
-                          )
-                        ],
-                      ),
-                    )
-                  ],
-                ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Container(
+                              width: 22,
+                              alignment: Alignment.center,
+                              child: Container(
+                                  height: 20,
+                                  width: 1.5,
+                                  color: AppColors.grey200),
+                            ),
+                            Expanded(child: Container()),
+                          ],
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.location_on,
+                                size: 22, color: Colors.black),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      widget.orderModel.destinationLocationName
+                                          .toString(),
+                                      style: AppTypography.boldLabel(context)
+                                          .copyWith(
+                                              fontWeight: FontWeight.w500,
+                                              height: 1.3)),
+                                  Text("Destination".tr,
+                                      style: AppTypography.caption(context)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                ],
               ),
             ),
     );
   }
-
-  // MODIFICATION: Changed how this widget is built to be more robust.
-  Widget _buildUserHeader(
-          {String? userId,
-          String? offerRate,
-          String? distance,
-          String? distanceType}) =>
-      Row(
-        children: [
-          Expanded(
-            child: UserView(
-              userId: userId,
-              distance: distance,
-              distanceType: distanceType,
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text("Your Offer".tr,
-                  style: AppTypography.caption(context)
-                      .copyWith(color: Colors.grey)),
-              // BUG FIX: Provide a default value for amount to avoid parse errors.
-              Text(Constant.amountShow(amount: offerRate ?? "0.0"),
-                  style: AppTypography.appTitle(context)
-                      .copyWith(color: AppColors.primary)),
-            ],
-          )
-        ],
-      );
-
-  Widget _buildLocationDetailRow(
-          {required String source, required String destination}) =>
-      LocationView(sourceLocation: source, destinationLocation: destination);
 }
 
 class TimerIndicator extends StatelessWidget {
@@ -993,23 +1061,28 @@ class TimerIndicator extends StatelessWidget {
           Container(
             width: double.infinity,
             padding:
-                const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            decoration: BoxDecoration(
+              color: timerColor.withOpacity(0.1),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
             child: Center(
               child: Text(
                 'Awaiting Confirmation: $seconds s'.tr,
                 style: GoogleFonts.poppins(
                   color: timerColor,
                   fontWeight: FontWeight.w600,
-                  fontSize: 15,
+                  fontSize: 14,
                 ),
               ),
             ),
           ),
           LinearProgressIndicator(
             value: progress,
-            backgroundColor: timerColor.withOpacity(0.2),
+            backgroundColor: Colors.transparent,
             color: timerColor,
-            minHeight: 5,
+            minHeight: 4,
           ),
         ],
       );

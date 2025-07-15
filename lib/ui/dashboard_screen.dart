@@ -22,7 +22,8 @@ class DashBoardScreen extends StatelessWidget {
           backgroundColor: AppColors.background,
           // The AppBar is now a primary part of the Scaffold
           appBar: AppBar(
-            elevation: 0,
+            elevation: 0.5,
+            shadowColor: AppColors.grey50,
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.white,
             title: Text(

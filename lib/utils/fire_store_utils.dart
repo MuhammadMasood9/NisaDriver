@@ -537,7 +537,7 @@ class FireStoreUtils {
         .collection(CollectionName.orders)
         .where('serviceId', isEqualTo: driverUserModel.serviceId)
         .where('zoneId', whereIn: driverUserModel.zoneIds)
-        .where('status', isEqualTo: Constant.ridePlaced);
+        .where('status', isEqualTo: Constant.ridePlaced );
     GeoFirePoint center = Geoflutterfire()
         .point(latitude: latitude ?? 0.0, longitude: longLatitude ?? 0.0);
     Stream<List<DocumentSnapshot>> stream = Geoflutterfire()

@@ -28,20 +28,7 @@ class OrderMapScreen extends StatelessWidget {
       builder: (controller) {
         return Scaffold(
           backgroundColor: const Color.fromARGB(0, 255, 228, 239),
-          appBar: AppBar(
-            elevation: 0,
-            backgroundColor: Colors.white,
-            leading: InkWell(
-              onTap: () => Get.back(),
-              child: const Icon(Icons.arrow_back, color: Colors.black),
-            ),
-            title: Text(
-              'Order Details'.tr,
-              style: AppTypography.appBar(context),
-            ),
-            centerTitle: true,
-            surfaceTintColor: Colors.white,
-          ),
+          // MODIFICATION: The AppBar and the back button have been removed.
           body: Stack(
             children: [
               GoogleMap(
@@ -73,14 +60,33 @@ class OrderMapScreen extends StatelessWidget {
                 ),
               ),
               Positioned(
-                bottom: 350,
-                right: 20,
-                child: FloatingActionButton(
-                  backgroundColor: AppColors.primary,
-                  onPressed: () async {
-                    await controller.animateToSourceLocation();
-                  },
-                  child: const Icon(Icons.my_location, color: Colors.white),
+                  bottom: 350,
+                  right: 20,
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    child: FloatingActionButton(
+                      backgroundColor: AppColors.primary,
+                      onPressed: () async {
+                        await controller.animateToSourceLocation();
+                      },
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  )),
+              Positioned(
+                top: 30,
+                left: 5,
+                child: IconButton(
+                  icon: const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.arrow_back_ios_new,
+                        color: AppColors.primary, size: 20),
+                  ),
+                  onPressed: () => Get.back(),
                 ),
               ),
               Align(
@@ -103,7 +109,7 @@ class OrderMapScreen extends StatelessWidget {
                     ],
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(12.0),
                     child: Obx(
                       () => controller.isLoading.value
                           ? Constant.loader(context)
@@ -131,7 +137,7 @@ class OrderMapScreen extends StatelessWidget {
                                       .orderModel.value.destinationLocationName
                                       .toString(),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 8),
                                 Visibility(
                                   visible: controller.orderModel.value.service!
                                           .offerRate ==
@@ -259,16 +265,13 @@ class OrderMapScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                // MODIFICATION: Replaced the simple button with a FutureBuilder
                                 FutureBuilder<bool>(
                                   future: FireStoreUtils.hasActiveRide(),
                                   builder: (context, snapshot) {
-                                    // While checking, show a loader
                                     if (snapshot.connectionState ==
                                         ConnectionState.waiting) {
                                       return Constant.loader(context);
                                     }
-                                    // If there's an error, show a disabled button
                                     if (snapshot.hasError ||
                                         !snapshot.hasData) {
                                       return ButtonThem.buildButton(
@@ -283,22 +286,18 @@ class OrderMapScreen extends StatelessWidget {
                                       );
                                     }
 
-                                    // Get the result: true if driver has an active ride, false otherwise
                                     bool hasActiveRide = snapshot.data!;
 
-                                    // Build the button based on the driver's status
                                     return ButtonThem.buildButton(
                                       context,
                                       title:
                                           "Accept Fare on ${Constant.amountShow(amount: controller.newAmount.value)}"
                                               .tr,
                                       btnHeight: 50,
-                                      // Button is grey if a ride is active, otherwise dark
                                       bgColors: hasActiveRide
                                           ? Colors.grey
                                           : AppColors.darkBackground,
                                       onPress: () async {
-                                        // CONDITION: Check for active ride before proceeding
                                         if (hasActiveRide) {
                                           ShowToastDialog.showToast(
                                               "You can only have one active ride at a time."

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui; // Needed for map camera bounds and image codec
 
-import 'package:cloud_firestore/cloud_firestore.dart' as cloud_firestore;
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/send_notification.dart';
@@ -13,7 +12,6 @@ import 'package:driver/model/order_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
-import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -180,7 +178,7 @@ class ScheduledOrderScreen extends StatelessWidget {
       init: ScheduledOrderController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: AppColors.grey100,
+          backgroundColor: AppColors.grey50,
           body: SafeArea(
             child: controller.isLoading.value
                 ? Constant.loader(context)
@@ -197,7 +195,7 @@ class ScheduledOrderScreen extends StatelessWidget {
                                   itemCount:
                                       controller.scheduledOrdersList.length,
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 6, horizontal: 10),
+                                      vertical: 6, horizontal: 6),
                                   itemBuilder: (context, index) {
                                     // Each card is built with a specific 'order' object
                                     OrderModel order =
@@ -277,6 +275,26 @@ class ScheduledOrderScreen extends StatelessWidget {
     );
   }
 
+  // NEW: A consistent container for all ride cards.
+  Widget _buildRideCardContainer({required Widget child}) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 20,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: child,
+      );
+
+  // NEW: Redesigned card to match modern styling.
   Widget _buildScheduledRideCard(BuildContext context, OrderModel order,
       ScheduledOrderController controller) {
     final rideDate = order.createdDate?.toDate();
@@ -287,55 +305,109 @@ class ScheduledOrderScreen extends StatelessWidget {
         rideDate != null ? DateFormat('h:mm a').format(rideDate) : 'Time n/a';
 
     return InkWell(
-      // The tap gesture passes the specific 'order' to the next step
-      onTap: () => _showRideDetailsBottomSheet(context, order, controller),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
-              spreadRadius: 1,
-              blurRadius: 20,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.calendar_today_outlined,
-                    color: AppColors.primary, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  '$formattedDate at $formattedTime',
-                  style: AppTypography.boldLabel(context)
-                      .copyWith(color: AppColors.primary),
-                ),
-              ],
-            ),
-            const Divider(height: 16),
-            UserView(
-              userId: order.userId,
-              amount: order.finalRate,
-              distance: order.distance,
-              distanceType: order.distanceType,
-            ),
-            const Divider(height: 12, color: AppColors.grey200),
-            LocationView(
-              sourceLocation: order.sourceLocationName.toString(),
-              destinationLocation: order.destinationLocationName.toString(),
-            ),
-          ],
-        ),
-      ),
-    );
+        onTap: () => _showRideDetailsBottomSheet(context, order, controller),
+        borderRadius: BorderRadius.circular(12),
+        child: _buildRideCardContainer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with Date and Time
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined,
+                      color: AppColors.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$formattedDate at $formattedTime',
+                    style: AppTypography.boldLabel(context)
+                        .copyWith(color: AppColors.primary),
+                  ),
+                ],
+              ),
+              const Divider(height: 20, thickness: 1),
+
+              // Pickup point and Payment row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.arrow_circle_down,
+                      size: 22, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(order.sourceLocationName.toString(),
+                            style: AppTypography.boldLabel(context).copyWith(
+                                fontWeight: FontWeight.w500, height: 1.3)),
+                        Text("Pickup point".tr,
+                            style: AppTypography.caption(context)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      Constant.amountShow(amount: order.finalRate.toString()),
+                      style: AppTypography.boldLabel(context)
+                          .copyWith(color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+              // Dotted line connecting the points
+              Row(
+                children: [
+                  Container(
+                    width: 22,
+                    alignment: Alignment.center,
+                    child: Container(
+                        height: 20, width: 1.5, color: AppColors.grey200),
+                  ),
+                  Expanded(child: Container()),
+                ],
+              ),
+              // Destination and Distance row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on, size: 22, color: Colors.black),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(order.destinationLocationName.toString(),
+                            style: AppTypography.boldLabel(context).copyWith(
+                                fontWeight: FontWeight.w500, height: 1.3)),
+                        Text("Destination".tr,
+                            style: AppTypography.caption(context)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text("Distance".tr,
+                          style: AppTypography.caption(context)),
+                      Text(
+                        "${(double.parse(order.distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${order.distanceType}",
+                        style: AppTypography.boldLabel(context),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ],
+          ),
+        ));
   }
 }
 
@@ -353,8 +425,9 @@ class RideDetailBottomSheet extends StatefulWidget {
 }
 
 class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
+  // TODO: IMPORTANT! Replace with your actual Google Maps API Key.
   final String _googleApiKey =
-      "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4"; // <--- REPLACE THIS
+      "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4"; // IMPORTANT
 
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
@@ -387,12 +460,13 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         widget.orderModel.destinationLocationLAtLng?.longitude == null) {
       if (kDebugMode)
         print('Error: Missing coordinates for source or destination');
-      if (!mounted) return;
-      setState(() {
-        _routeDistance = 'Error';
-        _routeDuration = 'Error';
-        _isLoadingRoute = false;
-      });
+      if (mounted) {
+        setState(() {
+          _routeDistance = 'Error';
+          _routeDuration = 'Error';
+          _isLoadingRoute = false;
+        });
+      }
       return;
     }
 
@@ -406,36 +480,35 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
 
     try {
-      Uint8List? sourceIcon =
-          await getBytesFromAsset('assets/images/green_mark.png', 80);
-      Uint8List? destinationIcon =
-          await getBytesFromAsset('assets/images/red_mark.png', 80);
+      final Uint8List sourceIcon =
+          await getBytesFromAsset('assets/images/green_mark.png', 30);
+      final Uint8List destinationIcon =
+          await getBytesFromAsset('assets/images/red_mark.png', 30);
 
       _markers.add(Marker(
-        markerId: const MarkerId('source'),
-        position: source,
-        icon: BitmapDescriptor.fromBytes(sourceIcon),
-        infoWindow: const InfoWindow(title: 'Pickup Location'),
-      ));
+          markerId: const MarkerId('source'),
+          position: source,
+          icon: BitmapDescriptor.fromBytes(sourceIcon),
+          anchor: const Offset(0.5, 0.5)));
 
       _markers.add(Marker(
-        markerId: const MarkerId('destination'),
-        position: destination,
-        icon: BitmapDescriptor.fromBytes(destinationIcon),
-        infoWindow: const InfoWindow(title: 'Drop-off Location'),
-      ));
+          markerId: const MarkerId('destination'),
+          position: destination,
+          icon: BitmapDescriptor.fromBytes(destinationIcon),
+          anchor: const Offset(0.5, 0.5)));
 
       if (mounted) setState(() {});
+
       await _drawRouteAndGetDetails();
     } catch (e) {
-      if (kDebugMode)
-        print('Error setting markers or loading custom icons: $e');
-      if (!mounted) return;
-      setState(() {
-        _isLoadingRoute = false;
-        _routeDistance = "Error";
-        _routeDuration = "Error";
-      });
+      if (kDebugMode) print('Error setting markers: $e');
+      if (mounted) {
+        setState(() {
+          _routeDistance = 'Error';
+          _routeDuration = 'Error';
+          _isLoadingRoute = false;
+        });
+      }
     }
   }
 
@@ -465,7 +538,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           final route = data['routes'][0];
           final leg = route['legs'][0];
           final overviewPolyline = route['overview_polyline']['points'];
-
           final List<PointLatLng> decodedPoints =
               PolylinePoints().decodePolyline(overviewPolyline);
           final List<LatLng> routePoints = decodedPoints
@@ -473,12 +545,16 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               .toList();
 
           if (routePoints.isNotEmpty) {
+            _polylines.clear();
             _polylines.add(Polyline(
-              polylineId: const PolylineId('route'),
-              points: routePoints,
-              color: AppColors.primary,
-              width: 5,
-            ));
+                polylineId: const PolylineId('route'),
+                points: routePoints,
+                color: AppColors.primary,
+                width: 2,
+                patterns: <PatternItem>[
+                  PatternItem.dash(20),
+                  PatternItem.gap(10)
+                ]));
           }
 
           if (mounted) {
@@ -490,41 +566,73 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           }
           _fitMapToShowRoute();
         } else {
+          String errorMessage = data['error_message'] ?? 'No route found';
           if (kDebugMode)
-            print(
-                "Directions API Error: ${data['status']} - ${data['error_message']}");
-          if (mounted) setState(() => _isLoadingRoute = false);
+            print("Directions API Error: ${data['status']} - $errorMessage");
+          if (mounted) {
+            setState(() {
+              _routeDistance = 'Route Error';
+              _routeDuration = 'Route Error';
+              _isLoadingRoute = false;
+            });
+          }
         }
       } else {
         if (kDebugMode)
           print("HTTP request failed with status: ${response.statusCode}");
-        if (mounted) setState(() => _isLoadingRoute = false);
+        if (mounted) {
+          setState(() {
+            _routeDistance = 'HTTP Error';
+            _routeDuration = 'HTTP Error';
+            _isLoadingRoute = false;
+          });
+        }
       }
     } catch (e) {
       if (kDebugMode) print("Error fetching directions: $e");
-      if (mounted) setState(() => _isLoadingRoute = false);
+      if (mounted) {
+        setState(() {
+          _routeDistance = 'Network Error';
+          _routeDuration = 'Network Error';
+          _isLoadingRoute = false;
+        });
+      }
     }
   }
 
   void _fitMapToShowRoute() {
-    if (_mapController == null || _markers.isEmpty) return;
+    if (_mapController == null || _markers.length < 2) return;
+
     final bounds = _boundsFromLatLngList(
         _markers.map((marker) => marker.position).toList());
-    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80.0));
+
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (_mapController != null && mounted) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 40.0), // Padding
+        );
+      }
+    });
   }
 
   LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
     assert(list.isNotEmpty);
-    double minLat = list.first.latitude, maxLat = list.first.latitude;
-    double minLng = list.first.longitude, maxLng = list.first.longitude;
-    for (final latLng in list) {
+    double minLat = list.first.latitude;
+    double maxLat = list.first.latitude;
+    double minLng = list.first.longitude;
+    double maxLng = list.first.longitude;
+
+    for (LatLng latLng in list) {
       minLat = min(minLat, latLng.latitude);
       maxLat = max(maxLat, latLng.latitude);
       minLng = min(minLng, latLng.longitude);
       maxLng = max(maxLng, latLng.longitude);
     }
+
     return LatLngBounds(
-        southwest: LatLng(minLat, minLng), northeast: LatLng(maxLat, maxLng));
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
   }
 
   @override
@@ -533,7 +641,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -544,8 +654,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               width: 40,
               height: 5,
               decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(12)),
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -560,16 +671,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                   distance: widget.orderModel.distance,
                   distanceType: widget.orderModel.distanceType,
                 ),
-                const Divider(height: 24),
-                LocationView(
-                  sourceLocation:
-                      widget.orderModel.sourceLocationName.toString(),
-                  destinationLocation:
-                      widget.orderModel.destinationLocationName.toString(),
-                ),
-                const Divider(height: 24),
-                _buildRouteInfoRow(),
-                const SizedBox(height: 20),
+                const Divider(
+                    height: 22, thickness: 1, color: AppColors.grey200),
+                _buildDetailsCard(),
+                const SizedBox(height: 10),
                 _buildActionButtons(),
               ],
             ),
@@ -595,29 +700,37 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               GoogleMap(
                 initialCameraPosition: CameraPosition(
                   target: LatLng(
-                    widget.orderModel.sourceLocationLAtLng!.latitude!,
-                    widget.orderModel.sourceLocationLAtLng!.longitude!,
-                  ),
-                  zoom: 12,
+                      widget.orderModel.sourceLocationLAtLng!.latitude!,
+                      widget.orderModel.sourceLocationLAtLng!.longitude!),
+                  zoom: 10,
                 ),
                 onMapCreated: (controller) async {
                   _mapController = controller;
-                  String style =
-                      await rootBundle.loadString('assets/map_style.json');
-                  _mapController?.setMapStyle(style);
-                  Future.delayed(const Duration(milliseconds: 200),
-                      () => _fitMapToShowRoute());
+
+                  try {
+                    String style =
+                        await rootBundle.loadString('assets/map_style.json');
+                    _mapController?.setMapStyle(style);
+                  } catch (e) {
+                    debugPrint("Error loading map style: $e");
+                  }
+                  _fitMapToShowRoute();
                 },
                 markers: _markers,
                 polylines: _polylines,
                 myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
+                zoomControlsEnabled: true,
+                compassEnabled: false,
+                mapToolbarEnabled: false,
               ),
               if (_isLoadingRoute)
                 Container(
                   color: Colors.black.withOpacity(0.5),
                   child: const Center(
-                      child: CircularProgressIndicator(color: Colors.white)),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -626,42 +739,65 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
   }
 
-  Widget _buildRouteInfoRow() {
+  Widget _buildDetailsCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
-          color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
+        color: AppColors.grey50,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildInfoChip(
-              icon: Icons.timer_outlined, label: 'ETA', value: _routeDuration),
-          Container(height: 30, width: 1, color: Colors.grey.shade300),
-          _buildInfoChip(
-              icon: Icons.map_outlined,
-              label: 'Distance',
-              value: _routeDistance),
+          _buildDetailItem(
+            'Ride Fare'.tr,
+            Constant.amountShow(amount: widget.orderModel.finalRate),
+            AppColors.primary,
+          ),
+          _buildDetailItem(
+            'Distance'.tr,
+            _isLoadingRoute ? '...' : _routeDistance,
+            Colors.black87,
+          ),
+          _buildDetailItem(
+            'Duration'.tr,
+            _isLoadingRoute ? '...' : _routeDuration,
+            Colors.black87,
+          ),
+          _buildDetailItem(
+            'Payment'.tr,
+            widget.orderModel.paymentType.toString(),
+            Colors.black87,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoChip(
-      {required IconData icon, required String label, required String value}) {
-    return Column(
-      children: [
-        Text(label.tr,
-            style: const TextStyle(color: Colors.grey, fontSize: 13)),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(width: 6),
-            Text(value, style: AppTypography.headers(context)),
-          ],
-        )
-      ],
+  Widget _buildDetailItem(String title, String value, Color valueColor) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: AppTypography.caption(context).copyWith(
+              color: Colors.grey.shade600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTypography.appTitle(context).copyWith(
+              color: valueColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -685,8 +821,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: () => Navigator.pop(
-                context, true), // Pop with `true` to indicate acceptance
+            onPressed: () {
+              // Passing true signals to accept the ride
+              Navigator.pop(context, true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

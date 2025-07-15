@@ -11,7 +11,8 @@ import 'package:driver/ui/home_screens/accepted_orders.dart';
 import 'package:driver/ui/home_screens/active_order_screen.dart';
 import 'package:driver/ui/order_screen/order_screen.dart';
 import 'package:driver/ui/home_screens/new_orders_screen.dart' as home;
-import 'package:driver/ui/scheduled_rides/scheduled_order_screen.dart' as scheduled;
+import 'package:driver/ui/scheduled_rides/scheduled_order_screen.dart'
+    as scheduled;
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/geoflutterfire/src/geoflutterfire.dart';
 import 'package:driver/widget/geoflutterfire/src/models/point.dart';

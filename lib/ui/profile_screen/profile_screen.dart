@@ -183,7 +183,7 @@ class ProfileScreen extends StatelessWidget {
                       icon: Icons.email,
                     ),
                     _buildModernPhoneField(context, controller),
-                    _buildVerificationStatusCard(context, controller),
+                    // _buildVerificationStatusCard(context, controller),
                     Obx(() => !controller.driverModel.value.profileVerify!
                         ? _buildModernOtpSection(context, controller)
                         : const SizedBox.shrink()),

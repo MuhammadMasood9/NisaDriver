@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
       },
       builder: (controller) {
         return Scaffold(
-          backgroundColor: AppColors.grey100,
+          backgroundColor: AppColors.grey300.withOpacity(0),
           body: controller.isLoading.value
               ? Constant.loader(context)
               : SafeArea(
@@ -33,101 +33,102 @@ class HomeScreen extends StatelessWidget {
                     //   return _buildProfileNotVerified(context);
                     // }
                     // Existing verified profile UI
-                    return Column(
+                    return Stack(
                       children: [
-                        // Wallet Warning Banner
-                        double.parse(controller.driverModel.value.walletAmount
-                                        ?.toString() ??
-                                    '0.0') >=
-                                double.parse(
-                                    Constant.minimumDepositToRideAccept ??
-                                        '0.0')
-                            ? const SizedBox(height: 0)
-                            : Container(
-                                width: double.infinity,
-                                margin:
-                                    const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      const Color(0xFFE74C3C),
-                                      const Color(0xFFE74C3C).withOpacity(0.8),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFFE74C3C)
-                                          .withOpacity(0.2),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(
-                                        Icons.account_balance_wallet_rounded,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        "You need a minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} in your wallet to accept orders and place bids."
-                                            .tr,
-                                        style: AppTypography.boldLabel(context)
-                                            .copyWith(
-                                                color: Colors.white,
-                                                height: 1.4),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                         // Main Content
-                        Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: AppColors.grey100,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, -2),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(28),
-                                topRight: Radius.circular(28),
-                              ),
+                        Column(
+                          children: [
+                            // Wallet Warning Banner
+                            double.parse(controller
+                                            .driverModel.value.walletAmount
+                                            ?.toString() ??
+                                        '0.0') >=
+                                    double.parse(
+                                        Constant.minimumDepositToRideAccept ??
+                                            '0.0')
+                                ? const SizedBox(height: 0)
+                                : Container(
+                                    width: double.infinity,
+                                    margin: const EdgeInsets.fromLTRB(
+                                        16, 16, 16, 8),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          const Color(0xFFE74C3C),
+                                          const Color(0xFFE74C3C)
+                                              .withOpacity(0.8),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFE74C3C)
+                                              .withOpacity(0.2),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.white.withOpacity(0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: const Icon(
+                                            Icons
+                                                .account_balance_wallet_rounded,
+                                            color: Colors.white,
+                                            size: 24,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            "You need a minimum ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept.toString())} in your wallet to accept orders and place bids."
+                                                .tr,
+                                            style:
+                                                AppTypography.boldLabel(context)
+                                                    .copyWith(
+                                                        color: Colors.white,
+                                                        height: 1.4),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                            // Main Content with padding for bottom nav
+                            Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.only(
-                                    top: 8, left: 0, right: 0),
+                                    top: 8,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0), // Added bottom padding for nav
                                 child: controller.widgetOptions
                                     .elementAt(controller.selectedIndex.value),
                               ),
                             ),
-                          ),
+                          ],
+                        ),
+                        // Bottom Navigation Bar positioned at the bottom
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: _buildResponsiveBottomNav(context, controller),
                         ),
                       ],
                     );
                   }),
                 ),
-          bottomNavigationBar: _buildResponsiveBottomNav(context, controller),
         );
       },
     );
@@ -218,21 +219,21 @@ class HomeScreen extends StatelessWidget {
         vertical: isCompact ? 8 : 10,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.background, // Semi-transparent white
         borderRadius: BorderRadius.circular(isCompact ? 28 : 32),
         border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
+          color: Colors.white.withOpacity(0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 25,
-            offset: const Offset(0, -8),
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
             spreadRadius: 0,

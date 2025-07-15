@@ -60,13 +60,13 @@ class AppTypography {
       );
 
   static TextStyle button(BuildContext context) => GoogleFonts.poppins(
-        fontSize: _responsiveFontSize(context, 12),
+        fontSize: _responsiveFontSize(context, 14),
         fontWeight: FontWeight.w600,
         color: AppColors.darkTextFieldBorder,
       );
 
   static TextStyle buttonlight(BuildContext context) => GoogleFonts.poppins(
-        fontSize: _responsiveFontSize(context, 12),
+        fontSize: _responsiveFontSize(context, 14),
         fontWeight: FontWeight.w600,
         color: Colors.white,
       );

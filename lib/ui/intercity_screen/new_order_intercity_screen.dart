@@ -10,6 +10,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/intercity_screen/pacel_details_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
+// The original LocationView is not needed in the card anymore, but kept for the bottom sheet.
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
@@ -93,6 +94,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
     );
   }
 
+  // MODIFIED: This widget now builds a layout similar to the "Order History" screen.
   Widget _buildNewRideRequestCard(BuildContext context,
       IntercityController controller, InterCityOrderModel orderModel) {
     bool isParcelService = orderModel.intercityServiceId == "647f350983ba2";
@@ -103,19 +105,93 @@ class NewOrderInterCityScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            UserView(
-              userId: orderModel.userId,
-              amount: orderModel.offerRate,
-              distance: orderModel.distance,
-              distanceType: orderModel.distanceType,
+            // This new block replaces the old UserView and LocationView to match the desired UI.
+            Column(
+              children: [
+                // Pickup point and Payment row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.arrow_circle_down,
+                        size: 22, color: AppColors.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(orderModel.sourceLocationName.toString(),
+                              style: AppTypography.boldLabel(context).copyWith(
+                                  fontWeight: FontWeight.w500, height: 1.3)),
+                          Text("Pickup point".tr,
+                              style: AppTypography.caption(context)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        Constant.amountShow(
+                            amount: orderModel.offerRate.toString()),
+                        style: AppTypography.boldLabel(context)
+                            .copyWith(color: AppColors.primary),
+                      ),
+                    ),
+                  ],
+                ),
+                // Dotted line connecting the points
+                Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      alignment: Alignment.center,
+                      child: Container(
+                          height: 20, width: 1.5, color: AppColors.grey200),
+                    ),
+                    Expanded(child: Container()),
+                  ],
+                ),
+                // Destination and Distance row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on,
+                        size: 22, color: Colors.black),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(orderModel.destinationLocationName.toString(),
+                              style: AppTypography.boldLabel(context).copyWith(
+                                  fontWeight: FontWeight.w500, height: 1.3)),
+                          Text("Destination".tr,
+                              style: AppTypography.caption(context)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text("Distance".tr,
+                            style: AppTypography.caption(context)),
+                        Text(
+                          '${orderModel.distance} ${orderModel.distanceType}',
+                          style: AppTypography.boldLabel(context),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ],
             ),
-            const Divider(height: 16, color: AppColors.grey200),
-            LocationView(
-              sourceLocation: orderModel.sourceLocationName.toString(),
-              destinationLocation:
-                  orderModel.destinationLocationName.toString(),
-            ),
-            const Divider(height: 16, color: AppColors.grey200),
+            const Divider(height: 20, color: AppColors.grey200),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -141,7 +217,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
                     },
                     child: Text(
                       "View Details".tr,
-                      style: AppTypography.appTitle(context),
+                      style: AppTypography.boldLabel(context),
                     ),
                   )
                 else

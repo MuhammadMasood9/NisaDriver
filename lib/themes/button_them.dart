@@ -106,7 +106,8 @@ class ButtonThem {
               Text(
                 title.toUpperCase(),
                 textAlign: TextAlign.center,
-                style: AppTypography.button(context),
+                style: AppTypography.button(context)
+                    .copyWith(color: AppColors.grey600),
               ),
             ],
           ),

@@ -45,7 +45,7 @@ class OrderMapController extends GetxController {
     controller?.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
-          zoom: 15,
+          zoom: 12,
           target: LatLng(
             orderModel.value.sourceLocationLAtLng?.latitude ??
                 Constant.currentLocation?.latitude ??
@@ -295,7 +295,7 @@ class OrderMapController extends GetxController {
     double radiusElevated = (distance / 2) + ((distance / 2) / 2);
     double scale = radiusElevated / 500;
 
-    zoomLevel = 16 - log(scale) / log(2);
+    zoomLevel = 6 - log(scale) / log(2);
 
     final GoogleMapController controller = await mapController.future;
     controller.animateCamera(CameraUpdate.newLatLngZoom(center, zoomLevel));
@@ -306,7 +306,7 @@ class OrderMapController extends GetxController {
     Polyline polyline = Polyline(
       polylineId: id,
       points: polylineCoordinates,
-      width: 6,
+      width: 3,
       color: AppColors.primary,
       patterns: [
         PatternItem.dash(20),
