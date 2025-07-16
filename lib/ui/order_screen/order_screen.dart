@@ -26,7 +26,7 @@ class OrderScreen extends StatelessWidget {
       init: OrderController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: AppColors.grey50,
+          backgroundColor: AppColors.grey75,
           body: controller.isLoading.value
               ? Constant.loader(context)
               : StreamBuilder<QuerySnapshot>(
@@ -108,14 +108,7 @@ class OrderScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(6),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.darkBackground.withOpacity(0.05),
-              spreadRadius: 1,
-              blurRadius: 6,
-              offset: const Offset(0, 5),
-            ),
-          ],
+         
         ),
         child: Column(
           children: [
@@ -147,8 +140,7 @@ class OrderScreen extends StatelessWidget {
   Widget _buildStatusHeader(BuildContext context, OrderModel orderModel) {
     // This logic already handles completed status correctly, no changes needed here.
     bool isCompleted = orderModel.status == Constant.rideComplete;
-    Color statusColor =
-        isCompleted ? AppColors.darkBackground : AppColors.primary;
+    Color statusColor = isCompleted ? AppColors.primary : AppColors.primary;
     String statusText =
         isCompleted ? "Ride Completed".tr : orderModel.status.toString();
 
@@ -267,25 +259,28 @@ class OrderScreen extends StatelessWidget {
       children: [
         Expanded(
           flex: 2,
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.rate_review_outlined, size: 16),
-            label: Text(
-              "Review".tr,
-              style: AppTypography.button(context)
-                  .copyWith(color: AppColors.grey600),
-            ),
-            onPressed: () {
-              Get.to(() => const ReviewScreen(), arguments: {
-                "type": "orderModel",
-                "orderModel": orderModel,
-              });
-            },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.grey600,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              side: BorderSide(color: Colors.grey.shade300),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6)),
+          child: Container(
+            height: 35,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.rate_review_outlined, size: 16),
+              label: Text(
+                "Review".tr,
+                style: AppTypography.button(context)
+                    .copyWith(color: AppColors.grey600),
+              ),
+              onPressed: () {
+                Get.to(() => const ReviewScreen(), arguments: {
+                  "type": "orderModel",
+                  "orderModel": orderModel,
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.grey600,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3)),
+              ),
             ),
           ),
         ),

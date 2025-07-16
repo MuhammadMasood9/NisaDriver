@@ -1,681 +1,146 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:math';
-import 'dart:ui' as ui; // Needed for map camera bounds and image codec
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/send_notification.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
+import 'package:driver/controller/active_order_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/order_model.dart';
+import 'package:driver/model/user_model.dart';
 import 'package:driver/themes/app_colors.dart';
+import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/typography.dart';
+import 'package:driver/ui/chat_screen/chat_screen.dart';
+import 'package:driver/ui/home_screens/live_tracking_screen.dart';
+import 'package:driver/ui/review/review_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
-import 'package:driver/widget/user_view.dart';
-import 'package:flutter/foundation.dart';
+import 'package:driver/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 
-/// Controller for fetching and managing scheduled ride data.
-class ScheduledOrderController extends GetxController {
-  RxBool isLoading = true.obs;
-  RxList<OrderModel> scheduledOrdersList = <OrderModel>[].obs;
-  Rx<DriverUserModel> driverModel = DriverUserModel().obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-    fetchInitialData();
-  }
-
-  /// Fetches both scheduled orders and the current driver's data in parallel.
-  Future<void> fetchInitialData() async {
-    isLoading.value = true;
-    try {
-      await Future.wait([
-        fetchScheduledOrders(),
-        fetchDriverData(),
-      ]);
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error fetching initial data: $e");
-      }
-      Get.snackbar("Error".tr, "Failed to load data.".tr);
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  /// Fetches the current driver's data from Firestore.
-  Future<void> fetchDriverData() async {
-    final driver = await FireStoreUtils.getDriverProfile(
-        FireStoreUtils.getCurrentUid() ?? '');
-    if (driver != null) {
-      driverModel.value = driver;
-    }
-  }
-
-  /// Fetches scheduled orders from Firestore and filters them to show only
-  /// those available to the current driver.
-  Future<void> fetchScheduledOrders() async {
-    try {
-      String currentDriverId = FireStoreUtils.getCurrentUid() ?? '';
-      if (currentDriverId.isEmpty) {
-        scheduledOrdersList.clear();
-        return;
-      }
-      List<OrderModel> orders =
-          await FireStoreUtils.getScheduledOrders(currentDriverId);
-
-      // We still need to filter out rides the driver has explicitly rejected.
-      scheduledOrdersList.value = orders.where((order) {
-        final rejectedIds = order.rejectedDriverId ?? [];
-        return !rejectedIds.contains(currentDriverId);
-      }).toList();
-    } catch (e) {
-      if (kDebugMode) {
-        print("Error fetching scheduled orders: $e");
-      }
-      Get.snackbar(
-        "Error".tr,
-        "Failed to load scheduled rides.".tr,
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  /// Handles the logic for a driver accepting a specific scheduled ride.
-  Future<void> acceptRide(OrderModel orderToAccept) async {
-    // Renamed for clarity
-    // 1. Check if driver's wallet has sufficient funds
-    if (double.parse(driverModel.value.walletAmount.toString()) <
-        double.parse(Constant.minimumDepositToRideAccept ?? '0.0')) {
-      ShowToastDialog.showToast(
-        "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet to accept this order."
-            .tr,
-      );
-      return;
-    }
-
-    ShowToastDialog.showLoader("Accepting Ride...".tr);
-
-    try {
-      String driverId = FireStoreUtils.getCurrentUid() ?? '';
-
-      // 2. Prepare the data to update in Firestore
-      Map<String, dynamic> updatedData = {
-        'status':
-            Constant.rideActive, // Update status to 'active' or 'accepted'
-        'driverId': driverId,
-        'driver': driverModel.value.toJson(), // Attach driver's details
-      };
-
-      // 3. Update the specific order document using its unique ID
-      await FireStoreUtils.fireStore
-          .collection(CollectionName.orders)
-          .doc(orderToAccept.id) // <--- Uses the ID of the specific order
-          .update(updatedData);
-
-      // 4. Notify the customer
-      var customer =
-          await FireStoreUtils.getCustomer(orderToAccept.userId.toString());
-      if (customer != null && customer.fcmToken != null) {
-        await SendNotification.sendOneNotification(
-          token: customer.fcmToken!,
-          title: 'Ride Secured!'.tr,
-          body: 'Your driver is assigned for the scheduled ride.'.tr,
-          payload: {'orderId': orderToAccept.id},
-        );
-      }
-
-      // 5. Update the local list to remove the accepted ride from the screen instantly
-      scheduledOrdersList.removeWhere((o) => o.id == orderToAccept.id);
-      scheduledOrdersList.refresh();
-
-      ShowToastDialog.closeLoader();
-      ShowToastDialog.showToast("Ride Accepted! Check your active rides.".tr);
-    } catch (e) {
-      ShowToastDialog.closeLoader();
-      ShowToastDialog.showToast("Failed to accept ride: $e".tr);
-      if (kDebugMode) {
-        print("Error accepting scheduled ride: $e");
-      }
-    }
-  }
-}
-
-/// A screen to display a list of available scheduled rides.
 class ScheduledOrderScreen extends StatelessWidget {
   const ScheduledOrderScreen({Key? key}) : super(key: key);
 
-  void _showRideDetailsBottomSheet(BuildContext context, OrderModel orderModel,
-      ScheduledOrderController controller) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => RideDetailBottomSheet(orderModel: orderModel),
-    ).then((accepted) {
-      // If the bottom sheet returns true, it means "Accept Ride" was pressed
-      if (accepted != null && accepted == true) {
-        // The controller's acceptRide function is called with the specific orderModel
-        controller.acceptRide(orderModel);
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return GetX<ScheduledOrderController>(
-      init: ScheduledOrderController(),
-      builder: (controller) {
-        return Scaffold(
-          backgroundColor: AppColors.grey50,
-          body: SafeArea(
-            child: controller.isLoading.value
-                ? Constant.loader(context)
-                : RefreshIndicator(
-                    onRefresh: () => controller.fetchInitialData(),
-                    color: AppColors.primary,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: controller.scheduledOrdersList.isEmpty
-                              ? _buildEmptyState(context, controller)
-                              : ListView.builder(
-                                  itemCount:
-                                      controller.scheduledOrdersList.length,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 6, horizontal: 6),
-                                  itemBuilder: (context, index) {
-                                    // Each card is built with a specific 'order' object
-                                    OrderModel order =
-                                        controller.scheduledOrdersList[index];
-                                    return _buildScheduledRideCard(
-                                        context, order, controller);
-                                  },
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-          ),
-        );
-      },
-    );
-  }
+    // This controller is suitable for handling actions on any active order.
+    final ActiveOrderController controller = Get.put(ActiveOrderController());
 
-  Widget _buildEmptyState(
-      BuildContext context, ScheduledOrderController controller) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Container(
-            height: constraints.maxHeight,
-            alignment: Alignment.center,
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.event_busy, size: 80, color: Colors.grey.shade400),
-                  const SizedBox(height: 24),
-                  Text(
-                    "No Scheduled Rides Available".tr,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Check back later for new scheduled ride opportunities.".tr,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton.icon(
-                    onPressed: () => controller.fetchInitialData(),
-                    icon: const Icon(Icons.refresh, size: 20),
-                    label: Text("Refresh".tr),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      backgroundColor: Colors.white,
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                            color: AppColors.primary.withOpacity(0.5)),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // NEW: A consistent container for all ride cards.
-  Widget _buildRideCardContainer({required Widget child}) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 20,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: child,
-      );
-
-  // NEW: Redesigned card to match modern styling.
-  Widget _buildScheduledRideCard(BuildContext context, OrderModel order,
-      ScheduledOrderController controller) {
-    final rideDate = order.createdDate?.toDate();
-    final formattedDate = rideDate != null
-        ? DateFormat('E, d MMM yyyy').format(rideDate)
-        : 'Date not available';
-    final formattedTime =
-        rideDate != null ? DateFormat('h:mm a').format(rideDate) : 'Time n/a';
-
-    return InkWell(
-        onTap: () => _showRideDetailsBottomSheet(context, order, controller),
-        borderRadius: BorderRadius.circular(12),
-        child: _buildRideCardContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with Date and Time
-              Row(
-                children: [
-                  Icon(Icons.calendar_today_outlined,
-                      color: AppColors.primary, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$formattedDate at $formattedTime',
-                    style: AppTypography.boldLabel(context)
-                        .copyWith(color: AppColors.primary),
-                  ),
-                ],
-              ),
-              const Divider(height: 20, thickness: 1),
-
-              // Pickup point and Payment row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.arrow_circle_down,
-                      size: 22, color: AppColors.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(order.sourceLocationName.toString(),
-                            style: AppTypography.boldLabel(context).copyWith(
-                                fontWeight: FontWeight.w500, height: 1.3)),
-                        Text("Pickup point".tr,
-                            style: AppTypography.caption(context)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      Constant.amountShow(amount: order.finalRate.toString()),
-                      style: AppTypography.boldLabel(context)
-                          .copyWith(color: AppColors.primary),
-                    ),
-                  ),
-                ],
-              ),
-              // Dotted line connecting the points
-              Row(
-                children: [
-                  Container(
-                    width: 22,
-                    alignment: Alignment.center,
-                    child: Container(
-                        height: 20, width: 1.5, color: AppColors.grey200),
-                  ),
-                  Expanded(child: Container()),
-                ],
-              ),
-              // Destination and Distance row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.location_on, size: 22, color: Colors.black),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(order.destinationLocationName.toString(),
-                            style: AppTypography.boldLabel(context).copyWith(
-                                fontWeight: FontWeight.w500, height: 1.3)),
-                        Text("Destination".tr,
-                            style: AppTypography.caption(context)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text("Distance".tr,
-                          style: AppTypography.caption(context)),
-                      Text(
-                        "${(double.parse(order.distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${order.distanceType}",
-                        style: AppTypography.boldLabel(context),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ],
-          ),
-        ));
-  }
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~ RIDE DETAIL BOTTOM SHEET WIDGET ~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class RideDetailBottomSheet extends StatefulWidget {
-  final OrderModel orderModel;
-  const RideDetailBottomSheet({Key? key, required this.orderModel})
-      : super(key: key);
-
-  @override
-  State<RideDetailBottomSheet> createState() => _RideDetailBottomSheetState();
-}
-
-class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
-  // TODO: IMPORTANT! Replace with your actual Google Maps API Key.
-  final String _googleApiKey =
-      "AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4"; // IMPORTANT
-
-  GoogleMapController? _mapController;
-  final Set<Marker> _markers = {};
-  final Set<Polyline> _polylines = {};
-
-  bool _isLoadingRoute = true;
-  String _routeDistance = '...';
-  String _routeDuration = '...';
-
-  @override
-  void initState() {
-    super.initState();
-    _setMarkersAndDrawRoute();
-  }
-
-  Future<Uint8List> getBytesFromAsset(String path, int width) async {
-    ByteData data = await rootBundle.load(path);
-    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
-        targetWidth: width);
-    ui.FrameInfo fi = await codec.getNextFrame();
-    return (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
-        .buffer
-        .asUint8List();
-  }
-
-  Future<void> _setMarkersAndDrawRoute() async {
-    if (widget.orderModel.sourceLocationLAtLng?.latitude == null ||
-        widget.orderModel.sourceLocationLAtLng?.longitude == null ||
-        widget.orderModel.destinationLocationLAtLng?.latitude == null ||
-        widget.orderModel.destinationLocationLAtLng?.longitude == null) {
-      if (kDebugMode)
-        print('Error: Missing coordinates for source or destination');
-      if (mounted) {
-        setState(() {
-          _routeDistance = 'Error';
-          _routeDuration = 'Error';
-          _isLoadingRoute = false;
-        });
-      }
-      return;
-    }
-
-    final source = LatLng(
-      widget.orderModel.sourceLocationLAtLng!.latitude!,
-      widget.orderModel.sourceLocationLAtLng!.longitude!,
-    );
-    final destination = LatLng(
-      widget.orderModel.destinationLocationLAtLng!.latitude!,
-      widget.orderModel.destinationLocationLAtLng!.longitude!,
-    );
-
-    try {
-      final Uint8List sourceIcon =
-          await getBytesFromAsset('assets/images/green_mark.png', 30);
-      final Uint8List destinationIcon =
-          await getBytesFromAsset('assets/images/red_mark.png', 30);
-
-      _markers.add(Marker(
-          markerId: const MarkerId('source'),
-          position: source,
-          icon: BitmapDescriptor.fromBytes(sourceIcon),
-          anchor: const Offset(0.5, 0.5)));
-
-      _markers.add(Marker(
-          markerId: const MarkerId('destination'),
-          position: destination,
-          icon: BitmapDescriptor.fromBytes(destinationIcon),
-          anchor: const Offset(0.5, 0.5)));
-
-      if (mounted) setState(() {});
-
-      await _drawRouteAndGetDetails();
-    } catch (e) {
-      if (kDebugMode) print('Error setting markers: $e');
-      if (mounted) {
-        setState(() {
-          _routeDistance = 'Error';
-          _routeDuration = 'Error';
-          _isLoadingRoute = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _drawRouteAndGetDetails() async {
-    final LatLng origin = LatLng(
-      widget.orderModel.sourceLocationLAtLng!.latitude!,
-      widget.orderModel.sourceLocationLAtLng!.longitude!,
-    );
-    final LatLng destination = LatLng(
-      widget.orderModel.destinationLocationLAtLng!.latitude!,
-      widget.orderModel.destinationLocationLAtLng!.longitude!,
-    );
-
-    String url = 'https://maps.googleapis.com/maps/api/directions/json?'
-        'origin=${origin.latitude},${origin.longitude}'
-        '&destination=${destination.latitude},${destination.longitude}'
-        '&mode=driving'
-        '&key=$_googleApiKey';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        if (data['status'] == 'OK' && (data['routes'] as List).isNotEmpty) {
-          final route = data['routes'][0];
-          final leg = route['legs'][0];
-          final overviewPolyline = route['overview_polyline']['points'];
-          final List<PointLatLng> decodedPoints =
-              PolylinePoints().decodePolyline(overviewPolyline);
-          final List<LatLng> routePoints = decodedPoints
-              .map((point) => LatLng(point.latitude, point.longitude))
-              .toList();
-
-          if (routePoints.isNotEmpty) {
-            _polylines.clear();
-            _polylines.add(Polyline(
-                polylineId: const PolylineId('route'),
-                points: routePoints,
-                color: AppColors.primary,
-                width: 2,
-                patterns: <PatternItem>[
-                  PatternItem.dash(20),
-                  PatternItem.gap(10)
-                ]));
+    return Scaffold(
+      backgroundColor: AppColors.grey75,
+      body: StreamBuilder<QuerySnapshot>(
+        // MODIFIED QUERY: This now only shows active rides that ARE scheduled.
+        stream: FirebaseFirestore.instance
+            .collection(CollectionName.orders)
+            .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
+            .where('status', whereIn: [
+              Constant.rideInProgress,
+              Constant.rideActive,
+            ])
+            .where('isScheduledRide',
+                isEqualTo: true) // The key change for this file.
+            .snapshots(),
+        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Something went wrong'.tr));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Constant.loader(context);
           }
 
-          if (mounted) {
-            setState(() {
-              _routeDistance = leg['distance']['text'] ?? 'N/A';
-              _routeDuration = leg['duration']['text'] ?? 'N/A';
-              _isLoadingRoute = false;
-            });
+          if (snapshot.data!.docs.isEmpty) {
+            return _buildEmptyState();
           }
-          _fitMapToShowRoute();
-        } else {
-          String errorMessage = data['error_message'] ?? 'No route found';
-          if (kDebugMode)
-            print("Directions API Error: ${data['status']} - $errorMessage");
-          if (mounted) {
-            setState(() {
-              _routeDistance = 'Route Error';
-              _routeDuration = 'Route Error';
-              _isLoadingRoute = false;
-            });
-          }
-        }
-      } else {
-        if (kDebugMode)
-          print("HTTP request failed with status: ${response.statusCode}");
-        if (mounted) {
-          setState(() {
-            _routeDistance = 'HTTP Error';
-            _routeDuration = 'HTTP Error';
-            _isLoadingRoute = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) print("Error fetching directions: $e");
-      if (mounted) {
-        setState(() {
-          _routeDistance = 'Network Error';
-          _routeDuration = 'Network Error';
-          _isLoadingRoute = false;
-        });
-      }
-    }
-  }
 
-  void _fitMapToShowRoute() {
-    if (_mapController == null || _markers.length < 2) return;
-
-    final bounds = _boundsFromLatLngList(
-        _markers.map((marker) => marker.position).toList());
-
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (_mapController != null && mounted) {
-        _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, 40.0), // Padding
-        );
-      }
-    });
-  }
-
-  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
-    assert(list.isNotEmpty);
-    double minLat = list.first.latitude;
-    double maxLat = list.first.latitude;
-    double minLng = list.first.longitude;
-    double maxLng = list.first.longitude;
-
-    for (LatLng latLng in list) {
-      minLat = min(minLat, latLng.latitude);
-      maxLat = max(maxLat, latLng.latitude);
-      minLng = min(minLng, latLng.longitude);
-      maxLng = max(maxLng, latLng.longitude);
-    }
-
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6)
+                .copyWith(bottom: 80),
+            itemBuilder: (context, index) {
+              final orderModel = OrderModel.fromJson(
+                  snapshot.data!.docs[index].data() as Map<String, dynamic>);
+              return _buildActiveOrderCard(context, orderModel, controller);
+            },
+          );
+        },
+      ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  /// Builds the card for an active order, styled with a ride type tag.
+  Widget _buildActiveOrderCard(BuildContext context, OrderModel orderModel,
+      ActiveOrderController controller) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 20,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
+          _buildRideTypeTag(context, orderModel),
           Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Container(
-              width: 40,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildMapSection(),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
             child: Column(
               children: [
-                UserView(
-                  userId: widget.orderModel.userId,
-                  amount: widget.orderModel.finalRate,
-                  distance: widget.orderModel.distance,
-                  distanceType: widget.orderModel.distanceType,
+                _buildLocationAndPriceSection(context, orderModel),
+                Divider(
+                  height: 10,
+                  thickness: 1,
+                  color: AppColors.background,
                 ),
-                const Divider(
-                    height: 22, thickness: 1, color: AppColors.grey200),
-                _buildDetailsCard(),
-                const SizedBox(height: 10),
-                _buildActionButtons(),
+                _buildMainActionAndContactRow(context, orderModel, controller),
+                SizedBox(height: 5),
+                _buildSecondaryActionRow(context, orderModel),
+                Divider(
+                  height: 20,
+                  color: AppColors.grey200,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  spacing: 30,
+                  children: [
+                    Text(
+                      Constant().formatTimestamp(orderModel.createdDate),
+                      style: AppTypography.caption(context)
+                          .copyWith(color: Colors.grey.shade600),
+                    ),
+                    Expanded(
+                        child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      spacing: 5,
+                      children: [
+                        Container(
+                          width: 50,
+                          child: _buildCircleIconButton(
+                            context: context,
+                            icon: Icons.chat_bubble_outline,
+                            onTap: () => _openChat(orderModel),
+                          ),
+                        ),
+                        Container(
+                          width: 50,
+                          child: _buildCircleIconButton(
+                            context: context,
+                            icon: Icons.call_outlined,
+                            onTap: () => _makePhoneCall(orderModel),
+                          ),
+                        )
+                      ],
+                    )),
+                  ],
+                )
               ],
             ),
           ),
@@ -684,159 +149,469 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
   }
 
-  Widget _buildMapSection() {
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            children: [
-              GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: LatLng(
-                      widget.orderModel.sourceLocationLAtLng!.latitude!,
-                      widget.orderModel.sourceLocationLAtLng!.longitude!),
-                  zoom: 10,
-                ),
-                onMapCreated: (controller) async {
-                  _mapController = controller;
+  /// Builds the top tag indicating the ride type (On-Demand/Scheduled) and date.
+  Widget _buildRideTypeTag(BuildContext context, OrderModel orderModel) {
+    // This will always evaluate to true now, showing the "Scheduled Ride" tag.
+    bool isScheduled = orderModel.isScheduledRide == true;
+    Color tagColor = isScheduled ? Colors.orange.shade700 : AppColors.primary;
+    String tagText = isScheduled ? "Scheduled Ride".tr : "On-Demand Ride".tr;
 
-                  try {
-                    String style =
-                        await rootBundle.loadString('assets/map_style.json');
-                    _mapController?.setMapStyle(style);
-                  } catch (e) {
-                    debugPrint("Error loading map style: $e");
-                  }
-                  _fitMapToShowRoute();
-                },
-                markers: _markers,
-                polylines: _polylines,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: true,
-                compassEnabled: false,
-                mapToolbarEnabled: false,
-              ),
-              if (_isLoadingRoute)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailsCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.grey50,
-        borderRadius: BorderRadius.circular(12),
+        color: tagColor.withOpacity(0.1),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildDetailItem(
-            'Ride Fare'.tr,
-            Constant.amountShow(amount: widget.orderModel.finalRate),
-            AppColors.primary,
-          ),
-          _buildDetailItem(
-            'Distance'.tr,
-            _isLoadingRoute ? '...' : _routeDistance,
-            Colors.black87,
-          ),
-          _buildDetailItem(
-            'Duration'.tr,
-            _isLoadingRoute ? '...' : _routeDuration,
-            Colors.black87,
-          ),
-          _buildDetailItem(
-            'Payment'.tr,
-            widget.orderModel.paymentType.toString(),
-            Colors.black87,
+          Text(
+            tagText,
+            style: AppTypography.boldLabel(context).copyWith(color: tagColor),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailItem(String title, String value, Color valueColor) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title,
-            style: AppTypography.caption(context).copyWith(
-              color: Colors.grey.shade600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTypography.appTitle(context).copyWith(
-              color: valueColor,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
+  /// Builds the location/price/distance section.
+  Widget _buildLocationAndPriceSection(
+      BuildContext context, OrderModel orderModel) {
+    return Column(
       children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.grey.shade800,
-              side: BorderSide(color: Colors.grey.shade400),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+        // Pickup row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.arrow_circle_down, size: 22, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(orderModel.sourceLocationName.toString(),
+                      style: AppTypography.boldLabel(context)
+                          .copyWith(fontWeight: FontWeight.w500, height: 1.3)),
+                  Text("Pickup point".tr,
+                      style: AppTypography.caption(context)),
+                ],
+              ),
             ),
-            child: Text("Close".tr,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text("Payment".tr, style: AppTypography.caption(context)),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    Constant.amountShow(
+                        amount: orderModel.finalRate.toString()),
+                    style: AppTypography.boldLabel(context)
+                        .copyWith(color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {
-              // Passing true signals to accept the ride
-              Navigator.pop(context, true);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+        // Connector
+        Row(
+          children: [
+            Container(
+              width: 22,
+              alignment: Alignment.center,
+              child:
+                  Container(height: 20, width: 1.5, color: AppColors.grey200),
             ),
-            child: Text("Accept Ride".tr,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
+            Expanded(child: Container()),
+          ],
+        ),
+        // Destination row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.location_on, size: 22, color: Colors.black87),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(orderModel.destinationLocationName.toString(),
+                      style: AppTypography.boldLabel(context)
+                          .copyWith(fontWeight: FontWeight.w500, height: 1.3)),
+                  Text("Destination".tr, style: AppTypography.caption(context)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text("Distance".tr, style: AppTypography.caption(context)),
+                Text(
+                  "${(double.parse(orderModel.distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${orderModel.distanceType}",
+                  style: AppTypography.boldLabel(context),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  /// Main action (Pickup/Complete) and contact buttons (Chat/Call).
+  Widget _buildMainActionAndContactRow(BuildContext context,
+      OrderModel orderModel, ActiveOrderController controller) {
+    bool isRideInProgress = orderModel.status == Constant.rideInProgress;
+
+    return Row(
+      children: [
+        Expanded(
+          flex: 1,
+          child: Container(
+            height: 35,
+            child: ElevatedButton(
+              onPressed: () => isRideInProgress
+                  ? _completeRide(controller, orderModel)
+                  : _showOtpDialog(context, controller, orderModel),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isRideInProgress
+                    ? AppColors.darkBackground
+                    : AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3)),
+              ),
+              child: Text(
+                isRideInProgress ? "Complete Ride".tr : "Pickup Customer".tr,
+                style: AppTypography.button(context)
+                    .copyWith(color: AppColors.background),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Expanded(
+            child: Container(
+          height: 35,
+          child: OutlinedButton(
+            onPressed: () => _trackRide(orderModel),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.grey500,
+              side: BorderSide(color: Colors.grey.shade300),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(3)),
+            ),
+            child: Text("Track Ride".tr,
+                style: AppTypography.button(context)
+                    .copyWith(color: AppColors.grey600)),
+          ),
+        )),
+      ],
+    );
+  }
+
+  /// Secondary actions (Cancel/Track).
+  Widget _buildSecondaryActionRow(BuildContext context, OrderModel orderModel) {
+    return Row(
+      children: [
+        Expanded(
+            child: Container(
+          height: 35,
+          child: OutlinedButton(
+            onPressed: () => _cancelRide(context, orderModel),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(3)),
+            ),
+            child: Text("Cancel Ride".tr,
+                style: AppTypography.button(context)
+                    .copyWith(color: AppColors.primary)),
+          ),
+        )),
+      ],
+    );
+  }
+
+  /// A circular icon button for chat and call.
+  Widget _buildCircleIconButton({
+    required BuildContext context,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      flex: 1,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 18),
+        ),
+      ),
+    );
+  }
+
+  /// A widget to display when no active rides are found.
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.event_available, size: 80, color: Colors.grey.shade400),
+            const SizedBox(height: 24),
+            Text("No Active Scheduled Rides".tr,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800)),
+            const SizedBox(height: 8),
+            Text("Your current scheduled rides will appear here.".tr,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                    fontSize: 15, color: Colors.grey.shade600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shows the OTP dialog for customer pickup.
+  void _showOtpDialog(BuildContext context, ActiveOrderController controller,
+      OrderModel orderModel) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) =>
+          otpDialog(context, controller, orderModel),
+    );
+  }
+
+  // --- Action Handlers ---
+
+  Future<void> _completeRide(
+      ActiveOrderController controller, OrderModel orderModel) async {
+    ShowToastDialog.showLoader("Completing Ride...".tr);
+    orderModel.status = Constant.rideComplete;
+    orderModel.paymentStatus = true;
+    orderModel.updateDate = Timestamp.now();
+    UserModel? customer =
+        await FireStoreUtils.getCustomer(orderModel.userId.toString());
+    if (customer?.fcmToken != null) {
+      await SendNotification.sendOneNotification(
+        token: customer!.fcmToken!,
+        title: 'Ride complete!'.tr,
+        body: 'Please complete your payment.'.tr,
+        payload: {"type": "city_order_complete", "orderId": orderModel.id},
+      );
+    }
+
+    if (await FireStoreUtils.setOrder(orderModel)) {
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Ride completed successfully".tr);
+      Get.to(() => const ReviewScreen(), arguments: {
+        "type": "orderModel",
+        "orderModel": orderModel,
+      });
+    } else {
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Failed to complete ride".tr);
+    }
+  }
+
+  Future<void> _cancelRide(BuildContext context, OrderModel orderModel) async {
+    bool? confirmCancel = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text("Confirm Cancel".tr),
+        content: Text("Are you sure you want to cancel this ride?".tr),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text("No".tr)),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text("Yes".tr)),
+        ],
+      ),
+    );
+
+    if (confirmCancel == true) {
+      ShowToastDialog.showLoader("Cancelling ride...".tr);
+      orderModel.status = Constant.rideCanceled;
+
+      UserModel? customer =
+          await FireStoreUtils.getCustomer(orderModel.userId.toString());
+      if (customer?.fcmToken != null) {
+        await SendNotification.sendOneNotification(
+          token: customer!.fcmToken!,
+          title: 'Ride Cancelled'.tr,
+          body: 'Your ride has been cancelled by the driver.'.tr,
+          payload: {"type": "city_order_cancelled", "orderId": orderModel.id},
+        );
+      }
+      await FireStoreUtils.setOrder(orderModel);
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Ride cancelled successfully".tr);
+    }
+  }
+
+  void _trackRide(OrderModel orderModel) {
+    if (Constant.mapType == "inappmap") {
+      Get.to(() => const LiveTrackingScreen(),
+          arguments: {"orderModel": orderModel, "type": "orderModel"});
+    } else {
+      if (orderModel.status == Constant.rideInProgress) {
+        Utils.redirectMap(
+          latitude: orderModel.destinationLocationLAtLng!.latitude!,
+          longLatitude: orderModel.destinationLocationLAtLng!.longitude!,
+          name: orderModel.destinationLocationName.toString(),
+        );
+      } else {
+        Utils.redirectMap(
+          latitude: orderModel.sourceLocationLAtLng!.latitude!,
+          longLatitude: orderModel.sourceLocationLAtLng!.longitude!,
+          name: orderModel.sourceLocationName.toString(),
+        );
+      }
+    }
+  }
+
+  Future<void> _openChat(OrderModel orderModel) async {
+    UserModel? customer =
+        await FireStoreUtils.getCustomer(orderModel.userId.toString());
+    DriverUserModel? driver =
+        await FireStoreUtils.getDriverProfile(orderModel.driverId.toString());
+    if (customer != null && driver != null) {
+      Get.to(() => ChatScreens(
+          driverId: driver.id,
+          customerId: customer.id,
+          customerName: customer.fullName,
+          customerProfileImage: customer.profilePic,
+          driverName: driver.fullName,
+          driverProfileImage: driver.profilePic,
+          orderId: orderModel.id,
+          token: customer.fcmToken));
+    }
+  }
+
+  Future<void> _makePhoneCall(OrderModel orderModel) async {
+    UserModel? customer =
+        await FireStoreUtils.getCustomer(orderModel.userId.toString());
+    if (customer?.phoneNumber != null) {
+      Constant.makePhoneCall("${customer!.countryCode}${customer.phoneNumber}");
+    }
+  }
+
+  /// OTP verification dialog.
+  Dialog otpDialog(BuildContext context, ActiveOrderController controller,
+      OrderModel orderModel) {
+    final TextEditingController otpController = TextEditingController();
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      backgroundColor: AppColors.background,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Enter Customer OTP".tr,
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600, fontSize: 18)),
+            const SizedBox(height: 8),
+            Text("Ask the customer for the 6-digit code to start the ride.".tr,
+                style: GoogleFonts.poppins(color: Colors.grey.shade600)),
+            Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: PinCodeTextField(
+                length: 6,
+                appContext: context,
+                keyboardType: TextInputType.phone,
+                pinTheme: PinTheme(
+                  fieldHeight: 45,
+                  fieldWidth: 40,
+                  activeColor: AppColors.primary,
+                  selectedColor: AppColors.primary,
+                  inactiveColor: AppColors.textFieldBorder,
+                  activeFillColor: AppColors.textField,
+                  inactiveFillColor: AppColors.textField,
+                  selectedFillColor: AppColors.textField,
+                  shape: PinCodeFieldShape.box,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                enableActiveFill: true,
+                cursorColor: AppColors.primary,
+                controller: otpController,
+                onCompleted: (v) async => _verifyOtp(v, orderModel),
+                onChanged: (value) {},
+              ),
+            ),
+            const SizedBox(height: 16),
+            ButtonThem.buildButton(
+              context,
+              title: "Verify & Start Ride".tr,
+              onPress: () async => _verifyOtp(otpController.text, orderModel),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _verifyOtp(String inputOtp, OrderModel orderModel) async {
+    if (inputOtp.length < 6) {
+      ShowToastDialog.showToast("Please enter the full 6-digit OTP".tr,
+          position: EasyLoadingToastPosition.center);
+      return;
+    }
+
+    if (orderModel.otp.toString().trim() == inputOtp.trim()) {
+      Get.back(); // Close the dialog
+      ShowToastDialog.showLoader("Please wait...".tr);
+      orderModel.status = Constant.rideInProgress;
+
+      await FireStoreUtils.setOrder(orderModel);
+
+      UserModel? customer =
+          await FireStoreUtils.getCustomer(orderModel.userId.toString());
+      if (customer?.fcmToken != null) {
+        await SendNotification.sendOneNotification(
+          token: customer!.fcmToken!,
+          title: 'Ride Started'.tr,
+          body: 'Your ride has started. Enjoy your trip!'.tr,
+          payload: {},
+        );
+      }
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Customer pickup successful".tr);
+
+      if (Constant.mapType == "inappmap") {
+        Get.to(() => const LiveTrackingScreen(),
+            arguments: {"orderModel": orderModel, "type": "orderModel"});
+      }
+    } else {
+      ShowToastDialog.showToast("Invalid OTP".tr,
+          position: EasyLoadingToastPosition.center);
+    }
   }
 }

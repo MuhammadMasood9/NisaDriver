@@ -60,7 +60,7 @@ class AppTypography {
       );
 
   static TextStyle button(BuildContext context) => GoogleFonts.poppins(
-        fontSize: _responsiveFontSize(context, 14),
+        fontSize: _responsiveFontSize(context, 12),
         fontWeight: FontWeight.w600,
         color: AppColors.darkTextFieldBorder,
       );

@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui; // Needed for map camera bounds and image codec
-import 'package:http/http.dart' as http;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
-import 'package:driver/controller/home_controller.dart';
+import 'package:driver/constant/send_notification.dart';
+import 'package:driver/constant/show_toast_dialog.dart';
+import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
@@ -14,73 +16,192 @@ import 'package:driver/ui/home_screens/order_map_screen.dart';
 import 'package:driver/ui/home_screens/zone_ride_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/user_view.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
-class NewOrderScreen extends StatefulWidget {
-  const NewOrderScreen({super.key});
+// Enum to identify the type of ride for conditional logic
+enum RideType { newRequest, scheduled, active }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~ UNIFIED ORDER CONTROLLER ~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class NewOrderController extends GetxController {
+  // Observables for UI state
+  RxBool isLoading = true.obs;
+  Rx<DriverUserModel> driverModel = DriverUserModel().obs;
+
+  // Observables for ride lists
+  RxList<OrderModel> acceptedOrdersList = <OrderModel>[].obs;
+  RxList<OrderModel> scheduledOrdersList = <OrderModel>[].obs;
+  RxList<OrderModel> newOrdersList = <OrderModel>[].obs;
+
+  // Stream subscriptions
+  StreamSubscription? _acceptedOrdersSubscription;
+  StreamSubscription? _newOrdersSubscription;
 
   @override
-  State<NewOrderScreen> createState() => _NewOrderScreenState();
-}
-
-class _NewOrderScreenState extends State<NewOrderScreen>
-    with AutomaticKeepAliveClientMixin<NewOrderScreen> {
-  final HomeController controller = Get.put(HomeController());
-
-  Stream<List<OrderModel>>? _allNewOrdersBroadcastStream;
-  Stream<QuerySnapshot>? _acceptedOrdersStream;
-
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    // Streams are initialized in the build method to ensure they refresh
-    // when the driver's online status changes.
+  void onInit() {
+    super.onInit();
+    initializeAllData();
   }
 
-  void _initializeStreams() {
-    _acceptedOrdersStream = FirebaseFirestore.instance
+  @override
+  void onClose() {
+    _acceptedOrdersSubscription?.cancel();
+    _newOrdersSubscription?.cancel();
+    super.onClose();
+  }
+
+  Future<void> initializeAllData() async {
+    isLoading.value = true;
+
+    // Fetch initial static data
+    await fetchDriverData();
+    await fetchScheduledOrders();
+
+    // If driver is online, set up real-time streams
+    if (driverModel.value.isOnline == true &&
+        driverModel.value.documentVerification == true) {
+      setupStreams();
+    }
+
+    isLoading.value = false;
+  }
+
+  Future<void> fetchDriverData() async {
+    final driver = await FireStoreUtils.getDriverProfile(
+        FireStoreUtils.getCurrentUid() ?? '');
+    if (driver != null) {
+      driverModel.value = driver;
+    }
+  }
+
+  Future<void> fetchScheduledOrders() async {
+    try {
+      String currentDriverId = FireStoreUtils.getCurrentUid() ?? '';
+      if (currentDriverId.isEmpty) return;
+
+      List<OrderModel> orders =
+          await FireStoreUtils.getScheduledOrders(currentDriverId);
+      scheduledOrdersList.value = orders.where((order) {
+        final rejectedIds = order.rejectedDriverId ?? [];
+        return !rejectedIds.contains(currentDriverId);
+      }).toList();
+    } catch (e) {
+      if (kDebugMode) print("Error fetching scheduled orders: $e");
+    }
+  }
+
+  void setupStreams() {
+    // Cancel existing streams before creating new ones
+    _acceptedOrdersSubscription?.cancel();
+    _newOrdersSubscription?.cancel();
+
+    // Stream for accepted orders
+    _acceptedOrdersSubscription = FirebaseFirestore.instance
         .collection(CollectionName.orders)
         .where('acceptedDriverId',
             arrayContains: FireStoreUtils.getCurrentUid())
-        .snapshots();
+        .snapshots()
+        .listen((snapshot) {
+      acceptedOrdersList.value =
+          snapshot.docs.map((doc) => OrderModel.fromJson(doc.data())).toList();
+    });
 
-    _allNewOrdersBroadcastStream = FireStoreUtils()
-        .getOrders(
-          controller.driverModel.value,
-          Constant.currentLocation?.latitude,
-          Constant.currentLocation?.longitude,
-        )
-        .asBroadcastStream();
+    // Stream for new orders
+    _newOrdersSubscription = FireStoreUtils()
+        .getOrders(driverModel.value, Constant.currentLocation?.latitude,
+            Constant.currentLocation?.longitude)
+        .listen((orders) {
+      newOrdersList.value = orders;
+    });
   }
 
-  @override
-  void dispose() {
-    FireStoreUtils().closeStream();
-    super.dispose();
+  Future<void> acceptScheduledRide(OrderModel orderToAccept) async {
+    if (double.parse(driverModel.value.walletAmount.toString()) <
+        double.parse(Constant.minimumDepositToRideAccept ?? '0.0')) {
+      ShowToastDialog.showToast(
+          "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet."
+              .tr);
+      return;
+    }
+
+    ShowToastDialog.showLoader("Accepting Ride...".tr);
+
+    try {
+      String driverId = FireStoreUtils.getCurrentUid() ?? '';
+      Map<String, dynamic> updatedData = {
+        'status': Constant.rideActive,
+        'driverId': driverId,
+        'driver': driverModel.value.toJson(),
+      };
+
+      await FireStoreUtils.fireStore
+          .collection(CollectionName.orders)
+          .doc(orderToAccept.id)
+          .update(updatedData);
+
+      var customer =
+          await FireStoreUtils.getCustomer(orderToAccept.userId.toString());
+      if (customer != null && customer.fcmToken != null) {
+        await SendNotification.sendOneNotification(
+          token: customer.fcmToken!,
+          title: 'Ride Secured!'.tr,
+          body: 'Your driver is assigned for the scheduled ride.'.tr,
+          payload: {'orderId': orderToAccept.id},
+        );
+      }
+
+      scheduledOrdersList.removeWhere((o) => o.id == orderToAccept.id);
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Ride Accepted! Check your active rides.".tr);
+    } catch (e) {
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Failed to accept ride: $e".tr);
+    }
   }
+
+  Future<void> handleTimerExpiry(String orderId) async {
+    String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection(CollectionName.orders)
+          .doc(orderId)
+          .update({
+        'acceptedDriverId': FieldValue.arrayRemove([driverId])
+      });
+    } catch (e) {
+      debugPrint("Error updating order on timer expiry: $e");
+    }
+  }
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~ NEW ORDER SCREEN ~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class NewOrderScreen extends StatelessWidget {
+  const NewOrderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
+    final NewOrderController controller = Get.put(NewOrderController());
 
     return Scaffold(
-      backgroundColor: AppColors.grey50,
+      backgroundColor: AppColors.grey75,
       body: SafeArea(
         child: Obx(() {
           if (controller.isLoading.value) {
             return Constant.loader(context);
-          }
-
-          if (_allNewOrdersBroadcastStream == null) {
-            _initializeStreams();
           }
 
           if (controller.driverModel.value.isOnline == false) {
@@ -95,31 +216,27 @@ class _NewOrderScreenState extends State<NewOrderScreen>
           }
 
           return RefreshIndicator(
-            onRefresh: () async {
-              setState(() {
-                _initializeStreams();
-              });
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLiveRidesNavigationCard(),
-                  _buildAcceptedOrdersSection(),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
-                    child: Text(
-                      "New Ride Requests".tr,
-                      style: AppTypography.boldHeaders(context),
-                    ),
+            onRefresh: () => controller.initializeAllData(),
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      _buildLiveRidesNavigationCard(context),
+
+                      // Sections for different ride types
+                      _buildAcceptedOrdersSection(context, controller),
+                      _buildScheduledOrdersSection(context, controller),
+                      _buildNewOrdersSection(context, controller),
+
+                      const SizedBox(height: 80),
+                    ],
                   ),
-                  _buildNewOrdersSection(context, controller),
-                  const SizedBox(
-                    height: 80,
-                  )
-                ],
+                ),
               ),
             ),
           );
@@ -128,33 +245,45 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
-  void _showRideDetailsBottomSheet(OrderModel orderModel,
-      {bool isAlreadyAccepted = false}) {
+  void _showRideDetailsBottomSheet(
+      BuildContext context, OrderModel orderModel, RideType rideType) {
+    final controller = Get.find<NewOrderController>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => RideDetailBottomSheet(
         orderModel: orderModel,
-        isAlreadyAccepted: isAlreadyAccepted,
+        rideType: rideType,
       ),
-    ).then((value) {
-      if (value != null && value == true) {
-        Get.to(() => const OrderMapScreen(),
-            arguments: {"orderModel": orderModel.id.toString()});
+    ).then((accepted) {
+      if (accepted != null && accepted == true) {
+        if (rideType == RideType.scheduled) {
+          controller.acceptScheduledRide(orderModel);
+        } else if (rideType == RideType.newRequest) {
+          Get.to(() => const OrderMapScreen(),
+              arguments: {"orderModel": orderModel.id.toString()});
+        }
       }
     });
   }
 
-  Widget _buildLiveRidesNavigationCard() {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+      child: Text(title, style: AppTypography.boldHeaders(context)),
+    );
+  }
+
+  Widget _buildLiveRidesNavigationCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: InkWell(
         onTap: () => Get.to(() => const RouteMatchingScreen()),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(6),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(6),
             gradient: LinearGradient(
               colors: [AppColors.primary, AppColors.darkModePrimary],
               begin: Alignment.topLeft,
@@ -205,96 +334,147 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
-  Widget _buildAcceptedOrdersSection() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _acceptedOrdersStream,
-      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text("Something went wrong: ${snapshot.error}"));
-        }
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox.shrink();
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6.0, vertical: 8.0),
-              child: Text(
-                "Active Orders".tr,
-                style: AppTypography.boldHeaders(context),
+  Widget _buildAcceptedOrdersSection(
+      BuildContext context, NewOrderController controller) {
+    if (controller.acceptedOrdersList.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, "Active Orders".tr),
+        ListView.builder(
+          itemCount: controller.acceptedOrdersList.length,
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          itemBuilder: (context, index) {
+            OrderModel orderModel = controller.acceptedOrdersList[index];
+            return InkWell(
+              onTap: () => _showRideDetailsBottomSheet(
+                  context, orderModel, RideType.active),
+              child: OrderItemWithTimer(
+                key: ValueKey("accepted-${orderModel.id}"),
+                orderModel: orderModel,
+                onExpired: () => controller.handleTimerExpiry(orderModel.id!),
               ),
-            ),
-            ListView.builder(
-              itemCount: snapshot.data!.docs.length,
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              itemBuilder: (context, index) {
-                OrderModel orderModel = OrderModel.fromJson(
-                    snapshot.data!.docs[index].data() as Map<String, dynamic>);
+            );
+          },
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
+          child: Divider(),
+        ),
+      ],
+    );
+  }
 
-                return InkWell(
-                  onTap: () => _showRideDetailsBottomSheet(orderModel,
-                      isAlreadyAccepted: true),
-                  child: OrderItemWithTimer(
-                      key: ValueKey("accepted-${orderModel.id}"),
-                      orderModel: orderModel),
-                );
-              },
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 6),
-              child: Divider(),
-            ),
-          ],
-        );
-      },
+  Widget _buildScheduledOrdersSection(
+      BuildContext context, NewOrderController controller) {
+    if (controller.scheduledOrdersList.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, "Scheduled Rides".tr),
+        ListView.builder(
+          itemCount: controller.scheduledOrdersList.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (context, index) {
+            OrderModel orderModel = controller.scheduledOrdersList[index];
+            return _buildGenericRideCard(
+                context, orderModel, RideType.scheduled);
+          },
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
+          child: Divider(),
+        ),
+      ],
     );
   }
 
   Widget _buildNewOrdersSection(
-      BuildContext context, HomeController controller) {
-    return StreamBuilder<List<OrderModel>>(
-      stream: _allNewOrdersBroadcastStream,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text("Something went wrong: ${snapshot.error}"));
-        }
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Constant.loader(context);
-        }
-        if (!snapshot.hasData || (snapshot.data?.isEmpty ?? true)) {
-          return _buildInfoMessage(
-              "All Caught Up!", "No new rides found nearby.",
-              icon: Icons.done_all_rounded);
-        } else {
-          return ListView.builder(
-            itemCount: snapshot.data!.length,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemBuilder: (context, index) {
-              OrderModel orderModel = snapshot.data![index];
-              return _buildNewRideRequestCard(orderModel,
-                  key: ValueKey("new-${orderModel.id}"));
-            },
-          );
-        }
-      },
+      BuildContext context, NewOrderController controller) {
+    if (controller.newOrdersList.isEmpty) {
+      // Show "All Caught Up" only if there are no other rides either
+      if (controller.acceptedOrdersList.isEmpty &&
+          controller.scheduledOrdersList.isEmpty) {
+        return _buildInfoMessage("All Caught Up!", "No new rides found nearby.",
+            icon: Icons.done_all_rounded);
+      }
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, "New Ride Requests".tr),
+        ListView.builder(
+          itemCount: controller.newOrdersList.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (context, index) {
+            OrderModel orderModel = controller.newOrdersList[index];
+            return _buildGenericRideCard(
+                context, orderModel, RideType.newRequest,
+                key: ValueKey("new-${orderModel.id}"));
+          },
+        ),
+      ],
     );
   }
 
-  // MODIFIED: This card now follows the design of the "Order History" screen.
-  Widget _buildNewRideRequestCard(OrderModel orderModel, {Key? key}) {
+  Widget _buildGenericRideCard(
+      BuildContext context, OrderModel order, RideType rideType,
+      {Key? key}) {
+    final rideDate = order.createdDate?.toDate();
+    final formattedDate = rideDate != null
+        ? DateFormat('E, d MMM yyyy').format(rideDate)
+        : 'Date not available';
+    final formattedTime =
+        rideDate != null ? DateFormat('h:mm a').format(rideDate) : 'Time n/a';
+    final String amount = rideType == RideType.newRequest
+        ? order.offerRate.toString()
+        : order.finalRate.toString();
+
     return InkWell(
         key: key,
-        onTap: () => _showRideDetailsBottomSheet(orderModel),
-        child: _buildRideCardContainer(
+        onTap: () => _showRideDetailsBottomSheet(context, order, rideType),
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 20,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (rideType == RideType.scheduled) ...[
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined,
+                        color: AppColors.primary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$formattedDate at $formattedTime',
+                      style: AppTypography.boldLabel(context)
+                          .copyWith(color: AppColors.primary),
+                    ),
+                  ],
+                ),
+                const Divider(height: 20, thickness: 1),
+              ],
               // Pickup point and Payment row
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,7 +486,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(orderModel.sourceLocationName.toString(),
+                        Text(order.sourceLocationName.toString(),
                             style: AppTypography.boldLabel(context).copyWith(
                                 fontWeight: FontWeight.w500, height: 1.3)),
                         Text("Pickup point".tr,
@@ -323,8 +503,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      Constant.amountShow(
-                          amount: orderModel.offerRate.toString()),
+                      Constant.amountShow(amount: amount),
                       style: AppTypography.boldLabel(context)
                           .copyWith(color: AppColors.primary),
                     ),
@@ -353,7 +532,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(orderModel.destinationLocationName.toString(),
+                        Text(order.destinationLocationName.toString(),
                             style: AppTypography.boldLabel(context).copyWith(
                                 fontWeight: FontWeight.w500, height: 1.3)),
                         Text("Destination".tr,
@@ -368,7 +547,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                       Text("Distance".tr,
                           style: AppTypography.caption(context)),
                       Text(
-                        "${(double.parse(orderModel.distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${orderModel.distanceType}",
+                        "${(double.parse(order.distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${order.distanceType}",
                         style: AppTypography.boldLabel(context),
                       ),
                     ],
@@ -380,55 +559,34 @@ class _NewOrderScreenState extends State<NewOrderScreen>
         ));
   }
 
-  Widget _buildRideCardContainer({required Widget child}) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 20,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: child,
-      );
-
-  Widget _buildInfoMessage(String title, String subtitle,
-          {IconData? icon, Color? color}) =>
+  Widget _buildInfoMessage(String title, String subtitle, {IconData? icon}) =>
       Center(
-        child: Opacity(
-          opacity: 0.7,
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null)
-                  Icon(icon, size: 80, color: Colors.grey.shade400),
-                const SizedBox(height: 24),
-                Text(title.tr,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade800,
-                    )),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle.tr,
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null)
+                Icon(icon, size: 80, color: Colors.grey.shade400),
+              const SizedBox(height: 24),
+              Text(title.tr,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    color: Colors.grey.shade600,
-                  ),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
+                  )),
+              const SizedBox(height: 8),
+              Text(
+                subtitle.tr,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  color: Colors.grey.shade600,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -440,12 +598,12 @@ class _NewOrderScreenState extends State<NewOrderScreen>
 
 class RideDetailBottomSheet extends StatefulWidget {
   final OrderModel orderModel;
-  final bool isAlreadyAccepted;
+  final RideType rideType;
 
   const RideDetailBottomSheet({
     Key? key,
     required this.orderModel,
-    this.isAlreadyAccepted = false,
+    required this.rideType,
   }) : super(key: key);
 
   @override
@@ -486,7 +644,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         widget.orderModel.sourceLocationLAtLng?.longitude == null ||
         widget.orderModel.destinationLocationLAtLng?.latitude == null ||
         widget.orderModel.destinationLocationLAtLng?.longitude == null) {
-      print('Error: Missing coordinates for source or destination');
+      if (kDebugMode)
+        print('Error: Missing coordinates for source or destination');
       if (mounted) {
         setState(() {
           _routeDistance = 'Error';
@@ -528,7 +687,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
       await _drawRouteAndGetDetails();
     } catch (e) {
-      print('Error setting markers: $e');
+      if (kDebugMode) print('Error setting markers: $e');
       if (mounted) {
         setState(() {
           _routeDistance = 'Error';
@@ -594,7 +753,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           _fitMapToShowRoute();
         } else {
           String errorMessage = data['error_message'] ?? 'No route found';
-          print("Directions API Error: ${data['status']} - $errorMessage");
+          if (kDebugMode)
+            print("Directions API Error: ${data['status']} - $errorMessage");
           if (mounted) {
             setState(() {
               _routeDistance = 'Route Error';
@@ -604,7 +764,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           }
         }
       } else {
-        print("HTTP request failed with status: ${response.statusCode}");
+        if (kDebugMode)
+          print("HTTP request failed with status: ${response.statusCode}");
         if (mounted) {
           setState(() {
             _routeDistance = 'HTTP Error';
@@ -614,7 +775,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         }
       }
     } catch (e) {
-      print("Error fetching directions: $e");
+      if (kDebugMode) print("Error fetching directions: $e");
       if (mounted) {
         setState(() {
           _routeDistance = 'Network Error';
@@ -662,7 +823,10 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // NEW: The whole sheet is built with a new method to match the image.
+    final String amount = widget.rideType == RideType.newRequest
+        ? widget.orderModel.offerRate.toString()
+        : widget.orderModel.finalRate.toString();
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -693,13 +857,13 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               children: [
                 UserView(
                   userId: widget.orderModel.userId,
-                  amount: widget.orderModel.offerRate,
+                  amount: amount,
                   distance: widget.orderModel.distance,
                   distanceType: widget.orderModel.distanceType,
                 ),
                 const Divider(
                     height: 22, thickness: 1, color: AppColors.grey200),
-                _buildDetailsCard(),
+                _buildDetailsCard(amount),
                 const SizedBox(height: 10),
                 _buildActionButtons(),
               ],
@@ -732,7 +896,6 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
                 ),
                 onMapCreated: (controller) async {
                   _mapController = controller;
-
                   try {
                     String style =
                         await rootBundle.loadString('assets/map_style.json');
@@ -765,20 +928,20 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
     );
   }
 
-  // NEW: A detailed card that mimics the grid from the example image.
-  Widget _buildDetailsCard() {
+  Widget _buildDetailsCard(String amount) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.grey50,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        spacing: 5,
         children: [
           _buildDetailItem(
             'Ride Fare'.tr,
-            Constant.amountShow(amount: widget.orderModel.offerRate),
+            Constant.amountShow(amount: amount),
             AppColors.primary,
           ),
           _buildDetailItem(
@@ -803,6 +966,11 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
   Widget _buildDetailItem(String title, String value, Color valueColor) {
     return Expanded(
+        child: Container(
+      padding: EdgeInsets.all(10),
+      decoration: BoxDecoration(
+          border: Border.all(color: AppColors.grey200),
+          borderRadius: BorderRadius.circular(3)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -817,7 +985,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           const SizedBox(height: 4),
           Text(
             value,
-            style: AppTypography.appTitle(context).copyWith(
+            style: AppTypography.boldLabel(context).copyWith(
               color: valueColor,
             ),
             maxLines: 1,
@@ -825,42 +993,49 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           ),
         ],
       ),
-    );
+    ));
   }
 
-  // NEW: Styled action buttons
   Widget _buildActionButtons() {
-    if (widget.isAlreadyAccepted) {
+    if (widget.rideType == RideType.active) {
       return SizedBox(
         width: double.infinity,
+        height: 35,
         child: ElevatedButton(
           onPressed: () => Navigator.pop(context),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+            padding: const EdgeInsets.symmetric(vertical: 8),
           ),
           child: Text("Close".tr,
               style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
       );
     }
+
+    // Both New and Scheduled rides have an Accept/Decline (or Close) choice
     return Row(
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () =>
+                Navigator.pop(context), // Pops with null, won't trigger .then()
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.grey.shade800,
               side: BorderSide(color: Colors.grey.shade400),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+                  borderRadius: BorderRadius.circular(5)),
+              padding: const EdgeInsets.symmetric(vertical: 8),
             ),
-            child: Text("Decline".tr,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+                widget.rideType == RideType.newRequest
+                    ? "Decline".tr
+                    : "Close".tr,
+                style: AppTypography.button(context)
+                    .copyWith(color: AppColors.grey500)),
           ),
         ),
         const SizedBox(width: 12),
@@ -874,11 +1049,12 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+                  borderRadius: BorderRadius.circular(5)),
+              padding: const EdgeInsets.symmetric(vertical: 8),
             ),
             child: Text("Accept Ride".tr,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: AppTypography.button(context)
+                    .copyWith(color: AppColors.background)),
           ),
         ),
       ],
@@ -886,9 +1062,15 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   }
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~ ORDER ITEM WITH TIMER ~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 class OrderItemWithTimer extends StatefulWidget {
   final OrderModel orderModel;
-  const OrderItemWithTimer({Key? key, required this.orderModel})
+  final VoidCallback onExpired;
+  const OrderItemWithTimer(
+      {Key? key, required this.orderModel, required this.onExpired})
       : super(key: key);
   @override
   State<OrderItemWithTimer> createState() => _OrderItemWithTimerState();
@@ -921,34 +1103,18 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
         if (mounted) {
           _isExpired.value = true;
         }
-        _handleExpiredTimer();
+        widget.onExpired();
       }
     });
   }
 
-  Future<void> _handleExpiredTimer() async {
-    String? driverId = FireStoreUtils.getCurrentUid();
-    if (driverId == null || widget.orderModel.id == null) return;
-    try {
-      await FirebaseFirestore.instance
-          .collection(CollectionName.orders)
-          .doc(widget.orderModel.id)
-          .update({
-        'acceptedDriverId': FieldValue.arrayRemove([driverId])
-      });
-    } catch (e) {
-      debugPrint("Error updating order on timer expiry: $e");
-    }
-  }
-
-  // MODIFIED: This widget now follows the consistent "Order History" card design.
   @override
   Widget build(BuildContext context) {
     return Obx(
       () => _isExpired.value
           ? const SizedBox.shrink()
           : Container(
-              margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -967,7 +1133,6 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                     padding: const EdgeInsets.all(12),
                     child: Column(
                       children: [
-                        // NEW: Location and payment block for accepted orders.
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

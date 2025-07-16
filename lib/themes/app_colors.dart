@@ -59,6 +59,7 @@ class AppColors {
 
   // Additional properties from the second class (retained)
   static const Color grey50 = Color(0xFFFFFFFF);
+  static const Color grey75 = Color.fromARGB(255, 248, 248, 248);
   static const Color grey100 = Color(0xFFF3F4F6);
   static const Color grey200 = Color(0xFFE5E7EB);
   static const Color grey300 = Color(0xFFD1D5DB);
