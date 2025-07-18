@@ -46,19 +46,18 @@ class DashBoardController extends GetxController {
       case 5:
         return const InboxScreen();
       case 6:
-        return const ProfileScreen();
+        return const account.MyProfileScreen();
       case 7:
         return const OnlineRegistrationScreen();
       case 8:
         return const VehicleInformationScreen();
       case 9:
-        return  safety.SafetyScreen();
-       case 10:
+        return safety.SafetyScreen();
+      case 10:
         return const SettingScreen();
 
-         case 11:
+      case 11:
         return const account.MyProfileScreen();
-
 
       default:
         return const Text("Error");

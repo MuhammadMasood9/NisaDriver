@@ -122,7 +122,7 @@ class DashBoardScreen extends StatelessWidget {
     // This makes the entire profile section tappable.
     // NOTE: We assume the "My Profile" screen is at index 1 in the drawerItems list.
     // Adjust this index if your drawer item order is different in your controller.
-    const int profileScreenIndex = 11;
+    const int profileScreenIndex = 6;
 
     return Material(
       color: Colors.transparent,
@@ -132,8 +132,7 @@ class DashBoardScreen extends StatelessWidget {
           controller.onSelectItem(profileScreenIndex);
         },
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
           child: FutureBuilder<DriverUserModel?>(
             future: FireStoreUtils.getCurrentUid() != null
                 ? FireStoreUtils.getDriverProfile(

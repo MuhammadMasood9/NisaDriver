@@ -119,7 +119,7 @@ class WalletScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: Obx(() => AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
+                        duration: const Duration(milliseconds: 250),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 6),
                         decoration: BoxDecoration(
