@@ -45,7 +45,7 @@ class ScheduledRidesScreen extends StatelessWidget {
 
         return Scaffold(
           // Set a background color for the screen.
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.grey75,
           body: AnnotatedRegion<SystemUiOverlayStyle>(
             // Ensure status bar icons are visible on the light background.
             value: const SystemUiOverlayStyle(
@@ -206,7 +206,7 @@ class ScheduledRidesScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withOpacity(0.05),
@@ -225,8 +225,8 @@ class ScheduledRidesScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.primary.withOpacity(0.05),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+                topLeft: Radius.circular(6),
+                topRight: Radius.circular(6),
               ),
             ),
             child: Row(
@@ -261,10 +261,10 @@ class ScheduledRidesScreen extends StatelessWidget {
                   sourceLocation: model.sourceLocationName.toString(),
                   destinationLocation: model.destinationLocationName.toString(),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
                 Divider(color: Colors.grey.shade200),
-                const SizedBox(height: 12),
-
+                const SizedBox(height: 6),
+               
                 // --- Schedule Details ---
 
                 Row(
@@ -288,7 +288,10 @@ class ScheduledRidesScreen extends StatelessWidget {
                     )
                   ],
                 ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 6),
+                Divider(color: Colors.grey.shade200),
+                const SizedBox(height: 6),
+                // const SizedBox(height: 16),
 
                 // --- Recurring Days ---
                 Text("Recurring Days".tr.toUpperCase(),

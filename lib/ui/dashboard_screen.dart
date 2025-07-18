@@ -115,78 +115,103 @@ class DashBoardScreen extends StatelessWidget {
   }
 
   /// Builds the user profile section in the drawer header.
-  /// It includes a FutureBuilder to fetch user data and shows loading/error states.
+  /// This section is now clickable and includes a navigation arrow.
+  /// It uses a FutureBuilder to fetch user data and shows loading/error states.
   Widget _buildUserProfile(
       BuildContext context, DashBoardController controller) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-      child: FutureBuilder<DriverUserModel?>(
-        future: FireStoreUtils.getCurrentUid() != null
-            ? FireStoreUtils.getDriverProfile(FireStoreUtils.getCurrentUid()!)
-            : Future.value(null),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildProfileSkeleton();
-          }
+    // This makes the entire profile section tappable.
+    // NOTE: We assume the "My Profile" screen is at index 1 in the drawerItems list.
+    // Adjust this index if your drawer item order is different in your controller.
+    const int profileScreenIndex = 11;
 
-          if (snapshot.hasError || !snapshot.hasData) {
-            return _buildProfileError();
-          }
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          // This will navigate to the profile screen and close the drawer.
+          controller.onSelectItem(profileScreenIndex);
+        },
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+          child: FutureBuilder<DriverUserModel?>(
+            future: FireStoreUtils.getCurrentUid() != null
+                ? FireStoreUtils.getDriverProfile(
+                    FireStoreUtils.getCurrentUid()!)
+                : Future.value(null),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                // The skeleton loader is not clickable.
+                return _buildProfileSkeleton();
+              }
 
-          DriverUserModel driverModel = snapshot.data!;
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildProfileImage(driverModel.profilePic.toString()),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      driverModel.fullName.toString(),
-                      style: AppTypography.appTitle(context).copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      driverModel.email.toString(),
-                      style: AppTypography.caption(context).copyWith(
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
+              if (snapshot.hasError || !snapshot.hasData) {
+                // The error view is not clickable.
+                return _buildProfileError();
+              }
+
+              DriverUserModel driverModel = snapshot.data!;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildProfileImage(driverModel.profilePic.toString()),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.star,
-                          color: AppColors.ratingColour,
-                          size: 15,
-                        ),
-                        const SizedBox(width: 4),
                         Text(
-                          driverModel.reviewsSum.toString(),
-                          style: AppTypography.smBoldLabel(context).copyWith(
+                          driverModel.fullName.toString(),
+                          style: AppTypography.appTitle(context).copyWith(
                             fontWeight: FontWeight.w600,
                             color: Colors.black87,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          driverModel.email.toString(),
+                          style: AppTypography.caption(context).copyWith(
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              color: AppColors.ratingColour,
+                              size: 15,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              driverModel.reviewsSum.toString(),
+                              style:
+                                  AppTypography.smBoldLabel(context).copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        )
                       ],
-                    )
-                  ],
-                ),
-              ),
-              // The switch has been removed from here to avoid duplication.
-            ],
-          );
-        },
+                    ),
+                  ),
+                  // This arrow icon indicates that the row is tappable and leads to another screen.
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

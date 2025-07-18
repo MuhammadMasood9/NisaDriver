@@ -10,6 +10,8 @@ import 'package:driver/ui/home_screens/home_screen.dart';
 import 'package:driver/ui/intercity_screen/home_intercity_screen.dart';
 import 'package:driver/ui/online_registration/online_registartion_screen.dart';
 import 'package:driver/ui/profile_screen/profile_screen.dart';
+import 'package:driver/ui/profile_screen/account_screen.dart' as account;
+import 'package:driver/ui/safety/safety_screen.dart' as safety;
 import 'package:driver/ui/scheduled_rides/scheduled_order_screen.dart';
 import 'package:driver/ui/scheduled_rides/scheduled_rides_screen.dart';
 import 'package:driver/ui/settings_screen/setting_screen.dart';
@@ -50,7 +52,13 @@ class DashBoardController extends GetxController {
       case 8:
         return const VehicleInformationScreen();
       case 9:
+        return  safety.SafetyScreen();
+       case 10:
         return const SettingScreen();
+
+         case 11:
+        return const account.MyProfileScreen();
+
 
       default:
         return const Text("Error");
@@ -58,7 +66,7 @@ class DashBoardController extends GetxController {
   }
 
   Future<void> onSelectItem(int index) async {
-    final logoutIndex = Constant.isSubscriptionModelApplied ? 11 : 10;
+    final logoutIndex = Constant.isSubscriptionModelApplied ? 13 : 12;
     if (index == logoutIndex) {
       await FirebaseAuth.instance.signOut();
       Get.offAll(const LoginScreen());
@@ -100,6 +108,7 @@ class DashBoardController extends GetxController {
       DrawerItem('Profile'.tr, "assets/icons/ic_profile.svg"),
       DrawerItem('Online Registration'.tr, "assets/icons/ic_document.svg"),
       DrawerItem('Vehicle Information'.tr, "assets/icons/ic_city.svg"),
+      DrawerItem("Safety", "assets/icons/ic_document.svg"),
       DrawerItem('Settings'.tr, "assets/icons/ic_settings.svg"),
       DrawerItem('Log out'.tr, "assets/icons/ic_logout.svg"),
     ];

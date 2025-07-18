@@ -82,6 +82,7 @@ dependencies:
 
   osm_nominatim: ^3.0.1
   flutter_osm_plugin: ^1.4.0
+  fl_chart: ^1.0.0
 
   #payment dependency
   flutter_stripe: ^11.4.0
