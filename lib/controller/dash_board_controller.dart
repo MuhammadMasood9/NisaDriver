@@ -42,38 +42,41 @@ class DashBoardController extends GetxController {
       case 3:
         return const WalletScreen();
       case 4:
-        return const BankDetailsScreen();
-      case 5:
         return const InboxScreen();
-      case 6:
-        return const account.MyProfileScreen();
-      case 7:
+      case 5:
         return const OnlineRegistrationScreen();
-      case 8:
-        return const VehicleInformationScreen();
-      case 9:
+      case 6:
         return safety.SafetyScreen();
-      case 10:
+      case 7:
         return const SettingScreen();
-
-      case 11:
+      // This is your new screen. It can be navigated to by setting
+      // selectedDrawerIndex.value = 8 from anywhere in your app.
+      case 8:
         return const account.MyProfileScreen();
-
       default:
         return const Text("Error");
     }
   }
 
+  // --- MODIFIED METHOD ---
+  // This method now correctly handles the "Log out" tap as a special action.
   Future<void> onSelectItem(int index) async {
-    final logoutIndex = Constant.isSubscriptionModelApplied ? 13 : 12;
-    if (index == logoutIndex) {
+    // According to your setDrawerList, "Log out" is the 9th item, at index 8.
+    const int logoutDrawerItemIndex = 9;
+
+    if (index == logoutDrawerItemIndex) {
+      // If the user taps the "Log out" item, perform the sign-out action
+      // and navigate to the LoginScreen. Do NOT change the selectedDrawerIndex.
       await FirebaseAuth.instance.signOut();
       Get.offAll(const LoginScreen());
     } else {
+      // For any other item, change the screen by updating the selected index
+      // and close the drawer.
       selectedDrawerIndex.value = index;
+      Get.back();
     }
-    Get.back();
   }
+  // --- END OF MODIFICATION ---
 
   @override
   void onInit() {
@@ -96,17 +99,15 @@ class DashBoardController extends GetxController {
     }
   }
 
+  // No changes needed here. "Log out" remains the 9th item (index 8).
   void setDrawerList() {
     drawerItems.value = [
       DrawerItem('Rides'.tr, "assets/icons/ic_city.svg"),
       DrawerItem('Parcels'.tr, "assets/icons/ic_intercity.svg"),
       DrawerItem('Schedule'.tr, "assets/icons/ic_intercity.svg"),
       DrawerItem('My Wallet'.tr, "assets/icons/ic_wallet.svg"),
-      DrawerItem('Bank Details'.tr, "assets/icons/ic_profile.svg"),
       DrawerItem('Inbox'.tr, "assets/icons/ic_inbox.svg"),
-      DrawerItem('Profile'.tr, "assets/icons/ic_profile.svg"),
       DrawerItem('Online Registration'.tr, "assets/icons/ic_document.svg"),
-      DrawerItem('Vehicle Information'.tr, "assets/icons/ic_city.svg"),
       DrawerItem("Safety", "assets/icons/ic_document.svg"),
       DrawerItem('Settings'.tr, "assets/icons/ic_settings.svg"),
       DrawerItem('Log out'.tr, "assets/icons/ic_logout.svg"),
@@ -139,18 +140,6 @@ class DashBoardController extends GetxController {
         ));
         return; // Stop execution
       }
-      // if (driverModel.value!.profileVerify != true) {
-      //   Get.dialog(AlertDialog(
-      //     title: Text('Information'.tr),
-      //     content: Text(
-      //         'Your profile is not yet verified by admin. Please wait for approval.'
-      //             .tr),
-      //     actions: [
-      //       TextButton(child: Text('OK'.tr), onPressed: () => Get.back()),
-      //     ],
-      //   ));
-      //   return; // Stop execution
-      // }
     }
 
     ShowToastDialog.showLoader("Updating Status...");

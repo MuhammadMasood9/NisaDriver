@@ -122,7 +122,7 @@ class DashBoardScreen extends StatelessWidget {
     // This makes the entire profile section tappable.
     // NOTE: We assume the "My Profile" screen is at index 1 in the drawerItems list.
     // Adjust this index if your drawer item order is different in your controller.
-    const int profileScreenIndex = 6;
+    const int profileScreenIndex = 8;
 
     return Material(
       color: Colors.transparent,
