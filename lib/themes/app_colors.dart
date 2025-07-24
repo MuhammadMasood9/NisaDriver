@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const Color primary = Color(0xffE75480); // Pink (from first class)
   static const Color darkModePrimary =
-      Color(0xffB83267); // Deep Pink/Purple (from first class)
+      Color.fromARGB(255, 150, 32, 79); // Deep Pink/Purple (from first class)
 
   static const Color background =
       Color.fromARGB(255, 255, 255, 255); // Light Pink (from first class)

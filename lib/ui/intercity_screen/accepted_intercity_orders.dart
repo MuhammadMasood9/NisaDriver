@@ -30,7 +30,7 @@ class AcceptedIntercityOrders extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.only(
+                borderRadius: const BorderRadius.only(      
                   topLeft: Radius.circular(28),
                   topRight: Radius.circular(28),
                 ),

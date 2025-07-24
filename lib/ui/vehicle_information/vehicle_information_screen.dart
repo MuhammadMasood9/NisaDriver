@@ -129,7 +129,7 @@ class VehicleInformationScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.primary,
-            AppColors.darkBackground,
+            AppColors.darkModePrimary,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

@@ -114,8 +114,9 @@ class BankDetailsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
+            AppColors.darkModePrimary,
             AppColors.primary,
-            AppColors.darkBackground,
+            // AppColors.darkBackground,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -336,13 +337,6 @@ class BankDetailsScreen extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: ElevatedButton(
         onPressed: () => _handleSave(controller),

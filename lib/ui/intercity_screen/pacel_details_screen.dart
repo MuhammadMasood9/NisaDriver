@@ -29,37 +29,48 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
     with SingleTickerProviderStateMixin {
   final ParcelDetailsController controller = Get.put(ParcelDetailsController());
 
-  // --- State Variables from reference UI ---
+  // --- State Variables ---
+  // FIXED: Removed 'final' to allow reassignment in setState
   Set<Marker> _markers = {};
   List<LatLng> _polylineCoordinates = [];
+
   LatLngBounds? _bounds;
   String _routeDistance = '...';
   String _routeDuration = '...';
   bool _isLoadingRoute = true;
+  String _mapStyle = '';
 
   AnimationController? _animationController;
   Animation<double>? _fadeAnimation;
 
   // --- Constants for consistent UI ---
-  static const double _cardBorderRadius = 8.0;
-  static const EdgeInsets _cardPadding = EdgeInsets.all(18.0);
-  static const SizedBox _verticalSpacing = SizedBox(height: 16.0);
+  static const double _cardBorderRadius = 12.0;
+  static const EdgeInsets _cardPadding = EdgeInsets.all(16.0);
+  static const SizedBox _verticalSpacing = SizedBox(height: 12.0);
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 700),
       vsync: this,
     );
     _fadeAnimation =
         CurvedAnimation(parent: _animationController!, curve: Curves.easeInOut);
 
-    // Fetch data only after the controller is ready
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadMapStyle();
+      await initializeMapData();
       _animationController!.forward();
-      initializeMapData();
     });
+  }
+
+  Future<void> _loadMapStyle() async {
+    try {
+      _mapStyle = await rootBundle.loadString('assets/map_style.json');
+    } catch (e) {
+      debugPrint("Could not load map style: $e");
+    }
   }
 
   Future<void> initializeMapData() async {
@@ -94,8 +105,8 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
       orderModel.destinationLocationLAtLng?.longitude ?? 67.063066,
     );
 
-    final iconStart = await getMarkerIcon('assets/images/green_mark.png', 70);
-    final iconEnd = await getMarkerIcon('assets/images/red_mark.png', 70);
+    final iconStart = await getMarkerIcon('assets/images/green_mark.png', 50);
+    final iconEnd = await getMarkerIcon('assets/images/red_mark.png', 50);
 
     if (mounted) {
       setState(() {
@@ -104,15 +115,11 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
             markerId: const MarkerId('source'),
             position: sourceLatLng,
             icon: iconStart,
-            infoWindow:
-                InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
           ),
           Marker(
             markerId: const MarkerId('destination'),
             position: destinationLatLng,
             icon: iconEnd,
-            infoWindow: InfoWindow(
-                title: 'Drop-off: ${orderModel.destinationLocationName}'),
           ),
         };
       });
@@ -130,8 +137,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
       orderModel.destinationLocationLAtLng?.longitude ?? 67.063066,
     );
 
-    // It's recommended to store your API key securely, e.g., using flutter_dotenv.
-    const String apiKey = 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4';
+    String apiKey = Constant.mapAPIKey;
     final String url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=${source.latitude},${source.longitude}&destination=${destination.latitude},${destination.longitude}&key=$apiKey';
 
@@ -165,15 +171,12 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
         } else {
           debugPrint(
               "Directions API Error: ${data['error_message'] ?? data['status']}");
-          ShowToastDialog.showToast("Could not fetch route details.");
         }
       } else {
         debugPrint("HTTP Error fetching directions: ${response.statusCode}");
-        ShowToastDialog.showToast("Error connecting to routing service.");
       }
     } catch (e) {
       debugPrint("Exception fetching directions: $e");
-      ShowToastDialog.showToast("An unexpected error occurred.");
     }
   }
 
@@ -191,16 +194,20 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
           extendBodyBehindAppBar: true,
           backgroundColor: AppColors.background,
           appBar: AppBar(
+            surfaceTintColor: AppColors.background,
             backgroundColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
             elevation: 0,
-            leading: IconButton(
-              icon: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.arrow_back_ios_new,
-                    color: AppColors.primary, size: 20),
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: InkWell(
+                onTap: () => Get.back(),
+                borderRadius: BorderRadius.circular(100),
+                child: const CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.arrow_back_ios_new,
+                      color: AppColors.primary, size: 18),
+                ),
               ),
-              onPressed: () => Get.back(),
             ),
             centerTitle: true,
           ),
@@ -222,23 +229,27 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
                       ),
                       markers: _markers,
                       polylines: {
-                        Polyline(
-                          polylineId: const PolylineId('route'),
-                          points: _polylineCoordinates,
-                          color: AppColors.primary,
-                          width: 3,
-                          patterns: [PatternItem.dash(15), PatternItem.gap(10)],
-                        ),
+                        if (_polylineCoordinates.isNotEmpty)
+                          Polyline(
+                            polylineId: const PolylineId('route'),
+                            points: _polylineCoordinates,
+                            color: AppColors.primary,
+                            width: 2,
+                            patterns: [
+                              PatternItem.dash(20),
+                              PatternItem.gap(10)
+                            ],
+                          ),
                       },
                       myLocationButtonEnabled: false,
                       zoomControlsEnabled: false,
-                      onMapCreated: (GoogleMapController mapController) async {
-                        String style = await rootBundle
-                            .loadString('assets/map_style.json');
-                        mapController.setMapStyle(style);
+                      onMapCreated: (GoogleMapController mapController) {
+                        if (_mapStyle.isNotEmpty) {
+                          mapController.setMapStyle(_mapStyle);
+                        }
                         if (_bounds != null) {
                           mapController.animateCamera(
-                              CameraUpdate.newLatLngBounds(_bounds!, 60));
+                              CameraUpdate.newLatLngBounds(_bounds!, 100));
                         }
                       },
                     ),
@@ -250,40 +261,47 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
                           ScrollController scrollController) {
                         return Container(
                           decoration: const BoxDecoration(
-                            color: AppColors.grey50,
+                            color: AppColors.grey75,
                             borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(28),
                               topRight: Radius.circular(28),
                             ),
                             boxShadow: [
-                              BoxShadow(blurRadius: 20, color: Colors.black12),
+                              BoxShadow(
+                                  blurRadius: 20,
+                                  color: Colors.black12,
+                                  spreadRadius: 5)
                             ],
                           ),
-                          child: SingleChildScrollView(
-                            controller: scrollController,
-                            child: Column(
-                              children: [
-                                _buildDragHandle(),
-                                FadeTransition(
-                                  opacity: _fadeAnimation!,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14),
-                                    child: Column(
-                                      children: [
-                                        _buildOrderIdSection(context),
-                                        _verticalSpacing,
-                                        _buildLocationSection(context),
-                                        _verticalSpacing,
-                                        _buildParcelDetailsSection(context),
-                                        _verticalSpacing,
-                                        _buildImageGallery(context),
-                                        const SizedBox(height: 50),
-                                      ],
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(28)),
+                            child: SingleChildScrollView(
+                              controller: scrollController,
+                              child: Column(
+                                children: [
+                                  _buildDragHandle(),
+                                  FadeTransition(
+                                    opacity: _fadeAnimation!,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
+                                      child: Column(
+                                        children: [
+                                          _buildOrderIdSection(context),
+                                          _verticalSpacing,
+                                          _buildLocationSection(context),
+                                          _verticalSpacing,
+                                          _buildParcelDetailsSection(context),
+                                          _verticalSpacing,
+                                          _buildImageGallery(context),
+                                          const SizedBox(height: 50),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -298,12 +316,12 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
 
   Widget _buildDragHandle() {
     return Container(
-      width: 45,
-      height: 5,
+      width: 40,
+      height: 4,
       margin: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
       ),
     );
   }
@@ -316,9 +334,8 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
         borderRadius: BorderRadius.circular(_cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -348,13 +365,11 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("Order ID".tr,
-                    style: AppTypography.appTitle(context)
-                        .copyWith(color: AppColors.grey800)),
+                    style: AppTypography.label(context).copyWith(fontSize: 12)),
                 const SizedBox(height: 2),
                 Text(
-                  "#${controller.orderModel.value.id!.toUpperCase()}",
-                  style: AppTypography.caption(context)!
-                      .copyWith(fontWeight: FontWeight.bold),
+                  "#${controller.orderModel.value.id?.toUpperCase() ?? 'N/A'}",
+                  style: AppTypography.boldLabel(context),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -385,22 +400,23 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
         children: [
           _buildCardHeader(context, "Route Details".tr),
           const Divider(color: AppColors.grey200, height: 1),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           LocationView(
             sourceLocation:
                 controller.orderModel.value.sourceLocationName.toString(),
             destinationLocation:
                 controller.orderModel.value.destinationLocationName.toString(),
           ),
-          const Divider(height: 12, color: AppColors.grey100),
+          const Divider(height: 20, color: AppColors.grey100),
           if (_isLoadingRoute)
             const Center(
                 child: Padding(
-              padding: EdgeInsets.all(8.0),
+              padding: EdgeInsets.symmetric(vertical: 8.0),
               child: CircularProgressIndicator(color: AppColors.primary),
             ))
           else
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildRouteStatItem(context, Icons.route_outlined,
                     "Distance".tr, _routeDistance),
@@ -415,25 +431,12 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
 
   Widget _buildRouteStatItem(
       BuildContext context, IconData icon, String title, String value) {
-    return Expanded(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.primary, size: 20),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: AppTypography.label(context)!
-                      .copyWith(color: AppColors.grey500)),
-              Text(value,
-                  style: AppTypography.caption(context)!
-                      .copyWith(fontWeight: FontWeight.bold)),
-            ],
-          )
-        ],
-      ),
+    return Column(
+      children: [
+        Text(title, style: AppTypography.caption(context)),
+        const SizedBox(height: 4),
+        Text(value, style: AppTypography.boldLabel(context)),
+      ],
     );
   }
 
@@ -445,17 +448,16 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
         children: [
           _buildCardHeader(context, "Parcel Information".tr),
           const Divider(color: AppColors.grey200, height: 1),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildSummaryRow(
             title: "Parcel Type".tr,
             value: order.parcelDimension ?? 'N/A',
           ),
-          const SizedBox(height: 8),
+          const Divider(height: 20, color: AppColors.grey100),
           _buildSummaryRow(
             title: "Weight".tr,
-            value: "${order.parcelWeight} ${order.parcelWeight ?? ''}",
+            value: "${order.parcelWeight} kg",
           ),
-          const SizedBox(height: 8),
         ],
       ),
     );
@@ -472,29 +474,28 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
           const SizedBox(height: 12),
           images.isEmpty
               ? Container(
-                  height: 40,
+                  height: 120,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300, width: 1),
                   ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.image_not_supported_rounded,
-                          size: 32,
-                          color: AppColors.grey500,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "No Images Available".tr,
-                          style: AppTypography.label(context)!
-                              .copyWith(color: AppColors.grey500),
-                        ),
-                      ],
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.image_not_supported_outlined,
+                        size: 40,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "No Images Available".tr,
+                        style: AppTypography.label(context)
+                            .copyWith(color: Colors.grey.shade600),
+                      ),
+                    ],
                   ),
                 )
               : GridView.builder(
@@ -505,7 +506,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 1,
+                    childAspectRatio: 1.2,
                   ),
                   itemBuilder: (BuildContext context, int index) {
                     return ClipRRect(
@@ -526,7 +527,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
                           child: Center(
                             child: Icon(
                               Icons.broken_image_rounded,
-                              color: AppColors.grey500,
+                              color: Colors.grey.shade500,
                               size: 32,
                             ),
                           ),
@@ -544,27 +545,20 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
   Widget _buildSummaryRow({
     required String title,
     required String value,
-    TextStyle? titleStyle,
-    TextStyle? valueStyle,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: titleStyle ??
-                  AppTypography.boldLabel(context)
-                      .copyWith(color: AppColors.grey500)),
-          const SizedBox(width: 16),
+              style: AppTypography.label(context)
+                  .copyWith(color: AppColors.grey500)),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: valueStyle ??
-                  AppTypography.boldLabel(context)
-                      .copyWith(fontWeight: FontWeight.w600),
+              style: AppTypography.boldLabel(context),
             ),
           ),
         ],

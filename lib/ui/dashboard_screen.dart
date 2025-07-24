@@ -5,6 +5,7 @@ import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
+import 'package:driver/ui/profile_screen/account_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -19,6 +20,7 @@ class DashBoardScreen extends StatelessWidget {
       init: DashBoardController(),
       builder: (controller) {
         return Scaffold(
+            // key: Get.key,
           backgroundColor: AppColors.background,
           // The AppBar is now a primary part of the Scaffold
           appBar: AppBar(
@@ -128,8 +130,14 @@ class DashBoardScreen extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          // This will navigate to the profile screen and close the drawer.
-          controller.onSelectItem(profileScreenIndex);
+          // First, pop the drawer from the navigation stack to close it.
+          Navigator.pop(context);
+
+          // Then, push the MyProfileScreen.
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => MyProfileScreen()),
+          );
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),

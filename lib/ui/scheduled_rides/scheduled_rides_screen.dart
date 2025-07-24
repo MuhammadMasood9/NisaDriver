@@ -6,11 +6,11 @@ import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/scheduled_ride_model.dart';
-import 'package:driver/ui/scheduled_rides/scheduled_ride_details_screen.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
+import 'package:driver/ui/scheduled_rides/scheduled_ride_details_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +19,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-// --- NEW: Controller for managing the selected tab state ---
+// Controller for managing the selected tab state
 class ScheduledRidesController extends GetxController {
   var selectedIndex = 0.obs;
 
@@ -33,21 +33,17 @@ class ScheduledRidesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // We use GetX to manage the state of the selected tab.
     return GetX<ScheduledRidesController>(
       init: ScheduledRidesController(),
       builder: (controller) {
-        // List of widgets to display based on the selected tab.
         final List<Widget> widgetOptions = [
           _buildNewSchedulesView(context),
           _buildMySchedulesView(context),
         ];
 
         return Scaffold(
-          // Set a background color for the screen.
           backgroundColor: AppColors.grey75,
           body: AnnotatedRegion<SystemUiOverlayStyle>(
-            // Ensure status bar icons are visible on the light background.
             value: const SystemUiOverlayStyle(
               statusBarColor: Colors.transparent,
               systemNavigationBarColor: Colors.white,
@@ -55,16 +51,12 @@ class ScheduledRidesScreen extends StatelessWidget {
               systemNavigationBarIconBrightness: Brightness.dark,
             ),
             child: SafeArea(
-              // Use a Stack to overlay the navigation bar on top of the content.
               child: Stack(
                 children: [
-                  // Main content area that switches between views.
-                  // IndexedStack preserves the state (e.g., scroll position) of each tab.
                   IndexedStack(
                     index: controller.selectedIndex.value,
                     children: widgetOptions,
                   ),
-                  // Position the custom navigation bar at the bottom.
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -98,12 +90,10 @@ class ScheduledRidesScreen extends StatelessWidget {
         }
         if (snapshot.data!.docs.isEmpty) {
           return _buildEmptyListView(
-              "No new weekly schedules available right now.".tr,
-              Icons.explore_off_rounded);
+              "No new weekly schedules available.".tr, Icons.explore_off_rounded);
         }
 
         return ListView.builder(
-          // Added bottom padding to prevent the nav bar from hiding the last item.
           padding: const EdgeInsets.only(top: 8, bottom: 110),
           itemCount: snapshot.data!.docs.length,
           itemBuilder: (context, index) {
@@ -139,13 +129,11 @@ class ScheduledRidesScreen extends StatelessWidget {
           return Constant.loader(context);
         }
         if (snapshot.data!.docs.isEmpty) {
-          return _buildEmptyListView(
-              "You have not accepted any weekly schedules.".tr,
-              Icons.work_off_rounded);
+          return _buildEmptyListView("You have not accepted any schedules.".tr,
+              Icons.calendar_today_outlined);
         }
 
         return ListView.builder(
-          // Added bottom padding to prevent the nav bar from hiding the last item.
           padding: const EdgeInsets.only(top: 8, bottom: 110),
           itemCount: snapshot.data!.docs.length,
           itemBuilder: (context, index) {
@@ -165,7 +153,6 @@ class ScheduledRidesScreen extends StatelessWidget {
 
   // --- UI WIDGETS AND HELPERS ---
 
-  // Helper for creating consistent info rows
   Widget _buildInfoRow(BuildContext context,
       {required IconData icon, required String title, required String value}) {
     return Row(
@@ -191,7 +178,6 @@ class ScheduledRidesScreen extends StatelessWidget {
     );
   }
 
-  // Card UI with Reduced Spacing
   Widget _buildScheduleCard(BuildContext context, ScheduleRideModel model,
       {required bool isAcceptable}) {
     String formattedStartDate = model.startDate != null
@@ -203,30 +189,32 @@ class ScheduledRidesScreen extends StatelessWidget {
     String time = model.scheduledTime ?? 'N/A';
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
-            blurRadius: 15,
+            color: AppColors.primary.withOpacity(0.08),
+            blurRadius: 20,
             offset: const Offset(0, 5),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade200, width: 1),
+        border: Border.all(color: Colors.grey.shade200, width: 0.8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- Header with Payout ---
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withOpacity(0.04),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(6),
-                topRight: Radius.circular(6),
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200, width: 0.8),
               ),
             ),
             child: Row(
@@ -236,21 +224,18 @@ class ScheduledRidesScreen extends StatelessWidget {
                     style: AppTypography.boldLabel(context)
                         .copyWith(color: AppColors.primary)),
                 Text(
-                  "Rs: ${model.weeklyRate}" ?? 'N/A',
+                  Constant.amountShow(amount: model.weeklyRate.toString()),
                   style: AppTypography.headers(context).copyWith(
                       color: AppColors.primary, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
           ),
-
-          // --- Main Content Area ---
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- Route Info ---
                 Text("Route".tr.toUpperCase(),
                     style: AppTypography.caption(context).copyWith(
                         color: Colors.grey.shade500,
@@ -261,12 +246,7 @@ class ScheduledRidesScreen extends StatelessWidget {
                   sourceLocation: model.sourceLocationName.toString(),
                   destinationLocation: model.destinationLocationName.toString(),
                 ),
-                const SizedBox(height: 6),
-                Divider(color: Colors.grey.shade200),
-                const SizedBox(height: 6),
-               
-                // --- Schedule Details ---
-
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -277,7 +257,7 @@ class ScheduledRidesScreen extends StatelessWidget {
                         value: '$formattedStartDate - $formattedEndDate',
                       ),
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _buildInfoRow(
                         context,
@@ -288,12 +268,7 @@ class ScheduledRidesScreen extends StatelessWidget {
                     )
                   ],
                 ),
-                  const SizedBox(height: 6),
-                Divider(color: Colors.grey.shade200),
-                const SizedBox(height: 6),
-                // const SizedBox(height: 16),
-
-                // --- Recurring Days ---
+                const SizedBox(height: 16),
                 Text("Recurring Days".tr.toUpperCase(),
                     style: AppTypography.caption(context).copyWith(
                         color: Colors.grey.shade500,
@@ -304,21 +279,15 @@ class ScheduledRidesScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          // --- Action Button ---
-          if (isAcceptable) ...[
-            const Divider(height: 1, indent: 16, endIndent: 16),
+          if (isAcceptable)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: ButtonThem.buildButton(context,
-                    title: "Accept Schedule".tr,
-                    bgColors: AppColors.primary,
-                    onPress: () => _acceptSchedule(context, model)),
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: ButtonThem.buildButton(context,
+                  title: "Accept Schedule".tr,
+                  btnHeight: 45,
+                  bgColors: AppColors.primary,
+                  onPress: () => _acceptSchedule(context, model)),
             ),
-          ]
         ],
       ),
     );
@@ -326,13 +295,8 @@ class ScheduledRidesScreen extends StatelessWidget {
 
   Widget _buildDaysRow(BuildContext context, List<String> days) {
     final Map<String, String> dayAbbreviations = {
-      'Monday': 'M',
-      'Tuesday': 'T',
-      'Wednesday': 'W',
-      'Thursday': 'T',
-      'Friday': 'F',
-      'Saturday': 'S',
-      'Sunday': 'S'
+      'Monday': 'M', 'Tuesday': 'T', 'Wednesday': 'W', 'Thursday': 'T',
+      'Friday': 'F', 'Saturday': 'S', 'Sunday': 'S'
     };
 
     return Row(
@@ -340,9 +304,9 @@ class ScheduledRidesScreen extends StatelessWidget {
       children: dayAbbreviations.keys.map((dayName) {
         final bool isSelected = days.contains(dayName);
         return Container(
-          width: Responsive.width(7.5, context),
-          height: Responsive.width(7.5, context),
-          margin: const EdgeInsets.only(right: 6),
+          width: Responsive.width(8, context),
+          height: Responsive.width(8, context),
+          margin: const EdgeInsets.only(right: 8),
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.darkBackground
@@ -354,10 +318,8 @@ class ScheduledRidesScreen extends StatelessWidget {
             child: Text(
               dayAbbreviations[dayName]!,
               style: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : AppColors.darkBackground.withOpacity(0.6),
-                fontSize: 10,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -374,8 +336,8 @@ class ScheduledRidesScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 60, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
+            Icon(icon, size: 70, color: Colors.grey.shade400),
+            const SizedBox(height: 20),
             Text(
               message,
               textAlign: TextAlign.center,
@@ -393,7 +355,7 @@ class ScheduledRidesScreen extends StatelessWidget {
     bool? confirm = await Get.dialog(AlertDialog(
       title: Text('Accept This Schedule?'.tr),
       content: Text(
-          'You are committing to all rides for this week (${model.weeklyRate}). Are you sure?'
+          'You are committing to all rides for this week. This cannot be undone. Are you sure?'
               .tr),
       actions: [
         TextButton(
@@ -450,24 +412,17 @@ class ScheduledRidesScreen extends StatelessWidget {
 
     return Container(
       margin: EdgeInsets.fromLTRB(
-          isCompact ? 8 : 12, 0, isCompact ? 8 : 12, isCompact ? 8 : 12),
+          isCompact ? 16 : 24, 0, isCompact ? 16 : 24, isCompact ? 12 : 16),
       padding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 4 : 8, vertical: isCompact ? 8 : 10),
+          horizontal: isCompact ? 4 : 8, vertical: isCompact ? 6 : 8),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(isCompact ? 28 : 32),
-        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 20,
-              offset: const Offset(0, -5),
-              spreadRadius: 0),
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-              spreadRadius: 0),
+              offset: const Offset(0, 5)),
         ],
       ),
       child: Row(
@@ -478,7 +433,7 @@ class ScheduledRidesScreen extends StatelessWidget {
             controller,
             controller.selectedIndex.value == 0,
             Icons.explore_outlined,
-            'New',
+            'New Schedules',
             0,
             isCompact,
           ),
@@ -503,102 +458,46 @@ class ScheduledRidesScreen extends StatelessWidget {
       IconData icon,
       String label,
       int index,
-      bool isCompact,
-      {int? badgeCount}) {
+      bool isCompact) {
     return Expanded(
       child: GestureDetector(
         onTap: () => controller.onItemTapped(index),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeInOutCubic,
-          margin: EdgeInsets.symmetric(horizontal: isCompact ? 2 : 3),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
           padding: EdgeInsets.symmetric(
-            horizontal: isSelected ? (isCompact ? 8 : 12) : (isCompact ? 6 : 8),
+            horizontal: isSelected ? (isCompact ? 12 : 16) : 8,
             vertical: isCompact ? 10 : 12,
           ),
           decoration: BoxDecoration(
-            gradient: isSelected
-                ? LinearGradient(colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.85)
-                  ], begin: Alignment.topLeft, end: Alignment.bottomRight)
-                : LinearGradient(colors: [
-                    Colors.grey.withOpacity(0.03),
-                    Colors.grey.withOpacity(0.01)
-                  ], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-            borderRadius: BorderRadius.circular(isCompact ? 20 : 24),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                        color: AppColors.primary.withOpacity(0.25),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                        spreadRadius: 0),
-                    BoxShadow(
-                        color: AppColors.primary.withOpacity(0.1),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                        spreadRadius: 0),
-                  ]
-                : [],
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(isCompact ? 22 : 26),
           ),
-          child: _buildNavContent(
-              context, isSelected, icon, label, badgeCount, isCompact),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: isCompact ? 18 : 20,
+                  color: isSelected ? Colors.white : const Color(0xFF636E72)),
+              if (isSelected)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Text(
+                    label.tr,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: isCompact ? 11 : 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildNavContent(BuildContext context, bool isSelected, IconData icon,
-      String label, int? badgeCount, bool isCompact) {
-    Widget iconWidget = AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      child: Icon(icon,
-          size: isSelected ? (isCompact ? 20 : 22) : (isCompact ? 18 : 20),
-          color: isSelected ? Colors.white : const Color(0xFF636E72)),
-    );
-
-    if (badgeCount != null && badgeCount > 0) {
-      iconWidget = badges.Badge(
-        badgeContent: Text(
-          badgeCount.toString(),
-          style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: isCompact ? 9 : 10,
-              fontWeight: FontWeight.w600),
-        ),
-        badgeStyle: badges.BadgeStyle(
-            badgeColor: const Color(0xFFE74C3C),
-            elevation: 2,
-            padding: EdgeInsets.all(isCompact ? 3 : 4)),
-        child: iconWidget,
-      );
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        iconWidget,
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              label.tr,
-              style: GoogleFonts.poppins(
-                color: isSelected ? Colors.white : const Color(0xFF636E72),
-                fontSize: isCompact ? 9 : 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                height: 1.0,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

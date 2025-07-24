@@ -28,55 +28,74 @@ import 'package:get/get.dart';
 class DashBoardController extends GetxController {
   RxList<DrawerItem> drawerItems = <DrawerItem>[].obs;
   RxInt selectedDrawerIndex = 0.obs;
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   final Rx<DriverUserModel?> driverModel = Rx<DriverUserModel?>(null);
   var isOnline = false.obs;
 
   Widget getDrawerItemWidget(int pos) {
-    switch (pos) {
-      case 0:
-        return const HomeScreen();
-      case 1:
-        return const HomeIntercityScreen();
-      case 2:
-        return const ScheduledRidesScreen();
-      case 3:
-        return const WalletScreen();
-      case 4:
-        return const InboxScreen();
-      case 5:
-        return const OnlineRegistrationScreen();
-      case 6:
-        return safety.SafetyScreen();
-      case 7:
-        return const SettingScreen();
-      // This is your new screen. It can be navigated to by setting
-      // selectedDrawerIndex.value = 8 from anywhere in your app.
-      case 8:
-        return const account.MyProfileScreen();
-      default:
-        return const Text("Error");
+    try {
+      switch (pos) {
+        case 0:
+          return const HomeScreen();
+        case 1:
+          return const HomeIntercityScreen();
+        case 2:
+          return const ScheduledRidesScreen();
+        case 3:
+          return const WalletScreen();
+        case 4:
+          return const InboxScreen();
+        case 5:
+          return const OnlineRegistrationScreen();
+        case 6:
+          return safety.SafetyScreen();
+        case 7:
+          return const SettingScreen();
+        // Added case 8 to handle the MyProfileScreen
+        case 8:
+          return const account.MyProfileScreen();
+        default:
+          return const Center(child: Text("Screen not found"));
+      }
+    } catch (e) {
+      log('Error in getDrawerItemWidget for position $pos: $e');
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 50, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Error loading screen: $e'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => selectedDrawerIndex.value = 0,
+              child: const Text('Go to Home'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
-  // --- MODIFIED METHOD ---
-  // This method now correctly handles the "Log out" tap as a special action.
   Future<void> onSelectItem(int index) async {
-    // According to your setDrawerList, "Log out" is the 9th item, at index 8.
-    const int logoutDrawerItemIndex = 9;
+    // Since logout is not in the drawer anymore, just handle normal navigation
+    // If you add logout back to the drawer later, it would be at the end of the list
 
-    if (index == logoutDrawerItemIndex) {
-      // If the user taps the "Log out" item, perform the sign-out action
-      // and navigate to the LoginScreen. Do NOT change the selectedDrawerIndex.
-      await FirebaseAuth.instance.signOut();
-      Get.offAll(const LoginScreen());
-    } else {
-      // For any other item, change the screen by updating the selected index
-      // and close the drawer.
-      selectedDrawerIndex.value = index;
+    try {
+      // Close the drawer first, then navigate
       Get.back();
+
+      // Add a small delay to ensure drawer is closed before navigation
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Update the selected index
+      selectedDrawerIndex.value = index;
+    } catch (e) {
+      log('Error in onSelectItem: $e');
+      // Fallback: just update the index
+      selectedDrawerIndex.value = index;
     }
   }
-  // --- END OF MODIFICATION ---
 
   @override
   void onInit() {
@@ -99,18 +118,20 @@ class DashBoardController extends GetxController {
     }
   }
 
-  // No changes needed here. "Log out" remains the 9th item (index 8).
+  // Drawer list with only visible items (My Profile is accessible via case 8 but not shown in drawer)
   void setDrawerList() {
     drawerItems.value = [
-      DrawerItem('Rides'.tr, "assets/icons/ic_city.svg"),
-      DrawerItem('Parcels'.tr, "assets/icons/ic_intercity.svg"),
-      DrawerItem('Schedule'.tr, "assets/icons/ic_intercity.svg"),
-      DrawerItem('My Wallet'.tr, "assets/icons/ic_wallet.svg"),
-      DrawerItem('Inbox'.tr, "assets/icons/ic_inbox.svg"),
-      DrawerItem('Online Registration'.tr, "assets/icons/ic_document.svg"),
-      DrawerItem("Safety", "assets/icons/ic_document.svg"),
-      DrawerItem('Settings'.tr, "assets/icons/ic_settings.svg"),
-      DrawerItem('Log out'.tr, "assets/icons/ic_logout.svg"),
+      DrawerItem('Rides'.tr, "assets/icons/ic_city.svg"), // 0
+      DrawerItem('Parcels'.tr, "assets/icons/ic_intercity.svg"), // 1
+      DrawerItem('Schedule'.tr, "assets/icons/ic_intercity.svg"), // 2
+      DrawerItem('My Wallet'.tr, "assets/icons/ic_wallet.svg"), // 3
+      DrawerItem('Inbox'.tr, "assets/icons/ic_inbox.svg"), // 4
+      DrawerItem('Online Registration'.tr, "assets/icons/ic_document.svg"), // 5
+      DrawerItem("Safety", "assets/icons/ic_document.svg"), // 6
+      DrawerItem('Settings'.tr, "assets/icons/ic_settings.svg"), // 7
+      // Note: My Profile (case 8) is handled in getDrawerItemWidget() but not shown in drawer
+      // Uncomment the line below if you want to add logout back to the drawer
+      // DrawerItem('Log out'.tr, "assets/icons/ic_logout.svg"),    // 8
     ];
   }
 

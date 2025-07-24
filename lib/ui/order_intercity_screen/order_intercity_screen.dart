@@ -1,28 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
-import 'package:driver/constant/send_notification.dart';
-import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/intercity_order_controller.dart';
-import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/intercity_order_model.dart';
-import 'package:driver/model/user_model.dart';
-import 'package:driver/model/wallet_transaction_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/ui/order_intercity_screen/complete_intecity_order_screen.dart';
 import 'package:driver/ui/review/review_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
-import 'package:driver/widget/location_view.dart';
-import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'dart:math';
+import 'package:google_fonts/google_fonts.dart';
 
 class OrderIntercityScreen extends StatelessWidget {
   const OrderIntercityScreen({Key? key}) : super(key: key);
@@ -33,7 +21,7 @@ class OrderIntercityScreen extends StatelessWidget {
       init: InterCityOrderController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: AppColors.grey100, // Applied from example
+          backgroundColor: AppColors.grey75,
           body: controller.isLoading.value
               ? Constant.loader(context)
               : StreamBuilder<QuerySnapshot>(
@@ -41,11 +29,7 @@ class OrderIntercityScreen extends StatelessWidget {
                       .collection(CollectionName.ordersIntercity)
                       .where('driverId',
                           isEqualTo: FireStoreUtils.getCurrentUid())
-                      .where('intercityServiceId', whereIn: [
-                        "647f340e35553",
-                        '647f350983ba2',
-                        'UmQ2bjWTnlwoKqdCIlTr'
-                      ])
+                      .where('status', isEqualTo: Constant.rideComplete)
                       .orderBy("createdDate", descending: true)
                       .snapshots(),
                   builder: (BuildContext context,
@@ -57,237 +41,17 @@ class OrderIntercityScreen extends StatelessWidget {
                       return Constant.loader(context);
                     }
                     return snapshot.data!.docs.isEmpty
-                        ? Center(child: Text("No Ride found".tr))
+                        ? _buildEmptyState()
                         : ListView.builder(
                             itemCount: snapshot.data!.docs.length,
-                            scrollDirection: Axis.vertical,
-                            shrinkWrap: true,
+                            padding: const EdgeInsets.only(
+                                left: 6, right: 6, bottom: 80),
                             itemBuilder: (context, index) {
                               InterCityOrderModel orderModel =
                                   InterCityOrderModel.fromJson(
                                       snapshot.data!.docs[index].data()
                                           as Map<String, dynamic>);
-                              return FutureBuilder<Map<String, dynamic>>(
-                                future: _buildMapData(orderModel),
-                                builder: (context, mapSnapshot) {
-                                  Set<Marker> markers =
-                                      mapSnapshot.data?['markers'] ?? {};
-                                  List<LatLng> polylineCoordinates = mapSnapshot
-                                          .data?['polylineCoordinates'] ??
-                                      [];
-                                  LatLngBounds? bounds =
-                                      mapSnapshot.data?['bounds'];
-
-                                  return InkWell(
-                                    onTap: () {
-                                      Get.to(
-                                          const CompleteIntercityOrderScreen(),
-                                          arguments: {
-                                            "orderModel": orderModel
-                                          });
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12.0,
-                                          vertical: 8), // Applied from example
-                                      child: _buildSectionCard(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const SizedBox(height: 6),
-                                            UserView(
-                                              userId: orderModel.userId,
-                                              amount: orderModel.finalRate,
-                                              distance: orderModel.distance,
-                                              distanceType:
-                                                  orderModel.distanceType,
-                                            ),
-                                            const SizedBox(height: 5),
-                                            Divider(
-                                              height: 3,
-                                              color: AppColors.grey200,
-                                            ),
-                                            const SizedBox(height: 5),
-                                            LocationView(
-                                              sourceLocation: orderModel
-                                                  .sourceLocationName
-                                                  .toString(),
-                                              destinationLocation: orderModel
-                                                  .destinationLocationName
-                                                  .toString(),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            _buildStatusSection(orderModel),
-                                            const SizedBox(height: 8),
-                                            _buildActionButtons(context,
-                                                orderModel, controller),
-                                            const SizedBox(height: 8),
-                                            Visibility(
-                                              visible: controller.paymentModel
-                                                          .value.cash!.name ==
-                                                      orderModel.paymentType
-                                                          .toString() &&
-                                                  orderModel.paymentStatus ==
-                                                      false &&
-                                                  orderModel.status !=
-                                                      Constant.rideComplete,
-                                              child: ButtonThem.buildButton(
-                                                context,
-                                                title:
-                                                    "Confirm cash payment".tr,
-                                                btnHeight: 44,
-                                                onPress: () async {
-                                                  ShowToastDialog.showLoader(
-                                                      "Please wait..".tr);
-                                                  orderModel.paymentStatus =
-                                                      true;
-                                                  orderModel.status =
-                                                      Constant.rideComplete;
-                                                  orderModel.updateDate =
-                                                      Timestamp.now();
-
-                                                  String? couponAmount = "0.0";
-                                                  if (orderModel.coupon !=
-                                                          null &&
-                                                      orderModel.coupon?.code !=
-                                                          null) {
-                                                    couponAmount = orderModel
-                                                                .coupon!.type ==
-                                                            "fix"
-                                                        ? orderModel
-                                                            .coupon!.amount
-                                                            .toString()
-                                                        : ((double.parse(orderModel
-                                                                        .finalRate
-                                                                        .toString()) *
-                                                                    double.parse(orderModel
-                                                                        .coupon!
-                                                                        .amount
-                                                                        .toString())) /
-                                                                100)
-                                                            .toString();
-                                                  }
-
-                                                  WalletTransactionModel
-                                                      adminCommissionWallet =
-                                                      WalletTransactionModel(
-                                                    id: Constant.getUuid(),
-                                                    amount:
-                                                        "-${Constant.calculateAdminCommission(
-                                                      amount: (double.parse(
-                                                                  orderModel
-                                                                      .finalRate
-                                                                      .toString()) -
-                                                              double.parse(
-                                                                  couponAmount))
-                                                          .toString(),
-                                                      adminCommission:
-                                                          orderModel
-                                                              .adminCommission,
-                                                    )}",
-                                                    createdDate:
-                                                        Timestamp.now(),
-                                                    paymentType: "wallet".tr,
-                                                    transactionId:
-                                                        orderModel.id,
-                                                    orderType: "intercity",
-                                                    userId: orderModel.driverId
-                                                        .toString(),
-                                                    userType: "driver",
-                                                    note:
-                                                        "Admin commission debited"
-                                                            .tr,
-                                                  );
-
-                                                  await FireStoreUtils
-                                                          .setWalletTransaction(
-                                                              adminCommissionWallet)
-                                                      .then((value) async {
-                                                    if (value == true) {
-                                                      await FireStoreUtils
-                                                          .updatedDriverWallet(
-                                                        amount:
-                                                            "-${Constant.calculateAdminCommission(
-                                                          amount: (double.parse(
-                                                                      orderModel
-                                                                          .finalRate
-                                                                          .toString()) -
-                                                                  double.parse(
-                                                                      couponAmount ??
-                                                                          "0.0"))
-                                                              .toString(),
-                                                          adminCommission:
-                                                              orderModel
-                                                                  .adminCommission,
-                                                        )}",
-                                                      );
-                                                    }
-                                                  });
-
-                                                  await FireStoreUtils
-                                                          .getCustomer(
-                                                              orderModel.userId
-                                                                  .toString())
-                                                      .then((value) async {
-                                                    if (value != null) {
-                                                      await SendNotification
-                                                          .sendOneNotification(
-                                                        token: value.fcmToken
-                                                            .toString(),
-                                                        title:
-                                                            'Cash Payment confirmed'
-                                                                .tr,
-                                                        body:
-                                                            'Driver has confirmed your cash payment'
-                                                                .tr,
-                                                        payload: {},
-                                                      );
-                                                    }
-                                                  });
-
-                                                  await FireStoreUtils
-                                                          .getIntercityFirstOrderOrNOt(
-                                                              orderModel)
-                                                      .then((value) async {
-                                                    if (value == true) {
-                                                      await FireStoreUtils
-                                                          .updateIntercityReferralAmount(
-                                                              orderModel);
-                                                    }
-                                                  });
-
-                                                  await FireStoreUtils
-                                                          .setInterCityOrder(
-                                                              orderModel)
-                                                      .then((value) {
-                                                    if (value == true) {
-                                                      ShowToastDialog
-                                                          .closeLoader();
-                                                      ShowToastDialog.showToast(
-                                                          "Payment Confirm successfully"
-                                                              .tr);
-                                                      Get.to(
-                                                          () =>
-                                                              const ReviewScreen(),
-                                                          arguments: {
-                                                            "type":
-                                                                "interCityOrderModel",
-                                                            "interCityOrderModel":
-                                                                orderModel,
-                                                          });
-                                                    }
-                                                  });
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
+                              return _buildOrderCard(context, orderModel);
                             },
                           );
                   },
@@ -297,132 +61,63 @@ class OrderIntercityScreen extends StatelessWidget {
     );
   }
 
-  Future<Map<String, dynamic>> _buildMapData(
-      InterCityOrderModel orderModel) async {
-    final LatLng sourceLatLng = LatLng(
-      orderModel.sourceLocationLAtLng?.latitude ?? 24.905702181412074,
-      orderModel.sourceLocationLAtLng?.longitude ?? 67.07225639373064,
-    );
-    final LatLng destinationLatLng = LatLng(
-      orderModel.destinationLocationLAtLng?.latitude ?? 24.94478876378326,
-      orderModel.destinationLocationLAtLng?.longitude ?? 67.06306681036949,
-    );
-
-    final bounds = LatLngBounds(
-      southwest: LatLng(
-        min(sourceLatLng.latitude, destinationLatLng.latitude),
-        min(sourceLatLng.longitude, destinationLatLng.longitude),
-      ),
-      northeast: LatLng(
-        max(sourceLatLng.latitude, destinationLatLng.latitude),
-        max(sourceLatLng.longitude, destinationLatLng.longitude),
-      ),
-    );
-
-    final iconStart = await BitmapDescriptor.asset(
-      const ImageConfiguration(size: Size(32, 32)),
-      'assets/images/green_mark.png',
-    );
-    final iconEnd = await BitmapDescriptor.asset(
-      const ImageConfiguration(size: Size(32, 32)),
-      'assets/images/red_mark.png',
-    );
-
-    final markers = {
-      Marker(
-        markerId: const MarkerId('source'),
-        position: sourceLatLng,
-        icon: iconStart,
-        infoWindow:
-            InfoWindow(title: 'Pickup: ${orderModel.sourceLocationName}'),
-      ),
-      Marker(
-        markerId: const MarkerId('destination'),
-        position: destinationLatLng,
-        icon: iconEnd,
-        infoWindow: InfoWindow(
-            title: 'Drop-off: ${orderModel.destinationLocationName}'),
-      ),
-    };
-
-    List<LatLng> polylineCoordinates = [];
-    try {
-      PolylineRequest request = PolylineRequest(
-        origin: PointLatLng(sourceLatLng.latitude, sourceLatLng.longitude),
-        destination: PointLatLng(
-            destinationLatLng.latitude, destinationLatLng.longitude),
-        mode: TravelMode.driving,
-      );
-
-      PolylineResult result = await PolylinePoints().getRouteBetweenCoordinates(
-        request: request,
-        googleApiKey: 'AIzaSyCCRRxa1OS0ezPBLP2fep93uEfW2oANKx4',
-      );
-
-      if (result.points.isNotEmpty) {
-        polylineCoordinates = result.points
-            .map((point) => LatLng(point.latitude, point.longitude))
-            .toList();
-      }
-    } catch (e) {
-      print('Error fetching polyline: $e');
-    }
-
-    return {
-      'markers': markers,
-      'polylineCoordinates': polylineCoordinates,
-      'bounds': bounds,
-    };
-  }
-
-  Widget _buildSectionCard({
-    required Widget child,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        gradient: LinearGradient(
-          colors: [Colors.white, Colors.grey[50]!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(
-          color: AppColors.containerBorder,
-          width: 0.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            spreadRadius: 2,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  Widget _buildStatusSection(InterCityOrderModel orderModel) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.gray,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-      ),
+  Widget _buildEmptyState() {
+    return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              orderModel.status.toString(),
-              style: AppTypography.boldLabel(Get.context!),
-            ),
-            Text(
-              Constant().formatTimestamp(orderModel.createdDate),
-              style: AppTypography.label(Get.context!),
+            Icon(Icons.explore_off_outlined,
+                size: 80, color: Colors.grey.shade400),
+            const SizedBox(height: 24),
+            Text("No Ride History".tr,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800)),
+            const SizedBox(height: 8),
+            Text("Your completed inter-city rides will appear here.".tr,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                    fontSize: 15, color: Colors.grey.shade600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(BuildContext context, InterCityOrderModel orderModel) {
+    return InkWell(
+      onTap: () {
+        Get.to(() => const CompleteIntercityOrderScreen(),
+            arguments: {"orderModel": orderModel});
+      },
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          children: [
+            _buildStatusHeader(context, orderModel),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLocationAndPriceSection(context, orderModel),
+                  const Divider(
+                    height: 20,
+                    thickness: 1,
+                    color: AppColors.grey200,
+                  ),
+                  _buildActionButtons(context, orderModel),
+                ],
+              ),
             ),
           ],
         ),
@@ -430,91 +125,144 @@ class OrderIntercityScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildStatusHeader(
+      BuildContext context, InterCityOrderModel orderModel) {
+    Color statusColor = AppColors.primary;
+    String statusText = "Ride Completed".tr;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            statusText,
+            style:
+                AppTypography.boldLabel(context).copyWith(color: statusColor),
+          ),
+          Text(
+            Constant().formatTimestamp(orderModel.createdDate),
+            style: AppTypography.caption(context)
+                .copyWith(color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationAndPriceSection(
+      BuildContext context, InterCityOrderModel orderModel) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.arrow_circle_down,
+                size: 22, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(orderModel.sourceLocationName.toString(),
+                      style: AppTypography.boldLabel(context)
+                          .copyWith(fontWeight: FontWeight.w500, height: 1.3)),
+                  Text("Pickup point".tr,
+                      style: AppTypography.caption(context)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                Constant.amountShow(amount: orderModel.finalRate.toString()),
+                style: AppTypography.boldLabel(context)
+                    .copyWith(color: AppColors.primary),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Container(
+              width: 22,
+              alignment: Alignment.center,
+              child:
+                  Container(height: 20, width: 1.5, color: AppColors.grey200),
+            ),
+            Expanded(child: Container()),
+          ],
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.location_on, size: 22, color: Colors.black),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(orderModel.destinationLocationName.toString(),
+                      style: AppTypography.boldLabel(context)
+                          .copyWith(fontWeight: FontWeight.w500, height: 1.3)),
+                  Text("Destination".tr, style: AppTypography.caption(context)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text("Distance".tr, style: AppTypography.caption(context)),
+                Text(
+                  '${orderModel.distance.toString()} ${orderModel.distanceType.toString()}',
+                  style: AppTypography.boldLabel(context),
+                ),
+              ],
+            )
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildActionButtons(
-    BuildContext context,
-    InterCityOrderModel orderModel,
-    InterCityOrderController controller,
-  ) {
+      BuildContext context, InterCityOrderModel orderModel) {
     return Row(
       children: [
         Expanded(
-          child: ButtonThem.buildBorderButton(
-            context,
-            title: "Review".tr,
-            btnHeight: 35,
-            iconVisibility: false,
-            btnWidthRatio: 1,
-            onPress: () async {
-              Get.to(const ReviewScreen(), arguments: {
-                "type": "interCityOrderModel",
-                "interCityOrderModel": orderModel,
-              });
-            },
-          ),
-        ),
-        Visibility(
-          child: const SizedBox(width: 10),
-          visible: orderModel.status == Constant.rideComplete ? false : true,
-        ),
-        Visibility(
-          visible: orderModel.status == Constant.rideComplete ? false : true,
-          child: Row(
-            children: [
-              InkWell(
-                onTap: () async {
-                  UserModel? customer = await FireStoreUtils.getCustomer(
-                      orderModel.userId.toString());
-                  DriverUserModel? driver =
-                      await FireStoreUtils.getDriverProfile(
-                          orderModel.driverId.toString());
-                  Get.to(ChatScreens(
-                    driverId: driver!.id,
-                    customerId: customer!.id,
-                    customerName: customer.fullName,
-                    customerProfileImage: customer.profilePic,
-                    driverName: driver.fullName,
-                    driverProfileImage: driver.profilePic,
-                    orderId: orderModel.id,
-                    token: customer.fcmToken,
-                  ));
-                },
-                child: Container(
-                  height: 35,
-                  width: 35,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Icon(
-                    Icons.chat,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
+          child: SizedBox(
+            height: 35,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.rate_review_outlined, size: 16),
+              label: Text(
+                "Review".tr,
+                style: AppTypography.button(context)
+                    .copyWith(color: AppColors.grey600),
               ),
-              const SizedBox(width: 10),
-              InkWell(
-                onTap: () async {
-                  UserModel? customer = await FireStoreUtils.getCustomer(
-                      orderModel.userId.toString());
-                  Constant.makePhoneCall(
-                      "${customer!.countryCode}${customer.phoneNumber}");
-                },
-                child: Container(
-                  height: 35,
-                  width: 35,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Icon(
-                    Icons.call,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
+              onPressed: () {
+                Get.to(() => const ReviewScreen(), arguments: {
+                  "type": "interCityOrderModel",
+                  "interCityOrderModel": orderModel,
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.grey600,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3)),
               ),
-            ],
+            ),
           ),
         ),
       ],
