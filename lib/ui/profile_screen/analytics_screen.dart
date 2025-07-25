@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/profile_controller.dart';
 import 'package:driver/themes/app_colors.dart';
@@ -1186,9 +1188,22 @@ class AnalyticsScreen extends StatelessWidget {
           SizedBox(
             height: 180,
             child: Obx(() {
+              // Calculate the maximum value from the data
               final double maxY = controller.weeklyRidesData
                   .map((group) => group.barRods.first.toY)
                   .fold(0.0, (max, current) => current > max ? current : max);
+
+              // --- FIX STARTS HERE ---
+              // 1. Calculate a safe interval for the Y-axis.
+              //    - Use max(1, ...) to ensure the interval is at least 1 for small ride counts.
+              //    - If maxY is 0, default to a safe value like 1.
+              final double yInterval =
+                  maxY > 0 ? max(1, (maxY / 4).roundToDouble()) : 1;
+
+              // 2. Set a default top boundary for the chart if there's no data.
+              final double chartMaxY = maxY == 0 ? 5 : maxY * 1.2;
+              // --- FIX ENDS HERE ---
+
               return controller.weeklyRidesData.isEmpty
                   ? Center(
                       child: Text(
@@ -1200,8 +1215,9 @@ class AnalyticsScreen extends StatelessWidget {
                     )
                   : BarChart(
                       BarChartData(
+                        // Use the safe max Y value
+                        maxY: chartMaxY,
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: maxY == 0 ? 10 : maxY * 1.2,
                         barTouchData: BarTouchData(enabled: false),
                         titlesData: FlTitlesData(
                           show: true,
@@ -1212,10 +1228,15 @@ class AnalyticsScreen extends StatelessWidget {
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
-                              interval: maxY / 4,
+                              // Use the safe, non-zero interval
+                              interval: yInterval,
                               getTitlesWidget: (double value, TitleMeta meta) {
-                                if (value == 0 || value == maxY)
+                                // Don't show a label for the max value to avoid overlap
+                                if (value == meta.max) return const Text('');
+                                // Only show integer values for ride counts
+                                if (value.toInt().toDouble() != value)
                                   return const Text('');
+
                                 return Text(
                                   value.toInt().toString(),
                                   style: const TextStyle(
@@ -1225,7 +1246,7 @@ class AnalyticsScreen extends StatelessWidget {
                                   ),
                                 );
                               },
-                              reservedSize: 42,
+                              reservedSize: 28, // Adjusted for better spacing
                             ),
                           ),
                           bottomTitles: AxisTitles(
@@ -1241,18 +1262,22 @@ class AnalyticsScreen extends StatelessWidget {
                                   'Sat',
                                   'Sun'
                                 ];
-                                return SideTitleWidget(
-                                  meta: meta,
-                                  space: 4,
-                                  child: Text(
-                                    titles[value.toInt()],
-                                    style: const TextStyle(
-                                      color: AppColors.grey600,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10,
+                                if (value.toInt() >= 0 &&
+                                    value.toInt() < titles.length) {
+                                  return SideTitleWidget(
+                                    meta: meta,
+                                    space: 4,
+                                    child: Text(
+                                      titles[value.toInt()],
+                                      style: const TextStyle(
+                                        color: AppColors.grey600,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 10,
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                }
+                                return const Text('');
                               },
                               reservedSize: 20,
                             ),
@@ -1262,7 +1287,8 @@ class AnalyticsScreen extends StatelessWidget {
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
-                          horizontalInterval: maxY / 4,
+                          // Use the safe, non-zero interval for grid lines
+                          horizontalInterval: yInterval,
                           getDrawingHorizontalLine: (value) {
                             return FlLine(
                               color: Colors.grey.shade100,
@@ -1270,26 +1296,7 @@ class AnalyticsScreen extends StatelessWidget {
                             );
                           },
                         ),
-                        barGroups: controller.weeklyRidesData
-                            .asMap()
-                            .entries
-                            .map((entry) => BarChartGroupData(
-                                  x: entry.key,
-                                  barRods: [
-                                    BarChartRodData(
-                                      toY: entry.value.barRods.first.toY,
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          AppColors.primary.withOpacity(0.8),
-                                          AppColors.primary,
-                                        ],
-                                      ),
-                                      width: 12,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ],
-                                ))
-                            .toList(),
+                        barGroups: controller.weeklyRidesData.toList(),
                       ),
                     );
             }),
@@ -1439,7 +1446,6 @@ class AnalyticsScreen extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    print("Chart Distrubution:$legendData");
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 16.0,

@@ -134,6 +134,11 @@ flutter:
     - assets/map_style.json
     - assets/images/green_mark.png
     - assets/images/red_mark.png
+    - assets/images/Accident.png
+    - assets/images/Every-Ride.png
+    - assets/images/Protecting.png
+    - assets/images/Safety-Support.png
+    - assets/images/Verfication.png
 
 flutter_launcher_icons:
   android: true

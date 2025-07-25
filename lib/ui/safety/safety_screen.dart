@@ -1,3 +1,4 @@
+import 'package:driver/themes/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:story_view/story_view.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,45 +29,45 @@ class SafetyScreen extends StatelessWidget {
   static final List<SafetyFeature> safetyFeatures = [
     SafetyFeature(
       title: "Proactive safety support",
-      iconPath: 'assets/images/safety_shield.png',
+      iconPath: 'assets/images/Protecting.png',
       popupImagePath:
-          'assets/images/popup_choose_passenger.png', // Replace with a relevant image
+          'assets/images/Protecting.png', // Replace with a relevant image
       popupTitle: "We've got your back",
       popupDescription:
           "Our system proactively checks in on you if we detect any unusual activity during your ride, like a long, unexpected stop.",
     ),
     SafetyFeature(
       title: "Passengers verification",
-      iconPath: 'assets/images/safety_verification.png',
+      iconPath: 'assets/images/Verfication.png',
       popupImagePath:
-          'assets/images/popup_choose_passenger.png', // This is the image from your screenshot
+          'assets/images/Verfication.png', // This is the image from your screenshot
       popupTitle: "Choose your passenger",
       popupDescription:
           "Before accepting a request, check the passenger's destination, name, profile picture, and ratings. Accept only the rides that suit you best.",
     ),
     SafetyFeature(
       title: "Protecting your privacy",
-      iconPath: 'assets/images/safety_privacy.png',
+      iconPath: 'assets/images/Safety-Support.png',
       popupImagePath:
-          'assets/images/popup_choose_passenger.png', // Replace with a relevant image
+          'assets/images/Safety-Support.png', // Replace with a relevant image
       popupTitle: "Your details are private",
       popupDescription:
           "Your phone number is anonymized when you call or text through the app, so your personal contact information stays private.",
     ),
     SafetyFeature(
       title: "Staying safe on every ride",
-      iconPath: 'assets/images/safety_safe_ride.png',
+      iconPath: 'assets/images/Every-Ride.png',
       popupImagePath:
-          'assets/images/popup_choose_passenger.png', // Replace with a relevant image
+          'assets/images/Every-Ride.png', // Replace with a relevant image
       popupTitle: "Safety for every journey",
       popupDescription:
           "From GPS tracking to our 24/7 support team, we have features in place to help you stay safe from pickup to drop-off.",
     ),
     SafetyFeature(
       title: "Accidents: Steps to take",
-      iconPath: 'assets/images/safety_accident.png',
+      iconPath: 'assets/images/Accident.png',
       popupImagePath:
-          'assets/images/popup_choose_passenger.png', // Replace with a relevant image
+          'assets/images/Accident.png', // Replace with a relevant image
       popupTitle: "In case of an accident",
       popupDescription:
           "If you're involved in an accident, first ensure your safety and call local emergency services if needed. You can then report the incident to us directly through the app.",
@@ -77,25 +78,6 @@ class SafetyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black),
-          onPressed: () {
-            // TODO: Implement drawer or navigation
-          },
-        ),
-        title: const Text(
-          "Safety",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -128,7 +110,7 @@ class SafetyScreen extends StatelessWidget {
           child: _buildTopActionCard(
             context: context,
             title: "Support",
-            iconPath: 'assets/images/safety_support.png',
+            iconPath: 'assets/images/Protecting.png',
             onTap: () {},
           ),
         ),
@@ -137,7 +119,7 @@ class SafetyScreen extends StatelessWidget {
           child: _buildTopActionCard(
             context: context,
             title: "Emergency contacts",
-            iconPath: 'assets/images/safety_emergency_contacts.png',
+            iconPath: 'assets/images/Protecting.png',
             onTap: () {},
           ),
         ),
@@ -254,31 +236,19 @@ class SafetyScreen extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Positioned(
-              bottom: -15,
-              right: -15,
-              child: Image.asset(
-                'assets/images/safety_green_splash.png',
-                height: 80,
-                width: 80,
-              ),
-            ),
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     feature.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
+                    style: AppTypography.appTitle(context),
                   ),
                   Align(
                     alignment: Alignment.bottomRight,
-                    child: Image.asset(feature.iconPath, height: 32, width: 32),
+                    child: Image.asset(feature.iconPath, height: 64, width: 64),
                   ),
                 ],
               ),

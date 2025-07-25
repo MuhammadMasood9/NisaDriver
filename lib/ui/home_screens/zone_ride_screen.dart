@@ -667,12 +667,12 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
       right: 70,
       child: Material(
         elevation: 8.0,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(6),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 400),
           decoration: BoxDecoration(
-              color: bgColor, borderRadius: BorderRadius.circular(30)),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              color: bgColor, borderRadius: BorderRadius.circular(6)),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
@@ -706,11 +706,13 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
           FloatingActionButton.small(
             heroTag: 'back_btn',
             onPressed: () => Get.back(),
+            elevation: 0,
             backgroundColor: Colors.white,
-            child: const Icon(Icons.arrow_back, color: Colors.black87),
+            child: const Icon(Icons.arrow_back, color: AppColors.primary),
           ),
           FloatingActionButton.small(
             heroTag: 'location_btn',
+            elevation: 0,
             onPressed: () {
               if (Constant.currentLocation != null) {
                 _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
@@ -781,7 +783,7 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
           ),
           Padding(
             padding: const EdgeInsets.only(left: 12.0, top: 4, bottom: 4),
-            child: Container(width: 2, height: 25, color: Colors.grey.shade300),
+            child: Container(width: 2, height: 15, color: Colors.grey.shade300),
           ),
           _buildLocationDisplayRow(
             isOrigin: false,
@@ -799,22 +801,20 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.08),
+              color: AppColors.primary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.withOpacity(0.2)),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.info_outline_rounded,
-                    color: Colors.blue.shade700, size: 20),
+                    color: AppColors.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   "Finds rides within 1km of your route".tr,
-                  style: TextStyle(
-                    color: Colors.blue.shade900,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: AppTypography.appTitle(context)
+                      .copyWith(color: AppColors.primary),
                 ),
               ],
             ),
@@ -838,16 +838,20 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
     bool isActive = isOrigin || _driverOrigin != null;
 
     return Material(
-      color: isActive ? Colors.grey.shade100 : Colors.grey.shade200,
-      borderRadius: BorderRadius.circular(12),
+      color: isActive ? AppColors.grey75 : AppColors.grey200,
+      borderRadius: BorderRadius.circular(6),
       child: InkWell(
         onTap: isActive ? onTap : null,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(6),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
           child: Row(
             children: [
-              Icon(icon, color: isActive ? iconColor : Colors.grey.shade400),
+              Icon(
+                icon,
+                color: isActive ? iconColor : Colors.grey.shade400,
+                size: 18,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -856,16 +860,11 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
                     if (isSet)
                       Text(
                         isOrigin ? 'Start'.tr : 'Destination'.tr,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: AppTypography.input(context),
                       ),
                     Text(
                       isSet ? address : hint,
-                      style: TextStyle(
-                        fontSize: 15,
+                      style: AppTypography.appTitle(context).copyWith(
                         color: isSet
                             ? Colors.black87
                             : (isActive
@@ -916,28 +915,27 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
           Row(
             children: [
               SizedBox(
-                height: 54,
+                height: 40,
                 child: OutlinedButton(
                   onPressed: isSearching ? null : _resetRoute,
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(6)),
                     side: BorderSide(color: Colors.grey.shade400),
                   ),
                   child: Icon(Icons.refresh,
-                      color: Colors.grey.shade700, size: 28),
+                      color: Colors.grey.shade700, size: 24),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: SizedBox(
-                  height: 54,
+                  height: 40,
                   child: ElevatedButton.icon(
                     icon: Icon(isSearching ? Icons.stop_circle : Icons.search),
                     label: Text(
                       isSearching ? "Stop Searching".tr : "Find Rides".tr,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 18),
+                      style: AppTypography.buttonlight(context),
                     ),
                     onPressed:
                         isSearching ? _stopSearching : _startSearchingForRides,
@@ -946,7 +944,7 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
                           isSearching ? Colors.red.shade600 : AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(6)),
                     ),
                   ),
                 ),

@@ -268,6 +268,7 @@ class LiveTrackingController extends GetxController {
       latitude: currentPosition.value!.latitude,
       longitude: currentPosition.value!.longitude,
       id: "Device",
+
       descriptor: driverIcon!,
       rotation: compassHeading.value, // Use compass bearing for marker
     );
@@ -1145,7 +1146,7 @@ class LiveTrackingController extends GetxController {
     final Uint8List destination =
         await Constant().getBytesFromAsset('assets/images/dropoff.png', 50);
     final Uint8List driver =
-        await Constant().getBytesFromAsset('assets/images/ic_cab.png', 30);
+        await Constant().getBytesFromAsset('assets/images/ic_cab.png', 60);
     departureIcon = BitmapDescriptor.fromBytes(departure);
     destinationIcon = BitmapDescriptor.fromBytes(destination);
     driverIcon = BitmapDescriptor.fromBytes(driver);

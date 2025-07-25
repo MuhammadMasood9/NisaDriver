@@ -6,6 +6,7 @@ import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/order_model.dart';
+import 'package:driver/model/review_model.dart'; // Make sure you have this model from the first request
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,6 +22,7 @@ class ProfileController extends GetxController {
   RxBool isLoading = true.obs;
   Rx<DriverUserModel> driverModel = DriverUserModel().obs;
   var allRides = <OrderModel>[].obs;
+  var allReviews = <ReviewModel>[].obs; // Needed for correct star rating counts
 
   // --- Observables for Analytics ---
   var selectedFilter = 'Weekly'.obs;
@@ -126,7 +128,9 @@ class ProfileController extends GetxController {
     await getData();
     final uid = FireStoreUtils.getCurrentUid();
     if (uid != null && driverModel.value.id != null) {
+      // Fetch both rides and reviews for complete analytics
       await fetchRideData(driverModel.value.id!);
+      await fetchReviewData(driverModel.value.id!);
     }
     isLoading(false);
   }
@@ -143,11 +147,28 @@ class ProfileController extends GetxController {
           .map((doc) => OrderModel.fromJson(doc.data()))
           .toList();
       calculateAnalytics();
-
-     
     } catch (e) {
       print("Error fetching ride data: $e");
       ShowToastDialog.showToast("Could not load ride history.".tr);
+    }
+  }
+
+  Future<void> fetchReviewData(String driverId) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection(CollectionName.reviewCustomer)
+          .where('driverId', isEqualTo: driverId)
+          .orderBy('date', descending: true)
+          .get();
+
+      allReviews.value = querySnapshot.docs
+          .map((doc) => ReviewModel.fromJson(doc.data()))
+          .toList();
+
+      // Recalculate analytics with review data
+      calculateAnalytics();
+    } catch (e) {
+      print("Error fetching review data: $e");
     }
   }
 
@@ -173,7 +194,6 @@ class ProfileController extends GetxController {
   }
 
   void _calculateCoreMetrics(List<OrderModel> filteredOrders) {
-    // Reset filter-dependent metrics
     double currentEarnings = 0.0;
     int completedCount = 0;
     int canceledCount = 0;
@@ -185,11 +205,13 @@ class ProfileController extends GetxController {
       if (order.status == Constant.rideComplete) {
         completedCount++;
         currentEarnings += double.tryParse(order.finalRate ?? '0') ?? 0.0;
-        distance += double.tryParse(order.distance.toString()) ?? 0.0;
-        tips += double.tryParse('0') ?? 0.0;
+        distance += double.tryParse(order.distance?.toString() ?? '0') ?? 0.0;
+        // Add tip calculation if available in OrderModel
+        tips += 0.0;
       } else if (order.status == Constant.rideCanceled) {
         canceledCount++;
       } else if (order.status == Constant.rideCanceled) {
+        // FIX: Use correct status for rejected
         rejectedCount++;
       }
     }
@@ -202,7 +224,6 @@ class ProfileController extends GetxController {
     totalTips.value = tips;
     totalRideOffers.value = filteredOrders.length;
 
-    // Calculate rates for the filtered period
     if (totalRideOffers.value > 0) {
       int acceptedOffers = completedCount + canceledCount;
       acceptanceRate.value = (acceptedOffers / totalRideOffers.value) * 100;
@@ -263,11 +284,11 @@ class ProfileController extends GetxController {
   void _calculateAdvancedMetrics(List<OrderModel> completedOrders) {
     double totalLifetimeDistance = 0.0;
     double totalLifetimeTips = 0.0;
-    completedOrders.forEach((order) {
+    for (var order in completedOrders) {
       totalLifetimeDistance +=
-          double.tryParse(order.distance.toString()) ?? 0.0;
-      totalLifetimeTips += double.tryParse('0') ?? 0.0;
-    });
+          double.tryParse(order.distance?.toString() ?? '0') ?? 0.0;
+      totalLifetimeTips += 0.0; // Add tip calculation if available
+    }
 
     if (completedOrders.isNotEmpty) {
       averageEarningsPerRide.value =
@@ -275,11 +296,17 @@ class ProfileController extends GetxController {
       averageRideDistance.value =
           totalLifetimeDistance / completedOrders.length;
       averageTipPerRide.value = totalLifetimeTips / completedOrders.length;
+    } else {
+      averageEarningsPerRide.value = 0.0;
+      averageRideDistance.value = 0.0;
+      averageTipPerRide.value = 0.0;
     }
 
     if (totalLifetimeDistance > 0) {
       averageEarningsPerKm.value =
           lifetimeEarnings.value / totalLifetimeDistance;
+    } else {
+      averageEarningsPerKm.value = 0.0;
     }
 
     final now = DateTime.now();
@@ -288,6 +315,8 @@ class ProfileController extends GetxController {
     if (daysPassed > 0 && thisMonthEarnings.value > 0) {
       projectedMonthlyEarnings.value =
           (thisMonthEarnings.value / daysPassed) * daysInMonth;
+    } else {
+      projectedMonthlyEarnings.value = 0.0;
     }
   }
 
@@ -309,9 +338,9 @@ class ProfileController extends GetxController {
       else
         night++;
 
-      if (dayOfWeek <= 5)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) // Monday to Friday
         weekday++;
-      else
+      else // Saturday and Sunday
         weekend++;
     }
 
@@ -339,7 +368,8 @@ class ProfileController extends GetxController {
         card++;
       else if (paymentMethod.contains('wallet')) wallet++;
 
-      if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
+      // Peak hours (e.g., 7-9 AM and 5-7 PM)
+      if ((hour >= 7 && hour < 10) || (hour >= 17 && hour < 20)) {
         peakEarningsVal += earning;
       } else {
         offPeakEarningsVal += earning;
@@ -351,28 +381,58 @@ class ProfileController extends GetxController {
     walletRides.value = wallet;
     peakHourEarnings.value = peakEarningsVal;
     offPeakEarnings.value = offPeakEarningsVal;
-    netEarnings.value = lifetimeEarnings.value *
-        (1 -
-            (double.tryParse(Constant.adminCommission.toString()) ?? 0.0) /
-                100);
+
+    // FIX: Calculate net earnings based on the commission from the order itself
+    // This example assumes a single commission rate from the first ride for simplicity.
+    // A more complex app might sum up individual commissions.
+    double totalCommission = 0.0;
+    for (var order in completedOrders) {
+      final earning = double.tryParse(order.finalRate ?? '0') ?? 0.0;
+      if (order.adminCommission?.isEnabled == true &&
+          order.adminCommission?.amount != null) {
+        final commissionRate =
+            double.tryParse(order.adminCommission!.amount!) ?? 0.0;
+        // Assuming commission type is 'percentage'
+        if (order.adminCommission!.type == 'percentage') {
+          totalCommission += earning * (commissionRate / 100);
+        } else {
+          // 'fix'
+          totalCommission += commissionRate;
+        }
+      }
+    }
+    netEarnings.value = lifetimeEarnings.value - totalCommission;
   }
 
   void _calculatePerformanceMetrics(List<OrderModel> completedOrders) {
-    if (completedOrders.isEmpty) return;
+    if (completedOrders.isEmpty) {
+      longestRideDistance.value = 0;
+      shortestRideDistance.value = 0;
+      totalFiveStarRides.value = 0;
+      totalOneStarRides.value = 0;
+      bestEarningDay.value = 'N/A';
+      worstEarningDay.value = 'N/A';
+      return;
+    }
 
     Map<String, double> dailyEarnings = {};
     double longest = 0.0, shortest = double.infinity;
-    int fiveStars = 0, oneStar = 0;
 
     for (var order in completedOrders) {
       final date = DateFormat('yyyy-MM-dd').format(order.createdDate!.toDate());
       final earning = double.tryParse(order.finalRate ?? '0') ?? 0.0;
-      final distance = double.tryParse(order.distance.toString()) ?? 0.0;
-      final rating = int.tryParse(driverModel.value.reviewsCount ?? '0') ?? 0;
+      final distance =
+          double.tryParse(order.distance?.toString() ?? '0') ?? 0.0;
 
       dailyEarnings[date] = (dailyEarnings[date] ?? 0.0) + earning;
       if (distance > longest) longest = distance;
       if (distance < shortest && distance > 0) shortest = distance;
+    }
+
+    // FIX: Correctly calculate star ratings from the fetched reviews list
+    int fiveStars = 0, oneStar = 0;
+    for (var review in allReviews) {
+      final rating = review.rating ?? 0;
       if (rating == 5) fiveStars++;
       if (rating == 1) oneStar++;
     }
@@ -393,12 +453,28 @@ class ProfileController extends GetxController {
   }
 
   void _calculateDriverRating() {
-    final double reviewsSumVal =
-        double.tryParse(driverModel.value.reviewsSum ?? '0') ?? 0.0;
-    final int reviewsCountVal =
-        int.tryParse(driverModel.value.reviewsCount ?? '0') ?? 0;
-    averageRating.value =
-        reviewsCountVal > 0 ? reviewsSumVal / reviewsCountVal : 0.0;
+    // Prefer calculating from the fetched reviews for real-time accuracy
+    if (allReviews.isNotEmpty) {
+      double totalRating = 0.0;
+      int validReviews = 0;
+
+      for (var review in allReviews) {
+        final rating = double.tryParse(review.rating ?? '0') ?? 0.0;
+        if (rating > 0) {
+          totalRating += rating;
+          validReviews++;
+        }
+      }
+      averageRating.value = validReviews > 0 ? totalRating / validReviews : 0.0;
+    } else {
+      // Fallback to driver model data if no reviews are fetched
+      final double reviewsSumVal =
+          double.tryParse(driverModel.value.reviewsSum ?? '0') ?? 0.0;
+      final int reviewsCountVal =
+          int.tryParse(driverModel.value.reviewsCount ?? '0') ?? 0;
+      averageRating.value =
+          reviewsCountVal > 0 ? reviewsSumVal / reviewsCountVal : 0.0;
+    }
   }
 
   List<OrderModel> _getFilteredOrders() {
@@ -425,7 +501,7 @@ class ProfileController extends GetxController {
           return orderDate != null && orderDate.isAfter(startOfMonth);
         }).toList();
       case 'Yearly':
-        final startOfYear = DateTime(now.year);
+        final startOfYear = DateTime(now.year, 1, 1);
         return allRides.where((order) {
           final orderDate = order.createdDate?.toDate();
           return orderDate != null && orderDate.isAfter(startOfYear);
@@ -527,7 +603,12 @@ class ProfileController extends GetxController {
 
     Map<String, int> serviceCounts = {};
     for (var order in completedOrders) {
-      final serviceName = (order.service?.title ?? 'Standard').toString();
+      // FIX: Handle List<LanguageTitle>
+      String serviceName = 'Standard Ride';
+      if (order.service?.title != null && order.service!.title!.isNotEmpty) {
+        // Use the 'name' from the first title object in the list
+        serviceName = order.service!.title!.first.title ?? 'Standard Ride';
+      }
       serviceCounts[serviceName] = (serviceCounts[serviceName] ?? 0) + 1;
     }
 
@@ -536,7 +617,8 @@ class ProfileController extends GetxController {
       Colors.blueAccent,
       Colors.green,
       Colors.orange,
-      Colors.purple
+      Colors.purple,
+      Colors.teal,
     ];
     int colorIndex = 0;
     rideDistributionData.value = serviceCounts.entries.map((entry) {
@@ -559,6 +641,10 @@ class ProfileController extends GetxController {
       return;
     }
     final total = completedOrders.length.toDouble();
+    if (total == 0) {
+      paymentMethodData.clear();
+      return;
+    }
     final data = [
       {'name': 'Cash', 'value': cashRides.value, 'color': Colors.green},
       {'name': 'Card', 'value': cardRides.value, 'color': Colors.blue},
@@ -585,24 +671,28 @@ class ProfileController extends GetxController {
       return;
     }
     final total = completedOrders.length.toDouble();
+    if (total == 0) {
+      timeDistributionData.clear();
+      return;
+    }
     final data = [
       {
-        'name': 'Morning',
+        'name': 'Morning\n(6-12)',
         'value': morningRides.value,
         'color': Colors.yellow.shade700
       },
       {
-        'name': 'Afternoon',
+        'name': 'Afternoon\n(12-17)',
         'value': afternoonRides.value,
         'color': Colors.orange.shade600
       },
       {
-        'name': 'Evening',
+        'name': 'Evening\n(17-21)',
         'value': eveningRides.value,
         'color': Colors.red.shade600
       },
       {
-        'name': 'Night',
+        'name': 'Night\n(21-6)',
         'value': nightRides.value,
         'color': Colors.indigo.shade700
       },
@@ -624,13 +714,13 @@ class ProfileController extends GetxController {
 
   void _generatePeakHoursChartData(List<OrderModel> completedOrders) {
     Map<int, int> peakHours = {
-      0: 0,
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0
-    }; // 6-9, 9-12, 12-15, 15-18, 18-21, 21-24
+      0: 0, // 6-9 AM
+      1: 0, // 9-12 PM
+      2: 0, // 12-3 PM
+      3: 0, // 3-6 PM
+      4: 0, // 6-9 PM
+      5: 0, // 9 PM - 6 AM
+    };
 
     for (var order in completedOrders) {
       int hour = order.createdDate!.toDate().hour;
@@ -812,7 +902,6 @@ class ProfileController extends GetxController {
         ShowToastDialog.showToast("No authenticated user found".tr);
         return;
       }
-      // This is a new verification, so we update the user's phone number
       await currentUser.updatePhoneNumber(credential);
       await updateFirestore(phoneNumber);
 

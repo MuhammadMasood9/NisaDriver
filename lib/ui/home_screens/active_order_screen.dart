@@ -26,13 +26,14 @@ class ActiveOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ActiveOrderController controller = Get.put(ActiveOrderController());
+    // Controller is initialized here but not used in this specific build method.
+    // It's used in the helper methods, which is fine.
+    Get.put(ActiveOrderController());
 
     return Scaffold(
       backgroundColor: AppColors.grey75,
       body: StreamBuilder<QuerySnapshot>(
-        // MODIFIED QUERY: This now only shows active rides that are NOT scheduled.
-        // isNotEqualTo: true also correctly handles cases where the field is null or doesn't exist.
+        // This query correctly shows active, on-demand rides.
         stream: FirebaseFirestore.instance
             .collection(CollectionName.orders)
             .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
@@ -40,8 +41,7 @@ class ActiveOrderScreen extends StatelessWidget {
               Constant.rideInProgress,
               Constant.rideActive,
             ])
-            .where('isScheduledRide',
-                isNotEqualTo: true) // The key change for this file.
+            .where('isScheduledRide', isNotEqualTo: true)
             .snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.hasError) {
@@ -50,7 +50,6 @@ class ActiveOrderScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Constant.loader(context);
           }
-
           if (snapshot.data!.docs.isEmpty) {
             return _buildEmptyState();
           }
@@ -62,6 +61,8 @@ class ActiveOrderScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final orderModel = OrderModel.fromJson(
                   snapshot.data!.docs[index].data() as Map<String, dynamic>);
+              // Pass controller to the card builder
+              final ActiveOrderController controller = Get.find();
               return _buildActiveOrderCard(context, orderModel, controller);
             },
           );
@@ -91,37 +92,40 @@ class ActiveOrderScreen extends StatelessWidget {
         children: [
           _buildRideTypeTag(context, orderModel), // New tag header
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               children: [
                 _buildLocationAndPriceSection(context, orderModel),
                 const Divider(
-                  height: 14,
+                  height: 24,
                   thickness: 1,
-                  color: AppColors.background,
+                  color: AppColors.grey200, // FIXED: Was AppColors.background
                 ),
-                _buildMainActionAndContactRow(context, orderModel, controller),
-                const SizedBox(height: 5),
-                _buildSecondaryActionRow(context, orderModel),
-                Divider(
-                  height: 20,
+                // FIX: Used a Column to correctly stack the button rows.
+                Column(
+                  children: [
+                    _buildMainActionRow(context, orderModel, controller),
+                    const SizedBox(height: 0),
+                    // _buildSecondaryActionRow(context, orderModel),
+                  ],
+                ),
+                const Divider(
+                  height: 24,
                   color: AppColors.grey200,
                 ),
+                // FIX: Removed invalid 'spacing' property and added SizedBox for spacing.
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  spacing: 30,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       Constant().formatTimestamp(orderModel.createdDate),
                       style: AppTypography.caption(context)
                           .copyWith(color: Colors.grey.shade600),
                     ),
-                    Expanded(
-                        child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      spacing: 5,
+                    Row(
                       children: [
-                        Container(
+                        SizedBox(
                           width: 50,
                           child: _buildCircleIconButton(
                             context: context,
@@ -129,7 +133,8 @@ class ActiveOrderScreen extends StatelessWidget {
                             onTap: () => _openChat(orderModel),
                           ),
                         ),
-                        Container(
+                        const SizedBox(width: 8), // Added for spacing
+                        SizedBox(
                           width: 50,
                           child: _buildCircleIconButton(
                             context: context,
@@ -138,7 +143,7 @@ class ActiveOrderScreen extends StatelessWidget {
                           ),
                         )
                       ],
-                    )),
+                    ),
                   ],
                 )
               ],
@@ -266,17 +271,16 @@ class ActiveOrderScreen extends StatelessWidget {
     );
   }
 
-  /// Main action (Pickup/Complete) and contact buttons (Chat/Call).
-  Widget _buildMainActionAndContactRow(BuildContext context,
-      OrderModel orderModel, ActiveOrderController controller) {
+  /// Main action buttons row (Pickup/Complete & Track).
+  Widget _buildMainActionRow(BuildContext context, OrderModel orderModel,
+      ActiveOrderController controller) {
     bool isRideInProgress = orderModel.status == Constant.rideInProgress;
 
     return Row(
       children: [
         Expanded(
-          flex: 1,
-          child: Container(
-            height: 35,
+          child: SizedBox(
+            height: 40,
             child: ElevatedButton(
               onPressed: () => isRideInProgress
                   ? _completeRide(controller, orderModel)
@@ -288,10 +292,10 @@ class ActiveOrderScreen extends StatelessWidget {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(3)),
+                    borderRadius: BorderRadius.circular(6)),
               ),
               child: Text(
-                isRideInProgress ? "Complete Ride".tr : "Pickup Customer".tr,
+                isRideInProgress ? "Complete".tr : "Pickup".tr,
                 style: AppTypography.button(context)
                     .copyWith(color: AppColors.background),
               ),
@@ -300,33 +304,28 @@ class ActiveOrderScreen extends StatelessWidget {
         ),
         const SizedBox(width: 5),
         Expanded(
-            child: Container(
-          height: 35,
-          child: OutlinedButton(
-            onPressed: () => _trackRide(orderModel),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.grey500,
-              side: BorderSide(color: Colors.grey.shade300),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3)),
+          child: SizedBox(
+            height: 40,
+            child: OutlinedButton(
+              onPressed: () => _trackRide(orderModel),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.grey500,
+                side: BorderSide(color: Colors.grey.shade300),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6)),
+              ),
+              child: Text("Track".tr,
+                  style: AppTypography.button(context)
+                      .copyWith(color: AppColors.grey600)),
             ),
-            child: Text("Track Ride".tr,
-                style: AppTypography.button(context)
-                    .copyWith(color: AppColors.grey600)),
           ),
-        )),
-      ],
-    );
-  }
-
-  /// Secondary actions (Cancel/Track).
-  Widget _buildSecondaryActionRow(BuildContext context, OrderModel orderModel) {
-    return Row(
-      children: [
+        ),
+        const SizedBox(width: 5),
         Expanded(
-            child: Container(
-          height: 35,
+            child: SizedBox(
+          height: 40,
+          width: double.infinity,
           child: OutlinedButton(
             onPressed: () => _cancelRide(context, orderModel),
             style: OutlinedButton.styleFrom(
@@ -334,36 +333,37 @@ class ActiveOrderScreen extends StatelessWidget {
               side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
               padding: const EdgeInsets.symmetric(vertical: 8),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3)),
+                  borderRadius: BorderRadius.circular(6)),
             ),
-            child: Text("Cancel Ride".tr,
+            child: Text("Cancel".tr,
                 style: AppTypography.button(context)
                     .copyWith(color: AppColors.primary)),
           ),
-        )),
+        ))
       ],
     );
   }
 
+  /// Secondary actions (Cancel).
+
   /// A circular icon button for chat and call.
+  /// FIX: Removed the `Expanded` widget which was causing a layout error.
   Widget _buildCircleIconButton({
     required BuildContext context,
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    return Expanded(
-      flex: 1,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(3),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Icon(icon, color: AppColors.primary, size: 18),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
         ),
+        child: Icon(icon, color: AppColors.primary, size: 20),
       ),
     );
   }
@@ -536,19 +536,20 @@ class ActiveOrderScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text("Enter Customer OTP".tr,
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600, fontSize: 18)),
+                style: AppTypography.appTitle(context)),
             const SizedBox(height: 8),
-            Text("Ask the customer for the 6-digit code to start the ride.".tr,
-                style: GoogleFonts.poppins(color: Colors.grey.shade600)),
+            Text(
+              "Ask the customer for the 6-digit code to start the ride.".tr,
+              style: AppTypography.caption(context),
+            ),
             Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: const EdgeInsets.only(top: 15),
               child: PinCodeTextField(
                 length: 6,
                 appContext: context,
                 keyboardType: TextInputType.phone,
                 pinTheme: PinTheme(
-                  fieldHeight: 45,
+                  fieldHeight: 40,
                   fieldWidth: 40,
                   activeColor: AppColors.primary,
                   selectedColor: AppColors.primary,
@@ -572,7 +573,7 @@ class ActiveOrderScreen extends StatelessWidget {
               title: "Verify & Start Ride".tr,
               onPress: () async => _verifyOtp(otpController.text, orderModel),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
           ],
         ),
       ),
