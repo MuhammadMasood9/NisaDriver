@@ -4,10 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
+import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/model/review_model.dart'; // Make sure you have this model from the first request
 import 'package:driver/themes/app_colors.dart';
+import 'package:driver/ui/auth_screen/login_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -122,16 +124,77 @@ class ProfileController extends GetxController {
     super.onInit();
     fetchInitialData();
   }
+final isLoggingOut = false.obs;
 
+  // ... your existing onInit and other methods ...
+
+  // ⭐️ 2. Replace your existing logout() method with this one
+  Future<void> logout() async {
+    // Prevent multiple logout calls
+    if (isLoggingOut.value) return;
+
+    try {
+      isLoggingOut.value = true;
+
+      // Log out from Firebase Authentication
+      await FirebaseAuth.instance.signOut();
+
+      // Clear local session data (e.g., from GetStorage)
+      // final box = GetStorage();
+      // await box.remove(Constant.driverUser);
+
+      // Reset the state of relevant controllers
+      final DashBoardController dashboardController = Get.find<DashBoardController>();
+      dashboardController.isOnline.value = false;
+      driverModel.value = DriverUserModel(); // Clear profile data
+
+      // Navigate to LoginScreen and remove all previous screens
+      Get.offAll(() => const LoginScreen());
+
+    } catch (e) {
+      // Show an error message if logout fails
+      Get.snackbar(
+        'Logout Failed'.tr,
+        'An error occurred. Please try again.'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      print("Error logging out: $e");
+    } finally {
+      // Ensure the loading state is always reset
+      isLoggingOut.value = false;
+    }
+  }
   Future<void> fetchInitialData() async {
     isLoading(true);
-    await getData();
+    
+    // First, ensure we have a valid user ID
     final uid = FireStoreUtils.getCurrentUid();
-    if (uid != null && driverModel.value.id != null) {
-      // Fetch both rides and reviews for complete analytics
-      await fetchRideData(driverModel.value.id!);
-      await fetchReviewData(driverModel.value.id!);
+    if (uid == null) {
+      ShowToastDialog.showToast("User not authenticated".tr);
+      driverModel.value = DriverUserModel();
+      isLoading(false);
+      return;
     }
+    
+    // Load profile data
+    await getData();
+    
+    // Only fetch additional data if profile loaded successfully
+    if (driverModel.value.id != null) {
+      try {
+        // Fetch both rides and reviews for complete analytics
+        await Future.wait([
+          fetchRideData(driverModel.value.id!),
+          fetchReviewData(driverModel.value.id!),
+        ]);
+      } catch (e) {
+        print("Error fetching additional data: $e");
+        // Don't fail the entire load if analytics data fails
+      }
+    }
+    
     isLoading(false);
   }
 
@@ -795,10 +858,15 @@ class ProfileController extends GetxController {
       String? driverId = FireStoreUtils.getCurrentUid();
       if (driverId == null) {
         ShowToastDialog.showToast("User not authenticated".tr);
+        driverModel.value = DriverUserModel();
         return;
       }
+      
+      // Add a small delay to ensure Firebase Auth is ready
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       final value = await FireStoreUtils.getDriverProfile(driverId);
-      if (value != null) {
+      if (value != null && value.id != null) {
         driverModel.value = value;
         phoneNumberController.value.text = value.phoneNumber ?? '';
         countryCode.value = value.countryCode ?? '+1';
@@ -806,11 +874,16 @@ class ProfileController extends GetxController {
         fullNameController.value.text = value.fullName ?? '';
         profileImage.value = value.profilePic ?? '';
         await syncProfileVerification();
+        print("Profile loaded successfully: ${value.fullName}");
       } else {
+        print("Driver profile not found for ID: $driverId");
         ShowToastDialog.showToast("Driver profile not found".tr);
+        driverModel.value = DriverUserModel();
       }
     } catch (e) {
+      print("Error fetching profile: $e");
       ShowToastDialog.showToast("Error fetching profile: $e".tr);
+      driverModel.value = DriverUserModel();
     }
   }
 

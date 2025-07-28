@@ -659,7 +659,7 @@ class AnalyticsScreen extends StatelessWidget {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    horizontalInterval: maxY / 4,
+                    horizontalInterval: maxY == 0 ? 1 : maxY / 4,
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
                         color: Colors.grey.shade100,
@@ -701,7 +701,7 @@ class AnalyticsScreen extends StatelessWidget {
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        interval: maxY / 4,
+                        interval: maxY == 0 ? 1 : maxY / 4,
                         getTitlesWidget: (double value, TitleMeta meta) {
                           if (value == 0 || value == maxY)
                             return const Text('');
@@ -1073,7 +1073,7 @@ class AnalyticsScreen extends StatelessWidget {
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
-                              interval: maxY / 4,
+                              interval: maxY == 0 ? 1 : maxY / 4,
                               getTitlesWidget: (double value, TitleMeta meta) {
                                 if (value == 0 || value == maxY)
                                   return const Text('');
@@ -1122,7 +1122,7 @@ class AnalyticsScreen extends StatelessWidget {
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
-                          horizontalInterval: maxY / 4,
+                          horizontalInterval: maxY == 0 ? 1 : maxY / 4,
                           getDrawingHorizontalLine: (value) {
                             return FlLine(
                               color: Colors.grey.shade100,
@@ -1361,7 +1361,7 @@ class AnalyticsScreen extends StatelessWidget {
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
-                              interval: maxY / 4,
+                              interval: maxY == 0 ? 1 : maxY / 4,
                               getTitlesWidget: (double value, TitleMeta meta) {
                                 if (value == 0 || value == maxY)
                                   return const Text('');
@@ -1403,7 +1403,7 @@ class AnalyticsScreen extends StatelessWidget {
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
-                          horizontalInterval: maxY / 4,
+                          horizontalInterval: maxY == 0 ? 1 : maxY / 4,
                           getDrawingHorizontalLine: (value) {
                             return FlLine(
                               color: Colors.grey.shade100,

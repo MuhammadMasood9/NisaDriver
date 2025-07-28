@@ -27,6 +27,74 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
+  
+  // Static set to track logged errors across instances
+  static final Set<String> _loggedErrors = <String>{};
+  
+  // Method to clear logged errors (useful for testing or resetting)
+  static void clearLoggedErrors() {
+    _loggedErrors.clear();
+  }
+
+  // Intro image slider for fallback when network images fail
+  Widget _buildIntroImageSlider(BuildContext context, int index) {
+    final List<String> introImages = [
+      'assets/images/intro_1.png',
+      'assets/images/intro_2.png',
+      'assets/images/intro_3.png',
+    ];
+    
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      child: Image.asset(
+        introImages[index % introImages.length],
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          // Only log asset errors once per session
+          final assetPath = introImages[index % introImages.length];
+          if (!_loggedErrors.contains('asset:$assetPath')) {
+            _loggedErrors.add('asset:$assetPath');
+            print('Asset image failed to load: $assetPath - Using placeholder');
+          }
+          
+          // If even the asset image fails, show a placeholder with gradient
+          return Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primary.withOpacity(0.1),
+                  AppColors.grey75,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.image_not_supported_outlined,
+                  size: 80,
+                  color: AppColors.grey500,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Image Unavailable'.tr,
+                  style: AppTypography.label(context).copyWith(
+                    color: AppColors.grey500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   // Shimmer widget for loading state
   Widget _buildOnboardingShimmer(BuildContext context) {
@@ -154,9 +222,26 @@ class LoginScreen extends StatelessWidget {
                                         fit: BoxFit.contain,
                                         placeholder: (context, url) =>
                                             Constant.loader(context),
-                                        errorWidget: (context, url, error) =>
-                                            Image.network(
-                                                Constant.userPlaceHolder),
+                                        errorWidget: (context, url, error) {
+                                          // Only log once per session to reduce noise
+                                          if (!_loggedErrors.contains(url)) {
+                                            _loggedErrors.add(url);
+                                            print('Image load failed for: $url - Using fallback intro image');
+                                          }
+                                          return _buildIntroImageSlider(context, index);
+                                        },
+                                        httpHeaders: const {
+                                          'Cache-Control': 'max-age=3600',
+                                        },
+                                        maxWidthDiskCache: 1000,
+                                        maxHeightDiskCache: 1000,
+                                        memCacheWidth: 1000,
+                                        memCacheHeight: 1000,
+                                        fadeInDuration: const Duration(milliseconds: 300),
+                                        fadeOutDuration: const Duration(milliseconds: 300),
+                                        fadeInCurve: Curves.easeIn,
+                                        fadeOutCurve: Curves.easeOut,
+                                        useOldImageOnUrlChange: true,
                                       ),
                                     ),
                                   ),

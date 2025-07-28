@@ -1,7 +1,17 @@
-import 'package:driver/themes/typography.dart';
+import 'package:driver/themes/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:story_view/story_view.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+// Assuming this class exists. If not, you can remove the import and this class.
+class AppTypography {
+  static TextStyle appTitle(BuildContext context) {
+    return const TextStyle(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+    );
+  }
+}
 
 // Data model for each safety feature
 class SafetyFeature {
@@ -24,8 +34,6 @@ class SafetyScreen extends StatelessWidget {
   const SafetyScreen({Key? key}) : super(key: key);
 
   // List of safety features with their corresponding popup data
-  // NOTE: I've updated the popupImagePath to use the user-provided screenshot for one of the items
-  // to better demonstrate the new UI. You can create different images for each feature.
   static final List<SafetyFeature> safetyFeatures = [
     SafetyFeature(
       title: "Proactive safety support",
@@ -83,6 +91,11 @@ class SafetyScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Added SafeArea to keep content below status bar
+            const SafeArea(
+              bottom: false,
+              child: SizedBox.shrink(),
+            ),
             _buildTopActions(context),
             const SizedBox(height: 24),
             _buildEmergencyCallButton(),
@@ -109,7 +122,7 @@ class SafetyScreen extends StatelessWidget {
         Expanded(
           child: _buildTopActionCard(
             context: context,
-            title: "Support",
+            title: "Support and backup",
             iconPath: 'assets/images/Protecting.png',
             onTap: () {},
           ),
@@ -136,7 +149,8 @@ class SafetyScreen extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        height: 120,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: Colors.grey[100],
           borderRadius: BorderRadius.circular(12),
@@ -168,6 +182,10 @@ class SafetyScreen extends StatelessWidget {
           if (await canLaunchUrl(launchUri)) {
             await launchUrl(launchUri);
           } else {
+            // It's good practice to show feedback to the user
+            // ScaffoldMessenger.of(context).showSnackBar(
+            //   SnackBar(content: Text('Could not launch emergency call')),
+            // );
             print('Could not launch $launchUri');
           }
         },
@@ -178,10 +196,10 @@ class SafetyScreen extends StatelessWidget {
         ),
         style: ElevatedButton.styleFrom(
           foregroundColor: Colors.white,
-          backgroundColor: const Color(0xFFD32F2F),
+          backgroundColor: AppColors.primary,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(6),
           ),
         ),
       ),
@@ -237,7 +255,7 @@ class SafetyScreen extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -248,7 +266,7 @@ class SafetyScreen extends StatelessWidget {
                   ),
                   Align(
                     alignment: Alignment.bottomRight,
-                    child: Image.asset(feature.iconPath, height: 64, width: 64),
+                    child: Image.asset(feature.iconPath, height: 50, width: 50),
                   ),
                 ],
               ),
@@ -260,7 +278,7 @@ class SafetyScreen extends StatelessWidget {
   }
 }
 
-// NEW WIDGET FOR STORY VIEWING
+// WIDGET FOR STORY VIEWING
 class SafetyStoryViewer extends StatefulWidget {
   final List<SafetyFeature> features;
   final int initialIndex;
@@ -283,17 +301,14 @@ class _SafetyStoryViewerState extends State<SafetyStoryViewer> {
   void initState() {
     super.initState();
 
-    // Reorder the feature list to start with the item that was tapped
     final reorderedFeatures = List<SafetyFeature>.from(widget.features);
     final tappedFeature = reorderedFeatures.removeAt(widget.initialIndex);
     reorderedFeatures.insert(0, tappedFeature);
 
-    // Create a StoryItem for each feature
     _storyItems = reorderedFeatures.map((feature) {
-      return StoryItem.pageImage(
-        url: feature.popupImagePath, // Used internally by the package
-        controller: _storyController,
-        // view: _StoryPageLayout(feature: feature), // Our custom page UI
+      // Pass the custom widget as the first POSITIONAL argument to StoryItem.
+      return StoryItem(
+        _StoryPageLayout(feature: feature, storyController: _storyController),
         duration: const Duration(seconds: 10),
       );
     }).toList();
@@ -325,11 +340,16 @@ class _SafetyStoryViewerState extends State<SafetyStoryViewer> {
   }
 }
 
-// NEW WIDGET FOR THE LAYOUT OF A SINGLE STORY PAGE
+// WIDGET FOR THE LAYOUT OF A SINGLE STORY PAGE
 class _StoryPageLayout extends StatelessWidget {
   final SafetyFeature feature;
+  final StoryController storyController;
 
-  const _StoryPageLayout({Key? key, required this.feature}) : super(key: key);
+  const _StoryPageLayout({
+    Key? key,
+    required this.feature,
+    required this.storyController,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -340,12 +360,11 @@ class _StoryPageLayout extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // The top progress bars are handled by the StoryView widget automatically.
-            // We can add a close button if needed.
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                const Spacer(),
                 IconButton(
+                  padding: EdgeInsets.zero,
                   icon: const Icon(Icons.close, size: 30),
                   onPressed: () => Navigator.of(context).pop(),
                   color: Colors.black,
@@ -366,8 +385,7 @@ class _StoryPageLayout extends StatelessWidget {
                 color: Colors.black,
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
-                decoration:
-                    TextDecoration.none, // To override any default styles
+                decoration: TextDecoration.none,
               ),
             ),
             const SizedBox(height: 16),

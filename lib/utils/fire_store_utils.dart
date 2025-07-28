@@ -160,7 +160,19 @@ class FireStoreUtils {
   }
 
   static String? getCurrentUid() {
-    return FirebaseAuth.instance.currentUser?.uid;
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && currentUser.uid.isNotEmpty) {
+        print("getCurrentUid: Found user with UID: ${currentUser.uid}");
+        return currentUser.uid;
+      } else {
+        print("getCurrentUid: No authenticated user found");
+        return null;
+      }
+    } catch (e) {
+      print("getCurrentUid: Error getting current user: $e");
+      return null;
+    }
   }
 
   static Future<bool> hasActiveRide() async {
@@ -247,20 +259,37 @@ class FireStoreUtils {
   }
 
   static Future<DriverUserModel?> getDriverProfile(String uuid) async {
-    DriverUserModel? driverModel;
-    await fireStore
-        .collection(CollectionName.driverUsers)
-        .doc(uuid)
-        .get()
-        .then((value) {
-      if (value.exists) {
-        driverModel = DriverUserModel.fromJson(value.data()!);
+    try {
+      if (uuid.isEmpty) {
+        print("getDriverProfile: UUID is empty");
+        return null;
       }
-    }).catchError((error) {
-      log("Failed to update user: $error");
-      driverModel = null;
-    });
-    return driverModel;
+      
+      print("getDriverProfile: Fetching profile for UUID: $uuid");
+      
+      final docSnapshot = await fireStore
+          .collection(CollectionName.driverUsers)
+          .doc(uuid)
+          .get();
+      
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (data != null) {
+          final driverModel = DriverUserModel.fromJson(data);
+          print("getDriverProfile: Profile found for ${driverModel.fullName}");
+          return driverModel;
+        } else {
+          print("getDriverProfile: Document exists but data is null");
+          return null;
+        }
+      } else {
+        print("getDriverProfile: Document does not exist for UUID: $uuid");
+        return null;
+      }
+    } catch (error) {
+      print("getDriverProfile: Error fetching profile: $error");
+      return null;
+    }
   }
 
   static Future<UserModel?> getCustomer(String uuid) async {
