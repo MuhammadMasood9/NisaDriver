@@ -26,23 +26,20 @@ class ActiveOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Controller is initialized here but not used in this specific build method.
-    // It's used in the helper methods, which is fine.
     Get.put(ActiveOrderController());
 
     return Scaffold(
       backgroundColor: AppColors.grey75,
       body: StreamBuilder<QuerySnapshot>(
-        // This query correctly shows active, on-demand rides.
+        // FIX: The query is changed to fetch all active rides first.
+        // The filtering for on-demand rides will be done inside the builder.
         stream: FirebaseFirestore.instance
             .collection(CollectionName.orders)
             .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
             .where('status', whereIn: [
-              Constant.rideInProgress,
-              Constant.rideActive,
-            ])
-            .where('isScheduledRide', isNotEqualTo: true)
-            .snapshots(),
+          Constant.rideInProgress,
+          Constant.rideActive,
+        ]).snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Something went wrong'.tr));
@@ -50,18 +47,29 @@ class ActiveOrderScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Constant.loader(context);
           }
-          if (snapshot.data!.docs.isEmpty) {
+          if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          // FIX: Client-side filtering to correctly handle rides where
+          // `isScheduledRide` is null or false.
+          final onDemandDocs = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            // Show the ride if 'isScheduledRide' is not explicitly true.
+            return data['isScheduledRide'] != true;
+          }).toList();
+
+          if (onDemandDocs.isEmpty) {
             return _buildEmptyState();
           }
 
           return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
+            itemCount: onDemandDocs.length,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6)
                 .copyWith(bottom: 80),
             itemBuilder: (context, index) {
               final orderModel = OrderModel.fromJson(
-                  snapshot.data!.docs[index].data() as Map<String, dynamic>);
-              // Pass controller to the card builder
+                  onDemandDocs[index].data() as Map<String, dynamic>);
               final ActiveOrderController controller = Get.find();
               return _buildActiveOrderCard(context, orderModel, controller);
             },
@@ -90,7 +98,7 @@ class ActiveOrderScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildRideTypeTag(context, orderModel), // New tag header
+          _buildRideTypeTag(context, orderModel),
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -99,21 +107,17 @@ class ActiveOrderScreen extends StatelessWidget {
                 const Divider(
                   height: 24,
                   thickness: 1,
-                  color: AppColors.grey200, // FIXED: Was AppColors.background
+                  color: AppColors.grey200,
                 ),
-                // FIX: Used a Column to correctly stack the button rows.
                 Column(
                   children: [
                     _buildMainActionRow(context, orderModel, controller),
-                    const SizedBox(height: 0),
-                    // _buildSecondaryActionRow(context, orderModel),
                   ],
                 ),
                 const Divider(
                   height: 24,
                   color: AppColors.grey200,
                 ),
-                // FIX: Removed invalid 'spacing' property and added SizedBox for spacing.
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -133,7 +137,7 @@ class ActiveOrderScreen extends StatelessWidget {
                             onTap: () => _openChat(orderModel),
                           ),
                         ),
-                        const SizedBox(width: 8), // Added for spacing
+                        const SizedBox(width: 8),
                         SizedBox(
                           width: 50,
                           child: _buildCircleIconButton(
@@ -156,7 +160,6 @@ class ActiveOrderScreen extends StatelessWidget {
 
   /// Builds the top tag indicating the ride type (On-Demand/Scheduled) and date.
   Widget _buildRideTypeTag(BuildContext context, OrderModel orderModel) {
-    // This will always evaluate to false now, showing the "On-Demand" tag.
     bool isScheduled = orderModel.isScheduledRide == true;
     Color tagColor = isScheduled ? Colors.orange.shade700 : AppColors.primary;
     String tagText = isScheduled ? "Scheduled Ride".tr : "On-Demand Ride".tr;
@@ -188,7 +191,8 @@ class ActiveOrderScreen extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.arrow_circle_down, size: 22, color: AppColors.primary),
+            const Icon(Icons.arrow_circle_down,
+                size: 22, color: AppColors.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -344,10 +348,7 @@ class ActiveOrderScreen extends StatelessWidget {
     );
   }
 
-  /// Secondary actions (Cancel).
-
   /// A circular icon button for chat and call.
-  /// FIX: Removed the `Expanded` widget which was causing a layout error.
   Widget _buildCircleIconButton({
     required BuildContext context,
     required IconData icon,
@@ -401,6 +402,7 @@ class ActiveOrderScreen extends StatelessWidget {
       OrderModel orderModel) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) =>
           otpDialog(context, controller, orderModel),
     );

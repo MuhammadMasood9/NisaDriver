@@ -6,16 +6,13 @@ import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/inbox_model.dart';
 import 'package:driver/model/user_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/firebase_pagination/src/firestore_pagination.dart';
-import 'package:driver/widget/firebase_pagination/src/models/view_type.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class InboxScreen extends StatefulWidget {
   const InboxScreen({super.key});
@@ -27,8 +24,6 @@ class InboxScreen extends StatefulWidget {
 class _InboxScreenState extends State<InboxScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  List<InboxModel> _searchResults = [];
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -36,41 +31,54 @@ class _InboxScreenState extends State<InboxScreen> {
     super.dispose();
   }
 
+  // Handles the deletion of a chat conversation after user confirmation.
   Future<void> _deleteChat(String orderId) async {
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Delete Chat?'.tr),
+          content: Text('This will permanently delete the conversation.'.tr),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'.tr),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child:
+                  Text('Delete'.tr, style: const TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
 
+      if (confirm != true) return;
+
+      // Use a batch write to delete all messages in the conversation for this driver
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection(CollectionName.chat)
           .where('orderId', isEqualTo: orderId)
           .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
           .get();
 
+      WriteBatch batch = FirebaseFirestore.instance.batch();
       for (var doc in querySnapshot.docs) {
-        await doc.reference.delete();
+        batch.delete(doc.reference);
       }
-
-      setState(() {
-        _searchResults.removeWhere((item) => item.orderId == orderId);
-        _isLoading = false;
-      });
+      await batch.commit();
 
       Get.snackbar(
-        'Success',
-        'Chat deleted successfully',
+        'Success'.tr,
+        'Chat deleted successfully'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       Get.snackbar(
-        'Error',
-        'Failed to delete chat',
+        'Error'.tr,
+        'Failed to delete chat: $e'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -78,275 +86,248 @@ class _InboxScreenState extends State<InboxScreen> {
     }
   }
 
-  void _performSearch(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: _buildBody(context),
+    );
   }
 
-  Future<void> _fetchSearchResults() async {
-    if (_searchQuery.isEmpty) {
-      setState(() {
-        _searchResults = [];
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection(CollectionName.chat)
-          .where("driverId", isEqualTo: FireStoreUtils.getCurrentUid())
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      final results = querySnapshot.docs
-          .map((doc) => InboxModel.fromJson(doc.data() as Map<String, dynamic>))
-          .where((inbox) =>
-              inbox.customerName!
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase()) ||
-              inbox.orderId!.toLowerCase().contains(_searchQuery.toLowerCase()))
-          .toList();
-
-      setState(() {
-        _searchResults = results;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Widget _buildChatItem(InboxModel inboxModel, BuildContext context) {
-    return InkWell(
-      onTap: () async {
-        UserModel? customer =
-            await FireStoreUtils.getCustomer(inboxModel.customerId.toString());
-        DriverUserModel? driver = await FireStoreUtils.getDriverProfile(
-            inboxModel.driverId.toString());
-
-        Get.to(ChatScreens(
-          driverId: driver!.id,
-          customerId: customer!.id,
-          customerName: customer.fullName,
-          customerProfileImage: customer.profilePic,
-          driverName: driver.fullName,
-          driverProfileImage: driver.profilePic,
-          orderId: inboxModel.orderId,
-          token: customer.fcmToken,
-        ));
-      },
-      onLongPress: () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: AppColors.background,
-            title:
-                Text("Delete Chat", style: AppTypography.boldHeaders(context)),
-            content: Text("Are you sure you want to delete this chat?",
-                style: AppTypography.caption(context)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text("Cancel",
-                    style:
-                        GoogleFonts.poppins(color: AppColors.darkBackground)),
-              ),
-              TextButton(
-                onPressed: () {
-                  _deleteChat(inboxModel.orderId!);
-                  Navigator.pop(context);
-                },
-                child: Text("Delete",
-                    style: GoogleFonts.poppins(color: AppColors.primary)),
-              ),
-            ],
+  Widget _buildLoader() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(6.0),
+          const SizedBox(height: 16),
+          Text(
+            'Loading conversations...'.tr,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          child: _buildSearchField(context),
+        ),
+        Expanded(
+          child: FirestorePagination(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemBuilder: (context, documentSnapshots, index) {
+              final data =
+                  documentSnapshots[index].data() as Map<String, dynamic>?;
+              if (data == null) return const SizedBox();
+
+              InboxModel inboxModel = InboxModel.fromJson(data);
+
+              // Client-side filtering for search functionality
+              if (_searchQuery.isNotEmpty &&
+                  !inboxModel.customerName!
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()) &&
+                  !inboxModel.orderId!
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase())) {
+                return const SizedBox.shrink();
+              }
+              return _buildChatItem(context, inboxModel);
+            },
+            onEmpty: _buildInfoState(
+              context,
+              icon: Icons.chat_bubble_outline,
+              title: "No Conversations Yet".tr,
+              subtitle: "Your chats with customers will appear here.".tr,
+            ),
+            query: FirebaseFirestore.instance
+                .collection(CollectionName.chat)
+                .where("driverId", isEqualTo: FireStoreUtils.getCurrentUid())
+                .orderBy('createdAt', descending: true),
+            isLive: true,
+            initialLoader: _buildLoader(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchField(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200, width: 1.5),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) => setState(() => _searchQuery = value),
+        style: AppTypography.label(context),
+        decoration: InputDecoration(
+          prefixIcon: Icon(Icons.search, size: 20, color: AppColors.primary),
+          hintText: "Search by customer or ride ID...".tr,
+          hintStyle: AppTypography.label(context)
+              .copyWith(color: Colors.grey.shade400),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatItem(BuildContext context, InboxModel inboxModel) {
+    return Dismissible(
+      key: Key(inboxModel.orderId.toString()),
+      onDismissed: (direction) => _deleteChat(inboxModel.orderId.toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade400,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Icon(Icons.delete_outline, color: Colors.white),
+            SizedBox(width: 8),
+            Text("Delete", style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
+      child: GestureDetector(
+        onTap: () async {
+          UserModel? customer = await FireStoreUtils.getCustomer(
+              inboxModel.customerId.toString());
+          DriverUserModel? driver = await FireStoreUtils.getDriverProfile(
+              inboxModel.driverId.toString());
+
+          if (customer != null && driver != null) {
+            Get.to(() => ChatScreens(
+                  driverId: driver.id,
+                  customerId: customer.id,
+                  customerName: customer.fullName,
+                  customerProfileImage: customer.profilePic,
+                  driverName: driver.fullName,
+                  driverProfileImage: driver.profilePic,
+                  orderId: inboxModel.orderId,
+                  token: customer.fcmToken,
+                ));
+          }
+        },
         child: Container(
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: const BorderRadius.all(Radius.circular(6)),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200, width: 1.0),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4))
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 0),
-            child: ListTile(
-              leading: ClipOval(
-                child: CachedNetworkImage(
-                  width: 40,
-                  height: 40,
-                  imageUrl: inboxModel.driverProfileImage.toString(),
-                  imageBuilder: (context, imageProvider) => Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: imageProvider,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => ClipRRect(
-                    borderRadius: BorderRadius.circular(5),
-                    child: Image.network(
-                      Constant.userPlaceHolder,
-                      fit: BoxFit.cover,
-                    ),
+          child: Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primary, width: 1.5)),
+                child: ClipOval(
+                  child: CachedNetworkImage(
+                    width: 45,
+                    height: 45,
+                    fit: BoxFit.cover,
+                    imageUrl: inboxModel.customerProfileImage.toString(),
+                    placeholder: (context, url) => Constant.loader(context),
+                    errorWidget: (context, url, error) => Image.network(
+                        Constant.userPlaceHolder,
+                        fit: BoxFit.cover),
                   ),
                 ),
               ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      inboxModel.customerName.toString(),
-                      style: AppTypography.boldLabel(context),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(inboxModel.customerName.toString(),
+                        style: AppTypography.boldLabel(context)),
+                    const SizedBox(height: 4),
+                    Text(
+                      inboxModel.lastMessage.toString(),
+                      style: AppTypography.label(context),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    Constant.dateFormatTimestamp(inboxModel.createdAt),
-                    style: AppTypography.label(context),
-                  ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(Constant.dateFormatTimestamp(inboxModel.createdAt),
+                      style: AppTypography.smBoldLabel(context)),
+                  const SizedBox(height: 8),
                 ],
               ),
-              subtitle: Text(
-                "Last Message: ${inboxModel.lastMessage}".tr,
-                style: AppTypography.label(context),
-              ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          SizedBox(height: Responsive.width(3, context)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border:
-                    Border.all(color: AppColors.containerBorder, width: 0.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: "Search conversations...".tr,
-                  hintStyle: AppTypography.caption(context)
-                      .copyWith(color: Colors.grey),
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close, color: Colors.grey),
-                          onPressed: () {
-                            _searchController.clear();
-                            _performSearch('');
-                            _fetchSearchResults();
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
-                ),
-                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
-                onChanged: _performSearch,
-                onSubmitted: (_) => _fetchSearchResults(),
-              ),
-            ),
-          ),
-          SizedBox(height: Responsive.width(3, context)),
-          Expanded(
-            child: Container(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 0, left: 10, right: 10),
-                child: _searchQuery.isNotEmpty
-                    ? _isLoading
-                        ? const Center(
-                            child: SizedBox(
-                              width: 24.0,
-                              height: 24.0,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.0,
-                              ),
-                            ),
-                          )
-                        : _searchResults.isEmpty
-                            ? Center(
-                                child: Text("No results found".tr,
-                                    style: GoogleFonts.poppins()))
-                            : ListView.builder(
-                                physics: const BouncingScrollPhysics(),
-                                itemCount: _searchResults.length,
-                                itemBuilder: (context, index) {
-                                  return _buildChatItem(
-                                      _searchResults[index], context);
-                                },
-                              )
-                    : FirestorePagination(
-                        physics: const BouncingScrollPhysics(),
-                        itemBuilder: (context, documentSnapshots, index) {
-                          final data = documentSnapshots[index].data()
-                              as Map<String, dynamic>?;
-                          InboxModel inboxModel = InboxModel.fromJson(data!);
-                          return _buildChatItem(inboxModel, context);
-                        },
-                        shrinkWrap: true,
-                        onEmpty: Center(
-                            child: Text("No Conversion found".tr,
-                                style: GoogleFonts.poppins())),
-                        query: FirebaseFirestore.instance
-                            .collection(CollectionName.chat)
-                            .where("driverId",
-                                isEqualTo: FireStoreUtils.getCurrentUid())
-                            .orderBy('createdAt', descending: true),
-                        viewType: ViewType.list,
-                        initialLoader: const Center(
-                          child: SizedBox(
-                            width: 24.0,
-                            height: 24.0,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.0,
-                            ),
-                          ),
-                        ),
-                        isLive: true,
-                      ),
-              ),
-            ),
-          ),
-        ],
+  Widget _buildInfoState(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 50, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: AppTypography.headers(context)),
+            const SizedBox(height: 8),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style: AppTypography.label(context)),
+          ],
+        ),
       ),
     );
   }

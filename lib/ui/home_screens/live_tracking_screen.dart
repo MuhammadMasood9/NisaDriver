@@ -998,31 +998,41 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: AppColors.background,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             "Report Traffic".tr,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            style: AppTypography.appTitle(context),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: Text("Light Traffic".tr),
+                title: Text(
+                  "Light Traffic".tr,
+                  style: AppTypography.caption(Get.context!),
+                ),
                 onTap: () {
                   controller.reportTraffic(0);
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                title: Text("Moderate Traffic".tr),
+                title: Text(
+                  "Moderate Traffic".tr,
+                  style: AppTypography.caption(Get.context!),
+                ),
                 onTap: () {
                   controller.reportTraffic(1);
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                title: Text("Heavy Traffic".tr),
+                title: Text(
+                  "Heavy Traffic".tr,
+                  style: AppTypography.caption(Get.context!),
+                ),
                 onTap: () {
                   controller.reportTraffic(2);
                   Navigator.pop(context);
@@ -1033,7 +1043,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("Cancel".tr),
+              child: Text("Cancel".tr,
+                  style: AppTypography.boldLabel(Get.context!)
+                      .copyWith(color: AppColors.grey600)),
             ),
           ],
         );

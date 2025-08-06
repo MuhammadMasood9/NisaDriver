@@ -6,9 +6,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/online_registration/details_upload_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class OnlineRegistrationScreen extends StatelessWidget {
   const OnlineRegistrationScreen({Key? key}) : super(key: key);
@@ -19,64 +17,30 @@ class OnlineRegistrationScreen extends StatelessWidget {
       init: OnlineRegistrationController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: const Color(0xFFFAFAFC), // Clean light background
-          // appBar: _buildAppBar(context),
+          backgroundColor: const Color(0xFFF8FAFC),
           body: controller.isLoading.value
-              ? Constant.loader(context)
+              ? _buildLoader()
               : _buildBody(context, controller),
         );
       },
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
-      leading: Container(
-        margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: Color(0xFF1A1A1A), size: 18),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      title: Text(
-        "Document Verification".tr,
-        style: GoogleFonts.inter(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFF1A1A1A),
-        ),
-      ),
-      centerTitle: true,
-      actions: [
-        Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildLoader() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
-          child: IconButton(
-            icon: const Icon(Icons.help_outline,
-                color: Color(0xFF1A1A1A), size: 18),
-            onPressed: () {
-              // Show help dialog
-            },
+          const SizedBox(height: 16),
+          Text(
+            'Loading documents...'.tr,
+            style: AppTypography.label(Get.context!),
           ),
-        ),
-      ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(
-          height: 1,
-          color: const Color(0xFFF0F0F0),
-        ),
+        ],
       ),
     );
   }
@@ -91,21 +55,18 @@ class OnlineRegistrationScreen extends StatelessWidget {
     double progress = totalDocs == 0 ? 0.0 : completedDocs / totalDocs;
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
       physics: const BouncingScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 24),
-            _buildProgressSection(context, completedDocs, totalDocs, progress),
-            const SizedBox(height: 32),
-            _buildDocumentsHeader(controller.documentList.length),
-            const SizedBox(height: 16),
-            _buildDocumentsList(context, controller),
-            const SizedBox(height: 24),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildProgressSection(context, completedDocs, totalDocs, progress),
+          const SizedBox(height: 24),
+          _buildDocumentsSection(context, controller),
+          const SizedBox(height: 24),
+          _buildInfoCard(context),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
@@ -118,10 +79,10 @@ class OnlineRegistrationScreen extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -130,6 +91,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Progress Circle
               Stack(
@@ -140,12 +102,10 @@ class OnlineRegistrationScreen extends StatelessWidget {
                     height: 80,
                     child: CircularProgressIndicator(
                       value: progress,
-                      strokeWidth: 6,
-                      backgroundColor: const Color(0xFFF5F5F5),
+                      strokeWidth: 7,
+                      backgroundColor: Colors.grey.shade200,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        isAllComplete
-                            ? const Color(0xFF22C55E)
-                            : const Color(0xFFFF6B8A), // Pastel red
+                        isAllComplete ? AppColors.success : AppColors.primary,
                       ),
                     ),
                   ),
@@ -154,13 +114,16 @@ class OnlineRegistrationScreen extends StatelessWidget {
                     children: [
                       Text(
                         "${(progress * 100).toInt()}%",
-                        style: AppTypography.appTitle(context),
+                        style: AppTypography.appTitle(context).copyWith(
+                          color: isAllComplete
+                              ? AppColors.success
+                              : AppColors.primary,
+                        ),
                       ),
                       Text(
                         "Done".tr,
-                        style: AppTypography.caption(context).copyWith(
-                          color: const Color(0xFF6B7280),
-                        ),
+                        style: AppTypography.caption(context)
+                            .copyWith(color: AppColors.grey500),
                       ),
                     ],
                   ),
@@ -174,34 +137,34 @@ class OnlineRegistrationScreen extends StatelessWidget {
                   children: [
                     Text(
                       isAllComplete
-                          ? "Verification Complete!"
-                          : "Complete Your Profile",
+                          ? "Verification Complete!".tr
+                          : "Complete Your Profile".tr,
                       style: AppTypography.boldHeaders(context),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       isAllComplete
-                          ? "All documents have been verified successfully"
-                          : "Upload and verify your documents to start driving",
-                      style: AppTypography.caption(context).copyWith(
-                        color: const Color(0xFF6B7280),
-                        height: 1.4,
-                      ),
+                          ? "All documents are verified. You are ready to go!"
+                              .tr
+                          : "Upload and verify your documents to start driving."
+                              .tr,
+                      style: AppTypography.caption(context)
+                          .copyWith(color: AppColors.grey600, height: 1.4),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         _buildProgressStat(
                             Icons.check_circle_outline,
                             completed.toString(),
                             "Verified",
-                            const Color(0xFF22C55E)),
+                            AppColors.success),
                         const SizedBox(width: 16),
                         _buildProgressStat(
                             Icons.pending_outlined,
                             (total - completed).toString(),
                             "Pending",
-                            const Color(0xFFFF6B8A)),
+                            AppColors.darkModePrimary),
                       ],
                     ),
                   ],
@@ -209,39 +172,6 @@ class OnlineRegistrationScreen extends StatelessWidget {
               ),
             ],
           ),
-          if (!isAllComplete) ...[
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF6B8A).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFFF6B8A).withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: const Color(0xFFFF6B8A),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Complete all verifications to activate your driver account",
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFFFF6B8A),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -252,72 +182,94 @@ class OnlineRegistrationScreen extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon, size: 14, color: color),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: AppTypography.appTitle(Get.context!),
-            ),
-            Text(
-              label.tr,
-              style: AppTypography.smBoldLabel(Get.context!).copyWith(
-                color: const Color(0xFF6B7280),
-              ),
-            ),
-          ],
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Text(
+          '$value ${label.tr}',
+          style: AppTypography.label(Get.context!)
+              .copyWith(color: AppColors.grey700),
         ),
       ],
     );
   }
 
-  Widget _buildDocumentsHeader(int totalDocs) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Required Documents".tr,
-              style: AppTypography.boldHeaders(Get.context!),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "Upload clear photos of your documents".tr,
-              style: AppTypography.caption(Get.context!).copyWith(
-                color: const Color(0xFF6B7280),
+  Widget _buildDocumentsSection(
+      BuildContext context, OnlineRegistrationController controller) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
               ),
             ),
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF6B8A).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.folder_copy_outlined,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Required Documents'.tr,
+                  style: AppTypography.boldHeaders(context),
+                ),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    "${controller.documentList.length} items".tr,
+                    style: AppTypography.smBoldLabel(context)
+                        .copyWith(color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Text(
-            "$totalDocs items",
-            style: AppTypography.boldLabel(Get.context!)
-                .copyWith(color: AppColors.primary),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: _buildDocumentsList(context, controller),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildDocumentsList(
       BuildContext context, OnlineRegistrationController controller) {
+    if (controller.documentList.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40.0),
+          child: Text(
+            'No documents required at this time.'.tr,
+            style: AppTypography.label(context),
+          ),
+        ),
+      );
+    }
+
     return ListView.separated(
       itemCount: controller.documentList.length,
       shrinkWrap: true,
@@ -334,14 +286,11 @@ class OnlineRegistrationScreen extends StatelessWidget {
               .firstWhere((item) => item.documentId == documentModel.id);
         }
 
-        bool isVerified = documents.verified == true;
-        bool isUploaded = contain.isNotEmpty;
-
         return _buildDocumentCard(
           context,
           documentModel: documentModel,
-          isVerified: isVerified,
-          isUploaded: isUploaded,
+          driverDocument: documents,
+          isUploaded: contain.isNotEmpty,
           onTap: () {
             Get.to(() => const DetailsUploadScreen(),
                 arguments: {'documentModel': documentModel});
@@ -354,159 +303,161 @@ class OnlineRegistrationScreen extends StatelessWidget {
   Widget _buildDocumentCard(
     BuildContext context, {
     required DocumentModel documentModel,
-    required bool isVerified,
+    required Documents driverDocument,
     required bool isUploaded,
     required VoidCallback onTap,
   }) {
+    bool isVerified = driverDocument.verified == true;
+    bool isUnderReview = isUploaded && !isVerified;
+
     Color statusColor;
     Color backgroundColor;
     String statusText;
     IconData statusIcon;
 
     if (isVerified) {
-      statusColor = const Color(0xFF22C55E);
-      backgroundColor = const Color(0xFF22C55E).withOpacity(0.1);
+      statusColor = AppColors.success;
+      backgroundColor = statusColor.withOpacity(0.1);
       statusText = "Verified".tr;
       statusIcon = Icons.check_circle;
-    } else if (isUploaded) {
-      statusColor = const Color(0xFFF59E0B);
-      backgroundColor = const Color(0xFFF59E0B).withOpacity(0.1);
+    } else if (isUnderReview) {
+      statusColor = AppColors.ratingColour;
+      backgroundColor = statusColor.withOpacity(0.1);
       statusText = "Under Review".tr;
-      statusIcon = Icons.schedule;
+      statusIcon = Icons.hourglass_top_rounded;
     } else {
-      statusColor = const Color(0xFFFF6B8A);
-      backgroundColor = const Color(0xFFFF6B8A).withOpacity(0.1);
+      statusColor = AppColors.darkModePrimary;
+      backgroundColor = statusColor.withOpacity(0.1);
       statusText = "Upload Required".tr;
-      statusIcon = Icons.cloud_upload;
+      statusIcon = Icons.upload_file_rounded;
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(6),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Document Icon
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    _getDocumentTypeIcon(documentModel.title.toString()),
-                    color: statusColor,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Document Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        Constant.localizationTitle(documentModel.title),
-                        style: AppTypography.appTitle(context),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: backgroundColor,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(statusIcon, size: 12, color: statusColor),
-                                const SizedBox(width: 4),
-                                Text(statusText,
-                                    style: AppTypography.smBoldLabel(context)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        isVerified
-                            ? "Document verified successfully".tr
-                            : isUploaded
-                                ? "Pending admin verification".tr
-                                : "Tap to upload your document".tr,
-                        style: AppTypography.caption(context).copyWith(
-                          color: const Color(0xFF6B7280),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                // Arrow Icon
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 14,
-                    color: Color(0xFF9CA3AF),
-                  ),
-                ),
-              ],
-            ),
+          border: Border.all(
+            color: Colors.grey.shade200,
+            width: 1.5,
           ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _getDocumentTypeIcon(documentModel.title.toString()),
+                color: statusColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    Constant.localizationTitle(documentModel.title),
+                    style: AppTypography.headers(context),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusIcon, size: 12, color: statusColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          statusText,
+                          style: AppTypography.smBoldLabel(context)
+                              .copyWith(color: statusColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.grey.shade400,
+              size: 16,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// Helper method to get an icon based on the document name for better visuals.
+  Widget _buildInfoCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6)),
+            child: const Icon(
+              Icons.info_outline,
+              color: AppColors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              "Your documents will be reviewed by our team. You'll be notified once the verification is complete."
+                  .tr,
+              style: AppTypography.label(context)
+                  .copyWith(color: AppColors.primary.withOpacity(0.8)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   IconData _getDocumentTypeIcon(String documentTitle) {
     String title = documentTitle.toLowerCase();
     if (title.contains('license') || title.contains('driving')) {
-      return Icons.credit_card;
+      return Icons.credit_card_outlined;
     } else if (title.contains('insurance')) {
-      return Icons.security;
+      return Icons.security_outlined;
     } else if (title.contains('registration') ||
         title.contains('rc') ||
         title.contains('vehicle')) {
-      return Icons.directions_car;
+      return Icons.directions_car_outlined;
     } else if (title.contains('identity') ||
         title.contains('id') ||
         title.contains('aadhaar')) {
-      return Icons.person;
+      return Icons.person_outline;
     } else if (title.contains('photo') || title.contains('picture')) {
-      return Icons.photo_camera;
+      return Icons.photo_camera_outlined;
     } else {
-      return Icons.description;
+      return Icons.description_outlined;
     }
   }
 }

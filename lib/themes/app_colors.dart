@@ -7,6 +7,8 @@ class AppColors {
 
   static const Color background =
       Color.fromARGB(255, 255, 255, 255); // Light Pink (from first class)
+  static const Color success = Color.fromARGB(255, 56, 197, 91);
+
   static const Color darkBackground =
       Color(0xFF141415); // Deep Purple (from first class)
 

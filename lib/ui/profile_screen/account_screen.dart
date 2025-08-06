@@ -20,7 +20,8 @@ class MyProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = Get.put(ProfileController());
-    final DashBoardController dashboardController = Get.find<DashBoardController>();
+    final DashBoardController dashboardController =
+        Get.find<DashBoardController>();
 
     // Check if user is authenticated
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -38,7 +39,8 @@ class MyProfileScreen extends StatelessWidget {
 
     // Auto-retry profile loading if it fails initially
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (controller.driverModel.value.id == null && !controller.isLoading.value) {
+      if (controller.driverModel.value.id == null &&
+          !controller.isLoading.value) {
         Future.delayed(const Duration(seconds: 1), () {
           if (controller.driverModel.value.id == null) {
             controller.fetchInitialData();
@@ -91,7 +93,8 @@ class MyProfileScreen extends StatelessWidget {
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary));
         }
 
         if (controller.driverModel.value.id == null) {
@@ -115,7 +118,8 @@ class MyProfileScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Please check your connection and try again.'.tr,
-                    style: AppTypography.label(context).copyWith(color: AppColors.grey500),
+                    style: AppTypography.label(context)
+                        .copyWith(color: AppColors.grey500),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -197,14 +201,17 @@ class MyProfileScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.darkBackground.withOpacity(0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.darkBackground.withOpacity(0.2), width: 1),
+              border: Border.all(
+                  color: AppColors.darkBackground.withOpacity(0.2), width: 1),
             ),
             child: ClipOval(
               child: CachedNetworkImage(
                 imageUrl: driver.profilePic ?? '',
                 fit: BoxFit.cover,
-                placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                errorWidget: (context, url, error) => Image.asset(Constant.userPlaceHolder, fit: BoxFit.cover),
+                placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2)),
+                errorWidget: (context, url, error) =>
+                    Image.asset(Constant.userPlaceHolder, fit: BoxFit.cover),
               ),
             ),
           ),
@@ -267,7 +274,8 @@ class MyProfileScreen extends StatelessWidget {
                     shaderCallback: (bounds) => LinearGradient(
                       colors: [
                         AppColors.primary,
-                         AppColors.darkModePrimary, // A complementary color for the gradient
+                        AppColors
+                            .darkModePrimary, // A complementary color for the gradient
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -275,7 +283,8 @@ class MyProfileScreen extends StatelessWidget {
                     child: Icon(
                       icon,
                       size: 28,
-                      color: Colors.white, // IMPORTANT: Must be white for the shader to work
+                      color: Colors
+                          .white, // IMPORTANT: Must be white for the shader to work
                     ),
                   ),
                 ),
@@ -293,7 +302,8 @@ class MyProfileScreen extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: AppTypography.label(context).copyWith(color: AppColors.grey500),
+                        style: AppTypography.label(context)
+                            .copyWith(color: AppColors.grey500),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -303,8 +313,11 @@ class MyProfileScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: AppColors.darkBackground.withOpacity(0.07), borderRadius: BorderRadius.circular(6)),
-                  child: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.darkBackground),
+                  decoration: BoxDecoration(
+                      color: AppColors.darkBackground.withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(6)),
+                  child: const Icon(Icons.arrow_forward_ios,
+                      size: 16, color: AppColors.darkBackground),
                 ),
               ],
             ),
@@ -315,7 +328,8 @@ class MyProfileScreen extends StatelessWidget {
   }
 
   // ====== ⭐️ WIDGET UPDATED WITH GRADIENT ICON ⭐️ ======
-  Widget _buildLogoutButton(BuildContext context, ProfileController controller) {
+  Widget _buildLogoutButton(
+      BuildContext context, ProfileController controller) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.background,
@@ -337,11 +351,19 @@ class MyProfileScreen extends StatelessWidget {
             Get.dialog(
               AlertDialog(
                 backgroundColor: AppColors.background,
-                title: Text('Logout'.tr),
-                content: Text('Are you sure you want to log out?'.tr),
+                title: Text(
+                  'Logout'.tr,
+                  style: AppTypography.appTitle(context),
+                ),
+                content: Text(
+                  'Are you sure you want to log out?'.tr,
+                  style: AppTypography.caption(context),
+                ),
                 actions: <Widget>[
                   TextButton(
-                    child: Text('Cancel'.tr, style: AppTypography.headers(context).copyWith(color: AppColors.grey500)),
+                    child: Text('Cancel'.tr,
+                        style: AppTypography.boldLabel(context)
+                            .copyWith(color: AppColors.grey500)),
                     onPressed: () {
                       if (!controller.isLoggingOut.value) {
                         Get.back(); // Close the dialog
@@ -357,10 +379,11 @@ class MyProfileScreen extends StatelessWidget {
                       );
                     }
                     return TextButton(
-                      child: Text(
-                        'Logout'.tr,
-                        style: const TextStyle(color: AppColors.danger200), // Use danger color for text
-                      ),
+                      child: Text('Logout'.tr,
+                          style: AppTypography.boldLabel(context).copyWith(
+                              color: AppColors
+                                  .primary) // Use danger color for text
+                          ),
                       onPressed: () {
                         controller.logout();
                       },
@@ -389,7 +412,8 @@ class MyProfileScreen extends StatelessWidget {
                       return LinearGradient(
                         colors: [
                           AppColors.danger200,
-                          const Color(0xFFF87171), // A lighter red for the gradient
+                          const Color(
+                              0xFFF87171), // A lighter red for the gradient
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -398,7 +422,8 @@ class MyProfileScreen extends StatelessWidget {
                     child: const Icon(
                       Icons.logout,
                       size: 28,
-                      color: Colors.white, // IMPORTANT: Must be white for the shader to work
+                      color: Colors
+                          .white, // IMPORTANT: Must be white for the shader to work
                     ),
                   ),
                 ),
@@ -414,7 +439,8 @@ class MyProfileScreen extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         "End your session and sign out".tr,
-                        style: AppTypography.label(context).copyWith(color: AppColors.grey500),
+                        style: AppTypography.label(context)
+                            .copyWith(color: AppColors.grey500),
                       ),
                     ],
                   ),
