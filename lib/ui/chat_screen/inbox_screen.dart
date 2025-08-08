@@ -32,28 +32,42 @@ class _InboxScreenState extends State<InboxScreen> {
   }
 
   // Handles the deletion of a chat conversation after user confirmation.
-  Future<void> _deleteChat(String orderId) async {
+  Future<bool> _deleteChat(String orderId) async {
     try {
       bool? confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Delete Chat?'.tr),
-          content: Text('This will permanently delete the conversation.'.tr),
+          backgroundColor: AppColors.background,
+          title: Text(
+            'Delete Chat?'.tr,
+            style: AppTypography.appTitle(context),
+          ),
+          content: Text(
+            'This will permanently delete the conversation.'.tr,
+            style: AppTypography.caption(context),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text('Cancel'.tr),
+              child: Text(
+                'Cancel'.tr,
+                style: AppTypography.boldLabel(context)
+                    .copyWith(color: AppColors.grey500),
+              ),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child:
-                  Text('Delete'.tr, style: const TextStyle(color: Colors.red)),
+              child: Text(
+                'Delete'.tr,
+                style: AppTypography.boldLabel(context)
+                    .copyWith(color: AppColors.primary),
+              ),
             ),
           ],
         ),
       );
 
-      if (confirm != true) return;
+      if (confirm != true) return false;
 
       // Use a batch write to delete all messages in the conversation for this driver
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -75,6 +89,8 @@ class _InboxScreenState extends State<InboxScreen> {
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
+
+      return true;
     } catch (e) {
       Get.snackbar(
         'Error'.tr,
@@ -83,6 +99,7 @@ class _InboxScreenState extends State<InboxScreen> {
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
+      return false;
     }
   }
 
@@ -200,7 +217,9 @@ class _InboxScreenState extends State<InboxScreen> {
   Widget _buildChatItem(BuildContext context, InboxModel inboxModel) {
     return Dismissible(
       key: Key(inboxModel.orderId.toString()),
-      onDismissed: (direction) => _deleteChat(inboxModel.orderId.toString()),
+      confirmDismiss: (direction) async {
+        return await _deleteChat(inboxModel.orderId.toString());
+      },
       direction: DismissDirection.endToStart,
       background: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -46,17 +46,39 @@ class NewOrderController extends GetxController {
   // Stream subscriptions
   StreamSubscription? _acceptedOrdersSubscription;
   StreamSubscription? _newOrdersSubscription;
+  StreamSubscription? _locationSubscription;
 
   @override
   void onInit() {
     super.onInit();
     initializeAllData();
+
+    // Listen for driver status changes
+    ever(driverModel, (DriverUserModel driver) {
+      if (driver.isOnline == true && driver.documentVerification == true) {
+        setupStreams();
+      } else {
+        _acceptedOrdersSubscription?.cancel();
+        _newOrdersSubscription?.cancel();
+        acceptedOrdersList.clear();
+        newOrdersList.clear();
+      }
+    });
+
+    // Set up periodic refresh every 30 seconds
+    Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (driverModel.value.isOnline == true &&
+          driverModel.value.documentVerification == true) {
+        _refreshNewOrdersStream();
+      }
+    });
   }
 
   @override
   void onClose() {
     _acceptedOrdersSubscription?.cancel();
     _newOrdersSubscription?.cancel();
+    _locationSubscription?.cancel();
     super.onClose();
   }
 
@@ -67,10 +89,16 @@ class NewOrderController extends GetxController {
     await fetchDriverData();
     await fetchScheduledOrders();
 
-    // If driver is online, set up real-time streams
+    // Always set up streams if driver is online and verified
     if (driverModel.value.isOnline == true &&
         driverModel.value.documentVerification == true) {
       setupStreams();
+    } else {
+      // Clear existing streams if driver is offline or not verified
+      _acceptedOrdersSubscription?.cancel();
+      _newOrdersSubscription?.cancel();
+      acceptedOrdersList.clear();
+      newOrdersList.clear();
     }
 
     isLoading.value = false;
@@ -116,13 +144,38 @@ class NewOrderController extends GetxController {
           snapshot.docs.map((doc) => OrderModel.fromJson(doc.data())).toList();
     });
 
-    // Stream for new orders
-    _newOrdersSubscription = FireStoreUtils()
-        .getOrders(driverModel.value, Constant.currentLocation?.latitude,
-            Constant.currentLocation?.longitude)
-        .listen((orders) {
-      newOrdersList.value = orders;
-    });
+    // Stream for new orders - only if we have current location
+    if (Constant.currentLocation != null) {
+      _newOrdersSubscription = FireStoreUtils()
+          .getOrders(driverModel.value, Constant.currentLocation?.latitude,
+              Constant.currentLocation?.longitude)
+          .listen((orders) {
+        newOrdersList.value = orders;
+      });
+    } else {
+      // If no location, clear the list
+      newOrdersList.clear();
+    }
+  }
+
+  // Method to manually refresh data
+  Future<void> refreshData() async {
+    await initializeAllData();
+  }
+
+  // Method to refresh new orders stream when location changes
+  void _refreshNewOrdersStream() {
+    if (driverModel.value.isOnline == true &&
+        driverModel.value.documentVerification == true &&
+        Constant.currentLocation != null) {
+      _newOrdersSubscription?.cancel();
+      _newOrdersSubscription = FireStoreUtils()
+          .getOrders(driverModel.value, Constant.currentLocation?.latitude,
+              Constant.currentLocation?.longitude)
+          .listen((orders) {
+        newOrdersList.value = orders;
+      });
+    }
   }
 
   Future<void> acceptScheduledRide(OrderModel orderToAccept) async {
@@ -189,13 +242,49 @@ class NewOrderController extends GetxController {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~ NEW ORDER SCREEN ~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class NewOrderScreen extends StatelessWidget {
+class NewOrderScreen extends StatefulWidget {
   const NewOrderScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final NewOrderController controller = Get.put(NewOrderController());
+  State<NewOrderScreen> createState() => _NewOrderScreenState();
+}
 
+class _NewOrderScreenState extends State<NewOrderScreen>
+    with WidgetsBindingObserver {
+  late NewOrderController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(NewOrderController());
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh data when app comes back to foreground
+      controller.refreshData();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when screen becomes visible
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.refreshData();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.grey75,
       body: SafeArea(
@@ -216,7 +305,7 @@ class NewOrderScreen extends StatelessWidget {
           }
 
           return RefreshIndicator(
-            onRefresh: () => controller.initializeAllData(),
+            onRefresh: () => controller.refreshData(),
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),

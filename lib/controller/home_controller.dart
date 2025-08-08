@@ -33,6 +33,16 @@ class HomeController extends GetxController {
   RxBool isLoading = true.obs;
   void onItemTapped(int index) {
     selectedIndex.value = index;
+
+    // Refresh data when switching to New tab (index 0)
+    if (index == 0) {
+      try {
+        final newOrderController = Get.find<home.NewOrderController>();
+        newOrderController.refreshData();
+      } catch (e) {
+        // Controller might not be initialized yet, which is fine
+      }
+    }
   }
 
   @override

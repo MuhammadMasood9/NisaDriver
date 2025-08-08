@@ -24,7 +24,6 @@ class SettingScreen extends StatelessWidget {
       builder: (controller) {
         return Scaffold(
           backgroundColor: AppColors.grey100,
-         
           body: controller.isLoading.value
               ? Constant.loader(context)
               : Padding(
@@ -52,8 +51,6 @@ class SettingScreen extends StatelessWidget {
                                 context,
                                 child: Column(
                                   children: [
-                                  
-                                   
                                     _buildSupportItem(context),
                                   ],
                                 ),
@@ -102,8 +99,8 @@ class SettingScreen extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Text(
                                   "Version ${Constant.appVersion}",
-                                  style: AppTypography.boldLabel(context)
-                                      .copyWith(
+                                  style:
+                                      AppTypography.boldLabel(context).copyWith(
                                     color: const Color(0xFF6B7280),
                                   ),
                                 ),
@@ -188,7 +185,6 @@ class SettingScreen extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _buildSupportItem(BuildContext context) {
     return InkWell(
@@ -293,8 +289,8 @@ class SettingScreen extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     "Permanently delete your account".tr,
-                    style: AppTypography.smBoldLabel(context)
-                        .copyWith(color: const Color(0xFFEF4444).withOpacity(0.8)),
+                    style: AppTypography.smBoldLabel(context).copyWith(
+                        color: const Color(0xFFEF4444).withOpacity(0.8)),
                   ),
                 ],
               ),
@@ -465,22 +461,14 @@ class SettingScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 "Delete Account".tr,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1D29),
-                ),
+                style: AppTypography.boldLabel(context),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
                 "Are you sure you want to delete your account? This action cannot be undone."
                     .tr,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  height: 1.4,
-                ),
+                style: AppTypography.caption(context),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -491,19 +479,14 @@ class SettingScreen extends StatelessWidget {
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(6),
                           side: BorderSide(color: Colors.grey.shade300),
                         ),
                       ),
                       onPressed: () => Get.back(),
-                      child: Text(
-                        "Cancel".tr,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
+                      child: Text("Cancel".tr,
+                          style: AppTypography.boldLabel(context)
+                              .copyWith(color: AppColors.grey600)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -513,7 +496,7 @@ class SettingScreen extends StatelessWidget {
                         backgroundColor: const Color(0xFFEF4444),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         elevation: 0,
                       ),
@@ -533,14 +516,9 @@ class SettingScreen extends StatelessWidget {
                           }
                         });
                       },
-                      child: Text(
-                        "Delete".tr,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: Text("Delete".tr,
+                          style: AppTypography.boldLabel(context)
+                              .copyWith(color: AppColors.background)),
                     ),
                   ),
                 ],
