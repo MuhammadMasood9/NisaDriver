@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/send_notification.dart';
@@ -78,9 +79,14 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     final bottomPanelMinHeight = screenHeight * 0.20;
     final bottomPanelMaxHeight = screenHeight * 0.45;
 
-    return GetBuilder<LiveTrackingController>(
-      init: LiveTrackingController(),
-      builder: (controller) {
+    // Initialize controller if not already present
+    if (!Get.isRegistered<LiveTrackingController>()) {
+      Get.put(LiveTrackingController());
+    }
+
+    return Obx(
+      () {
+        final controller = Get.find<LiveTrackingController>();
         return Scaffold(
           backgroundColor: Colors.grey.shade100,
           body: Stack(
@@ -94,7 +100,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                     mapType: MapType.normal,
                     zoomControlsEnabled: false,
                     mapToolbarEnabled: false,
-                    trafficEnabled: false,
+                    trafficEnabled: true, // Enable traffic display
                     polylines: Set.of(controller.polyLines.values),
                     markers: Set.of(controller.markers.values),
                     padding: EdgeInsets.only(
@@ -147,6 +153,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
 
               // Navigation Instruction Card
               _buildNavigationCard(context, controller),
+
+              // Lane Guidance Indicator
+              _buildLaneGuidanceIndicator(context, controller),
+
+              // Better Route Notification
+              _buildBetterRouteNotification(context, controller),
 
               // Off-Route Warning
               _buildOffRouteAlert(context, controller),
@@ -279,7 +291,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
           duration: const Duration(milliseconds: 300),
           opacity: controller.navigationInstruction.value.isEmpty ? 0.0 : 1.0,
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -325,27 +337,162 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                     ],
                   ),
                 ),
+                // Enhanced speed indicator with real-time updates
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
+                    color: _getSpeedColor(controller.currentSpeed.value),
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _getSpeedColor(controller.currentSpeed.value)
+                            .withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Row(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.speed, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.speed,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "${controller.currentSpeed.value.toStringAsFixed(0)}",
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                       Text(
-                        "${controller.currentSpeed.value.toStringAsFixed(0)} km/h",
-                        style: AppTypography.smBoldLabel(context),
+                        "km/h",
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Get speed-based color for the speed indicator
+  Color _getSpeedColor(double speed) {
+    if (speed < 20) return Colors.green;
+    if (speed < 40) return Colors.orange;
+    if (speed < 60) return Colors.deepOrange;
+    return Colors.red;
+  }
+
+  Widget _buildLaneGuidanceIndicator(
+      BuildContext context, LiveTrackingController controller) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 169,
+      left: 16,
+      right: 16,
+      child: Obx(
+        () => AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: controller.isLaneGuidanceEnabled.value ? 1.0 : 0.0,
+          child: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.directions_walk_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Lane Guidance: ${controller.currentLaneGuidance.value}",
+                    style: AppTypography.boldLabel(context).copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBetterRouteNotification(
+      BuildContext context, LiveTrackingController controller) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 380,
+      left: 60,
+      right: 60,
+      child: Obx(
+        () => AnimatedSlide(
+          offset: controller.isBetterRouteAvailable
+              ? Offset.zero
+              : const Offset(0, -2),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.elasticOut,
+          child: AnimatedOpacity(
+            opacity: controller.isBetterRouteAvailable ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: controller.isBetterRouteAvailable
+                ? Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.directions_car_rounded,
+                            color: Colors.blue.shade600, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "A faster route is available! Recalculating...",
+                            style: AppTypography.boldLabel(context).copyWith(
+                              color: Colors.blue.shade800,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => controller.recalculateRoute(),
+                          child: Text(
+                            "Reroute",
+                            style: AppTypography.label(context).copyWith(
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ),
       ),
@@ -490,6 +637,13 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
           ),
           const SizedBox(height: 8),
           _buildMapControlButton(
+            icon: Icons.directions_car_outlined,
+            isActive: controller.isLaneGuidanceEnabled.value,
+            tooltip: 'Toggle Lane Guidance',
+            onPressed: () => controller.toggleLaneGuidance(),
+          ),
+          const SizedBox(height: 8),
+          _buildMapControlButton(
             icon: Icons.add,
             tooltip: 'Zoom In',
             onPressed: () =>
@@ -507,176 +661,390 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     );
   }
 
-  Widget _buildBottomSheet(
-      BuildContext context, LiveTrackingController controller) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.22,
-      minChildSize: 0.22,
-      maxChildSize: 0.30,
-      builder: (BuildContext context, ScrollController scrollController) {
-        return Container(
+  // Real-time traffic indicator widget
+  Widget _buildTrafficIndicator(LiveTrackingController controller) {
+    return Obx(() => Container(
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
+            color: controller.getTrafficLevelColor().withOpacity(0.9),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 12,
-                offset: const Offset(0, -4),
+                color: controller.getTrafficLevelColor().withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            child: Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 20),
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Obx(() => _buildStatCard(
-                                  icon: Icons.access_time_outlined,
-                                  value: controller.estimatedTime.value,
-                                  label: "Time Left",
-                                  color: AppColors.primary,
-                                )),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Obx(() => _buildStatCard(
-                                  icon: Icons.straighten_outlined,
-                                  value: controller.formatDistance(
-                                      controller.distance.value),
-                                  label: "Distance",
-                                  color: AppColors.darkBackground,
-                                )),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Obx(() => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Trip Progress',
-                                style: AppTypography.boldHeaders(context),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                height: 8,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: AppColors.grey200,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: FractionallySizedBox(
-                                  alignment: Alignment.centerLeft,
-                                  widthFactor:
-                                      controller.tripProgressValue.value,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          AppColors.primary,
-                                          AppColors.darkBackground
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )),
-                      const SizedBox(height: 24),
-                      Obx(() {
-                        final isRideInProgress =
-                            controller.status.value == Constant.rideInProgress;
-                        return Row(
-                          spacing: 5,
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  if (isRideInProgress) {
-                                    _handleCompleteRide(controller);
-                                  } else {
-                                    showDialog(
-                                      context: context,
-                                      builder: (BuildContext context) =>
-                                          _otpDialog(
-                                        context,
-                                        controller,
-                                        controller.orderModel.value,
-                                        controller.intercityOrderModel.value,
-                                      ),
-                                    );
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.darkBackground,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: Text(
-                                  isRideInProgress
-                                      ? "Complete ".tr
-                                      : "Pickup ".tr,
-                                  style: AppTypography.buttonlight(context),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () =>
-                                    _handleCancelRide(context, controller),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.red.shade600,
-                                  side: BorderSide(color: Colors.red.shade300),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: Text(
-                                  "Cancel Ride".tr,
-                                  style: AppTypography.button(context)
-                                      .copyWith(color: AppColors.primary),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }),
-                      SizedBox(
-                          height: MediaQuery.of(context).padding.bottom + 20),
-                    ],
-                  ),
-                ),
-              ],
+          child: IconButton(
+            icon: Icon(
+              Icons.traffic,
+              color: Colors.white,
+              size: 20,
             ),
+            onPressed: () => _showTrafficInfoDialog(context, controller),
+            tooltip: controller.getTrafficLevelText(),
+          ),
+        ));
+  }
+
+  Widget _buildBottomSheet(
+      BuildContext context, LiveTrackingController controller) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.20,
+      minChildSize: 0.20,
+      maxChildSize: 0.45,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                offset: Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // Enhanced trip progress indicator
+                    _buildTripProgressIndicator(controller),
+                    const SizedBox(height: 16),
+
+                    // Trip statistics
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.route,
+                            value:
+                                "${controller.distance.value.toStringAsFixed(1)} km",
+                            label: "Distance".tr,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.access_time,
+                            value: controller.estimatedTime.value,
+                            label: "ETA".tr,
+                            color: AppColors.darkBackground,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.speed,
+                            value:
+                                "${controller.currentSpeed.value.toStringAsFixed(0)} km/h",
+                            label: "Speed".tr,
+                            color:
+                                _getSpeedColor(controller.currentSpeed.value),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Speed limit indicator
+                    _buildSpeedLimitIndicator(controller),
+                    const SizedBox(height: 16),
+
+                    // Real-time traffic indicator
+                    _buildTrafficStatusCard(controller),
+                    const SizedBox(height: 16),
+
+                    // Action buttons
+                    _buildActionButtons(context, controller),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
     );
+  }
+
+  // Enhanced trip progress indicator
+  Widget _buildTripProgressIndicator(LiveTrackingController controller) {
+    return Obx(() => Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.darkBackground.withOpacity(0.025),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.darkBackground.withOpacity(0.01),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Trip Progress".tr,
+                    style: AppTypography.boldLabel(context),
+                  ),
+                  Text(
+                    controller.tripProgress.value,
+                    style: AppTypography.boldHeaders(context).copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Progress bar
+              Container(
+                height: 8,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: controller.tripProgressValue.value,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary,
+                          AppColors.primary.withOpacity(0.7),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Progress details
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Pickup".tr,
+                    style: AppTypography.caption(context).copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  Text(
+                    "Destination".tr,
+                    style: AppTypography.caption(context).copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ));
+  }
+
+  // Speed limit indicator
+  Widget _buildSpeedLimitIndicator(LiveTrackingController controller) {
+    return Obx(() => Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.darkBackground.withOpacity(0.025),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: AppColors.darkBackground.withOpacity(0.025),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.speed,
+                color: AppColors.primary,
+                size: 22,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Speed Limit".tr,
+                      style: AppTypography.boldLabel(context),
+                    ),
+                    Text(
+                      "${controller.currentSpeedLimit.value.toStringAsFixed(0)} km/h",
+                      style: AppTypography.caption(context).copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getSpeedColor(controller.currentSpeed.value),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  "Current Speed".tr,
+                  style: AppTypography.boldLabel(context)
+                      .copyWith(color: AppColors.background),
+                ),
+              ),
+            ],
+          ),
+        ));
+  }
+
+  // Traffic status card
+  Widget _buildTrafficStatusCard(LiveTrackingController controller) {
+    return Obx(() => Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: controller.getTrafficLevelColor().withOpacity(0.05),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: controller.getTrafficLevelColor().withOpacity(0.05),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.traffic,
+                color: controller.getTrafficLevelColor(),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Traffic Status".tr,
+                      style: AppTypography.boldLabel(context),
+                    ),
+                    Text(
+                      controller.getTrafficLevelText(),
+                      style: AppTypography.caption(context).copyWith(
+                        color: controller.getTrafficLevelColor(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: controller.getTrafficLevelColor(),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  controller.trafficLevel.value == 0
+                      ? "L"
+                      : controller.trafficLevel.value == 1
+                          ? "M"
+                          : "H",
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ));
+  }
+
+  // Action buttons for ride control
+  Widget _buildActionButtons(
+      BuildContext context, LiveTrackingController controller) {
+    return Obx(() {
+      final isRideInProgress =
+          controller.status.value == Constant.rideInProgress;
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () async {
+                if (isRideInProgress) {
+                  _handleCompleteRide(controller);
+                } else {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) => _otpDialog(
+                      context,
+                      controller,
+                      controller.orderModel.value,
+                      controller.intercityOrderModel.value,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: Text(
+                isRideInProgress ? "Complete Ride".tr : "Pickup Customer".tr,
+                style: AppTypography.buttonlight(context),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => _handleCancelRide(context, controller),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red.shade600,
+                side: BorderSide(color: Colors.red.shade300),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: Text(
+                "Cancel Ride".tr,
+                style: AppTypography.button(context).copyWith(
+                  color: Colors.red.shade600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildFloatingActionButton(
@@ -749,32 +1117,33 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
       required String label,
       required Color color}) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
-        // crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 5,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 8),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: AppTypography.boldLabel(context),
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: AppTypography.caption(context),
-              ),
-            ],
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: AppTypography.boldLabel(context),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: AppTypography.caption(context),
+                ),
+              ],
+            ),
           )
         ],
       ),
@@ -785,6 +1154,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     ShowToastDialog.showLoader("Completing ride...".tr);
     OrderModel orderModel = controller.orderModel.value;
     orderModel.status = Constant.rideComplete;
+    orderModel.paymentStatus = true;
+    orderModel.updateDate = Timestamp.now();
 
     UserModel? customer =
         await FireStoreUtils.getCustomer(orderModel.userId.toString());
@@ -872,75 +1243,115 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     }
   }
 
-  Dialog _otpDialog(BuildContext context, LiveTrackingController controller,
+  Widget _otpDialog(BuildContext context, LiveTrackingController controller,
       OrderModel orderModel, InterCityOrderModel interOrderModel) {
-    String currentOtp = "";
-    return Dialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Verify OTP".tr,
-              style: AppTypography.boldHeaders(context),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Enter the 6-digit code from the customer's app.".tr,
-              style: AppTypography.caption(context),
-            ),
-            const SizedBox(height: 12),
-            PinCodeTextField(
-              length: 6,
-              appContext: context,
-              keyboardType: TextInputType.number,
-              pinTheme: PinTheme(
-                fieldHeight: 35,
-                fieldWidth: 35,
-                borderWidth: 1,
-                activeColor: AppColors.primary,
-                selectedColor: AppColors.primary,
-                inactiveColor: Colors.grey.shade300,
-                activeFillColor: AppColors.primary.withOpacity(0.1),
-                inactiveFillColor: Colors.grey.shade50,
-                selectedFillColor: AppColors.primary.withOpacity(0.1),
-                shape: PinCodeFieldShape.box,
-                borderRadius: BorderRadius.circular(12),
+    return StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        String currentOtp = "";
+        // Create a new TextEditingController for each dialog instance
+        final TextEditingController otpTextController = TextEditingController();
+
+        return WillPopScope(
+          onWillPop: () async {
+            otpTextController
+                .dispose(); // Dispose the controller when back button is pressed
+            return true;
+          },
+          child: Dialog(
+            backgroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Verify OTP".tr,
+                    style: AppTypography.boldHeaders(context),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Enter the 6-digit code from the customer's app.".tr,
+                    style: AppTypography.caption(context),
+                  ),
+                  const SizedBox(height: 12),
+                  PinCodeTextField(
+                    length: 6,
+                    appContext: context,
+                    keyboardType: TextInputType.number,
+                    pinTheme: PinTheme(
+                      fieldHeight: 35,
+                      fieldWidth: 35,
+                      borderWidth: 1,
+                      activeColor: AppColors.primary,
+                      selectedColor: AppColors.primary,
+                      inactiveColor: Colors.grey.shade300,
+                      activeFillColor: AppColors.primary.withOpacity(0.1),
+                      inactiveFillColor: Colors.grey.shade50,
+                      selectedFillColor: AppColors.primary.withOpacity(0.1),
+                      shape: PinCodeFieldShape.box,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: AppTypography.button(context),
+                    enableActiveFill: true,
+                    cursorColor: AppColors.primary,
+                    controller: otpTextController, // Use the local controller
+                    onCompleted: (v) => currentOtp = v,
+                    onChanged: (value) => currentOtp = value,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            otpTextController
+                                .dispose(); // Dispose the controller
+                            Navigator.of(context).pop(); // Close the dialog
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.grey.shade600,
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            "Cancel".tr,
+                            style: AppTypography.button(context),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            await _verifyOtp(currentOtp, controller, orderModel,
+                                interOrderModel);
+                            otpTextController
+                                .dispose(); // Dispose the controller after verification
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: Text(
+                            "Verify ".tr,
+                            style: AppTypography.buttonlight(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              textStyle: AppTypography.button(context),
-              enableActiveFill: true,
-              cursorColor: AppColors.primary,
-              controller: controller.otpController.value,
-              onCompleted: (v) => currentOtp = v,
-              onChanged: (value) => currentOtp = value,
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 40,
-              child: ElevatedButton(
-                onPressed: () async {
-                  await _verifyOtp(
-                      currentOtp, controller, orderModel, interOrderModel);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                child: Text(
-                  "Verify & Start Ride".tr,
-                  style: AppTypography.buttonlight(context),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -958,6 +1369,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
           ? orderModel.otp ?? ''
           : interOrderModel.otp ?? '';
       if (modelOtp == inputOtp) {
+        // Close the dialog first
         Get.back();
         ShowToastDialog.showLoader("Starting ride...".tr);
         OrderModel currentOrderModel = controller.orderModel.value;
@@ -1003,6 +1415,67 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             "Report Traffic".tr,
+            style: AppTypography.appTitle(context),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(
+                  "Light Traffic".tr,
+                  style: AppTypography.caption(Get.context!),
+                ),
+                onTap: () {
+                  controller.reportTraffic(0);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(
+                  "Moderate Traffic".tr,
+                  style: AppTypography.caption(Get.context!),
+                ),
+                onTap: () {
+                  controller.reportTraffic(1);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(
+                  "Heavy Traffic".tr,
+                  style: AppTypography.caption(Get.context!),
+                ),
+                onTap: () {
+                  controller.reportTraffic(2);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Cancel".tr,
+                  style: AppTypography.boldLabel(Get.context!)
+                      .copyWith(color: AppColors.grey600)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTrafficInfoDialog(
+      BuildContext context, LiveTrackingController controller) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.background,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            "Traffic Level".tr,
             style: AppTypography.appTitle(context),
           ),
           content: Column(

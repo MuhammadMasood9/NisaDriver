@@ -551,8 +551,8 @@ class ActiveOrderScreen extends StatelessWidget {
                 appContext: context,
                 keyboardType: TextInputType.phone,
                 pinTheme: PinTheme(
-                  fieldHeight: 40,
-                  fieldWidth: 40,
+                  fieldHeight: 35,
+                  fieldWidth: 35,
                   activeColor: AppColors.primary,
                   selectedColor: AppColors.primary,
                   inactiveColor: AppColors.textFieldBorder,
@@ -560,7 +560,7 @@ class ActiveOrderScreen extends StatelessWidget {
                   inactiveFillColor: AppColors.textField,
                   selectedFillColor: AppColors.textField,
                   shape: PinCodeFieldShape.box,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 enableActiveFill: true,
                 cursorColor: AppColors.primary,
@@ -569,7 +569,7 @@ class ActiveOrderScreen extends StatelessWidget {
                 onChanged: (value) {},
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             ButtonThem.buildButton(
               context,
               title: "Verify & Start Ride".tr,

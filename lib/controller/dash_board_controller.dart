@@ -1,26 +1,19 @@
 import 'dart:developer';
 
-import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/driver_user_model.dart';
-import 'package:driver/ui/auth_screen/login_screen.dart';
-import 'package:driver/ui/bank_details/bank_details_screen.dart';
 import 'package:driver/ui/chat_screen/inbox_screen.dart';
 import 'package:driver/ui/home_screens/home_screen.dart';
 import 'package:driver/ui/intercity_screen/home_intercity_screen.dart';
 import 'package:driver/ui/online_registration/online_registartion_screen.dart';
-import 'package:driver/ui/profile_screen/profile_screen.dart';
 import 'package:driver/ui/profile_screen/account_screen.dart' as account;
 import 'package:driver/ui/safety/safety_screen.dart' as safety;
-import 'package:driver/ui/scheduled_rides/scheduled_order_screen.dart';
 import 'package:driver/ui/scheduled_rides/scheduled_rides_screen.dart';
 import 'package:driver/ui/settings_screen/setting_screen.dart';
-import 'package:driver/ui/vehicle_information/vehicle_information_screen.dart';
 // import 'package:driver/ui/vehicle_information/vehicle_information_screen.dart';
 import 'package:driver/ui/wallet/wallet_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/utils.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
@@ -182,16 +175,23 @@ class DashBoardController extends GetxController {
 
   Rx<DateTime> currentBackPressTime = DateTime.now().obs;
 
-  Future<bool> onWillPop() {
+  Future<bool> onWillPop() async {
+    // If not on MainScreen, go to MainScreen instead of exiting
+    if (selectedDrawerIndex.value != 0) {
+      selectedDrawerIndex.value = 0;
+      return false;
+    }
+
+    // If already on MainScreen, use double-tap-to-exit logic
     DateTime now = DateTime.now();
     if (now.difference(currentBackPressTime.value) >
         const Duration(seconds: 2)) {
       currentBackPressTime.value = now;
       ShowToastDialog.showToast("Double press to exit",
           position: EasyLoadingToastPosition.center);
-      return Future.value(false);
+      return false;
     }
-    return Future.value(true);
+    return true;
   }
 }
 

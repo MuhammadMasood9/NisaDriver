@@ -8,11 +8,8 @@ import 'package:driver/controller/information_controller.dart';
 import 'package:driver/model/document_model.dart';
 import 'package:driver/model/driver_document_model.dart';
 import 'package:driver/model/vehicle_type_model.dart';
-import 'package:driver/model/zone_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -127,7 +124,7 @@ class EnhancedDateSelector extends StatelessWidget {
                             Timestamp.fromDate(selectedDate!),
                             format: dateFormat)
                         : hintText,
-                    style: AppTypography.caption(context)!.copyWith(
+                    style: AppTypography.caption(context).copyWith(
                       color: hasValue
                           ? AppColors.darkBackground
                           : Colors.grey[600],
@@ -244,7 +241,7 @@ class InformationScreen extends StatelessWidget {
                                                       .tr
                                                   : "Upload your documents for verification."
                                                       .tr,
-                                      style: AppTypography.caption(context)!
+                                      style: AppTypography.caption(context)
                                           .copyWith(color: AppColors.grey500),
                                     ),
                                     const SizedBox(height: 30),
@@ -762,7 +759,7 @@ class InformationScreen extends StatelessWidget {
                 Expanded(
                   child: Text(
                     value.isEmpty ? "Select $label" : value,
-                    style: AppTypography.caption(context)!.copyWith(
+                    style: AppTypography.caption(context).copyWith(
                       color: value.isEmpty
                           ? Colors.grey.shade600
                           : AppColors.darkBackground,
@@ -1149,9 +1146,9 @@ class InformationScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                padding: EdgeInsets.only(left: 10),
-                child: Expanded(
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.only(left: 10),
                   child: ListView.builder(
                     itemCount: controller.zoneList.length,
                     shrinkWrap: true,

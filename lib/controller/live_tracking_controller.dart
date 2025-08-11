@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'dart:developer' as dev;
-import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:typed_data';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
@@ -63,7 +62,6 @@ class LiveTrackingController extends GetxController {
   RxDouble mapBearing =
       0.0.obs; // Bearing for map camera rotation (direction of travel)
   RxBool isLocationPermissionGranted = false.obs;
-  Rx<TextEditingController> otpController = TextEditingController().obs;
   RxBool isLoading = true.obs;
   RxString type = "".obs;
   RxString status = "".obs;
@@ -79,10 +77,13 @@ class LiveTrackingController extends GetxController {
   RxBool isVoiceEnabled = true.obs;
   RxBool isAutoNavigationEnabled = true.obs;
   RxBool isNightMode = false.obs;
+  RxBool isLaneGuidanceEnabled = true.obs; // Add lane guidance toggle
   RxDouble currentSpeed = 0.0.obs;
   RxString speedLimit = "".obs;
   RxBool isOffRoute = false.obs;
   RxInt trafficLevel = 0.obs;
+  RxString currentLaneGuidance = "".obs; // Add current lane guidance text
+  RxDouble currentSpeedLimit = 50.0.obs; // Add current speed limit
 
   RxList<NavigationStep> navigationSteps = <NavigationStep>[].obs;
   RxInt currentStepIndex = 0.obs;
@@ -109,12 +110,17 @@ class LiveTrackingController extends GetxController {
   RxInt nextRoutePointIndex = 0.obs;
   Position? _previousPosition;
   DateTime? _previousTime;
+  LatLng? _predictedPosition; // New field for predictive positioning
 
   RxList<String> currentLanes = <String>[].obs;
   RxString recommendedLane = "".obs;
 
   final List<Map<String, dynamic>> _ttsQueue = [];
   bool _isSpeaking = false;
+  RxBool _betterRouteAvailable =
+      false.obs; // New field for better route availability
+  Map<String, dynamic>? _betterRouteData; // New field for better route data
+  int _timeSaved = 0; // New field for time saved
 
   @override
   void onInit() {
@@ -222,29 +228,58 @@ class LiveTrackingController extends GetxController {
 
   void _startLocationUpdates() {
     _positionStream?.cancel();
+    // Use high accuracy without an aggressive time limit to avoid frequent timeouts
     final LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: currentSpeed.value > 50 ? 5 : 2, // Optimized filter
+      accuracy: LocationAccuracy.bestForNavigation,
+      // Slightly relaxed distance filter for stability; still very responsive
+      distanceFilter:
+          currentSpeed.value > 80 ? 10 : (currentSpeed.value > 40 ? 5 : 3),
     );
 
     _positionStream =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(
       (Position position) => updateDeviceLocation(position),
       onError: (error) {
-        ShowToastDialog.showToast("Error tracking location. Please check GPS.");
-        Future.delayed(Duration(seconds: 5), () => _startLocationUpdates());
+        // Avoid noisy toasts on benign timeouts; just restart with a short delay
+        if (error is TimeoutException) {
+          dev.log('Position stream timeout; restarting location updates');
+        } else {
+          ShowToastDialog.showToast(
+              "Error tracking location. Please check GPS.");
+          print("Error tracking location. Please check GPS.$error");
+        }
+        Future.delayed(const Duration(seconds: 2), _startLocationUpdates);
       },
     );
   }
 
   void updateDeviceLocation(Position position) {
+    // Validate position accuracy
+    if (position.accuracy > 20) {
+      // Skip low accuracy positions to prevent jitter
+      return;
+    }
+
     currentPosition.value = position;
     currentSpeed.value = position.speed * 3.6;
+
+    // Calculate acceleration for predictive movement
+    double? acceleration;
+    if (_previousPosition != null && _previousTime != null) {
+      double timeDiff =
+          DateTime.now().difference(_previousTime!).inMilliseconds / 1000.0;
+      if (timeDiff > 0) {
+        double speedDiff =
+            (currentSpeed.value - (_previousPosition!.speed * 3.6));
+        acceleration = speedDiff / timeDiff;
+      }
+    }
 
     _previousPosition = position;
     _previousTime = DateTime.now();
 
     _updateMapBearing(); // Calculate bearing for the map camera
+    _updatePredictivePosition(acceleration); // Add predictive positioning
 
     addDeviceMarker(); // Update marker position and initial bearing
 
@@ -259,6 +294,40 @@ class LiveTrackingController extends GetxController {
     checkOffRoute();
     updateTimeAndDistanceEstimates();
     updateDynamicPolyline();
+
+    // Real-time traffic and route optimization
+    if (currentSpeed.value < 5 && trafficLevel.value > 0) {
+      _optimizeRouteForTraffic();
+    }
+  }
+
+  // Add predictive positioning for smoother camera movement
+  void _updatePredictivePosition(double? acceleration) {
+    if (currentPosition.value == null || acceleration == null) return;
+
+    // Predict position 2 seconds ahead based on current speed and acceleration
+    double predictedLat = currentPosition.value!.latitude;
+    double predictedLng = currentPosition.value!.longitude;
+
+    if (currentSpeed.value > 5) {
+      double timeAhead = 2.0; // 2 seconds ahead
+      double distance =
+          (currentSpeed.value / 3.6) * timeAhead; // Convert km/h to m/s
+
+      // Calculate predicted position based on bearing
+      double bearingRad = mapBearing.value * pi / 180;
+      double latChange =
+          distance * cos(bearingRad) / 111320; // Approximate meters to degrees
+      double lngChange = distance *
+          sin(bearingRad) /
+          (111320 * cos(currentPosition.value!.latitude * pi / 180));
+
+      predictedLat += latChange;
+      predictedLng += lngChange;
+    }
+
+    // Store predicted position for camera movement
+    _predictedPosition = LatLng(predictedLat, predictedLng);
   }
 
   void addDeviceMarker() {
@@ -380,7 +449,8 @@ class LiveTrackingController extends GetxController {
   void startAutoNavigation() {
     _autoNavigationTimer?.cancel();
     _autoNavigationTimer =
-        Timer.periodic(const Duration(milliseconds: 500), (timer) {
+        Timer.periodic(const Duration(milliseconds: 200), (timer) {
+      // Increased frequency
       if (isAutoNavigationEnabled.value) {
         updateAutoNavigation();
       }
@@ -389,10 +459,125 @@ class LiveTrackingController extends GetxController {
 
   void startTrafficUpdates() {
     _trafficUpdateTimer?.cancel();
-    _trafficUpdateTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+    _trafficUpdateTimer = Timer.periodic(const Duration(minutes: 2), (timer) {
+      // More frequent updates
       updateMarkersAndPolyline();
+      _checkRealTimeTrafficConditions();
+      _checkForBetterRoutes(); // Add route optimization check
     });
   }
+
+  // Check for better routes continuously
+  void _checkForBetterRoutes() async {
+    if (currentPosition.value == null || routePoints.isEmpty) return;
+
+    try {
+      LatLng source = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+      LatLng destination = getTargetLocation();
+
+      // Only check for better routes if we're not in heavy traffic
+      if (trafficLevel.value < 2) {
+        final String url =
+            'https://maps.googleapis.com/maps/api/directions/json?'
+            'origin=${source.latitude},${source.longitude}&'
+            'destination=${destination.latitude},${destination.longitude}&'
+            'alternatives=true&'
+            'departure_time=now&'
+            'traffic_model=best_guess&'
+            'key=${Constant.mapAPIKey}';
+
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          Map<String, dynamic> data = json.decode(response.body);
+          if (data['status'] == 'OK' && data['routes'].length > 1) {
+            // Find the fastest route
+            Map<String, dynamic> fastestRoute = data['routes'][0];
+            int fastestDuration = fastestRoute['legs'][0]['duration_in_traffic']
+                    ?['value'] ??
+                fastestRoute['legs'][0]['duration']['value'];
+
+            for (var route in data['routes']) {
+              int duration = route['legs'][0]['duration_in_traffic']
+                      ?['value'] ??
+                  route['legs'][0]['duration']['value'];
+              if (duration < fastestDuration) {
+                fastestDuration = duration;
+                fastestRoute = route;
+              }
+            }
+
+            // Check if the new route is significantly better (at least 2 minutes faster)
+            int currentDuration = _calculateCurrentRouteDuration();
+            if (fastestDuration < (currentDuration - 120)) {
+              // 2 minutes = 120 seconds
+              _suggestRouteChange(
+                  fastestRoute, fastestDuration, currentDuration);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Handle errors silently
+    }
+  }
+
+  // Calculate current route duration
+  int _calculateCurrentRouteDuration() {
+    if (routePoints.isEmpty) return 0;
+
+    // Estimate based on distance and current traffic
+    double totalDistance = 0;
+    for (int i = 0; i < routePoints.length - 1; i++) {
+      totalDistance += calculateDistanceBetweenPoints(
+        routePoints[i].latitude,
+        routePoints[i].longitude,
+        routePoints[i + 1].latitude,
+        routePoints[i + 1].longitude,
+      );
+    }
+
+    double adjustedSpeed = _calculateAdjustedSpeed();
+    return (totalDistance / adjustedSpeed * 3600).round(); // Convert to seconds
+  }
+
+  // Suggest route change to user
+  void _suggestRouteChange(
+      Map<String, dynamic> newRoute, int newDuration, int currentDuration) {
+    int timeSaved = currentDuration - newDuration;
+    int minutesSaved = (timeSaved / 60).round();
+
+    if (isVoiceEnabled.value) {
+      queueAnnouncement(
+          "Faster route available. You can save $minutesSaved minutes by taking an alternative route.",
+          priority: 2);
+    }
+
+    // Store the better route for user to accept
+    _betterRouteAvailable.value = true;
+    _betterRouteData = newRoute;
+    _timeSaved = minutesSaved;
+  }
+
+  // Accept the better route
+  void acceptBetterRoute() {
+    if (_betterRouteAvailable.value && _betterRouteData != null) {
+      _updateRouteWithAlternative(_betterRouteData!);
+      _betterRouteAvailable.value = false;
+      _betterRouteData = null;
+      _timeSaved = 0;
+
+      if (isVoiceEnabled.value) {
+        queueAnnouncement("Route updated to faster alternative.", priority: 1);
+      }
+    }
+  }
+
+  // Check if better route is available
+  bool get isBetterRouteAvailable => _betterRouteAvailable.value;
+
+  // Get time saved with better route
+  int get timeSavedWithBetterRoute => _timeSaved;
 
   void updateAutoNavigation() {
     if (!isAutoNavigationEnabled.value ||
@@ -458,24 +643,18 @@ class LiveTrackingController extends GetxController {
   }
 
   void adjustCameraForNavigation(LatLng devicePos) {
-    navigationZoom.value = showDriverToPickupRoute.value ? 16.0 : 15.0;
+    // Dynamic zoom based on speed and context
+    navigationZoom.value = _calculateDynamicZoom();
 
-    if (currentSpeed.value < 5)
-      navigationZoom.value += 0.5;
-    else if (currentSpeed.value > 50) navigationZoom.value -= 0.5;
-
-    if (distanceToNextTurn.value < 150) navigationZoom.value += 0.5;
-
-    navigationZoom.value = navigationZoom.value.clamp(14.0, 17.0);
-
+    // Smooth camera movement
     if (mapController != null && isFollowingDriver.value) {
       mapController!.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
-            target: devicePos,
+            target: _predictedPosition ?? devicePos,
             zoom: navigationZoom.value,
-            tilt: 0.0, // Set to 0.0 for 2D view
-            bearing: mapBearing.value, // Use map bearing for camera rotation
+            tilt: _calculateOptimalTilt(),
+            bearing: mapBearing.value,
           ),
         ),
       );
@@ -498,19 +677,24 @@ class LiveTrackingController extends GetxController {
       if (currentManeuver.value.contains("right")) {
         currentLanes.value = ["straight", "straight", "right", "right"];
         recommendedLane.value = "right";
+        currentLaneGuidance.value = "Stay in right lane for upcoming turn";
       } else if (currentManeuver.value.contains("left")) {
         currentLanes.value = ["left", "left", "straight", "straight"];
         recommendedLane.value = "left";
+        currentLaneGuidance.value = "Stay in left lane for upcoming turn";
       } else if (currentManeuver.value.contains("roundabout")) {
         currentLanes.value = ["roundabout", "roundabout"];
         recommendedLane.value = "roundabout";
+        currentLaneGuidance.value = "Use roundabout lane";
       } else {
         currentLanes.value = ["straight", "straight"];
         recommendedLane.value = "straight";
+        currentLaneGuidance.value = "Continue in current lane";
       }
     } else {
       currentLanes.clear();
       recommendedLane.value = "";
+      currentLaneGuidance.value = "No lane guidance needed";
     }
   }
 
@@ -536,7 +720,8 @@ class LiveTrackingController extends GetxController {
     }
 
     bool wasOffRoute = isOffRoute.value;
-    isOffRoute.value = minDistanceToRoute > 25;
+    // Reduced threshold for faster off-route detection
+    isOffRoute.value = minDistanceToRoute > 20; // Reduced from 25m to 20m
 
     if (isOffRoute.value && !wasOffRoute) {
       queueAnnouncement("You are off route. Recalculating route.", priority: 3);
@@ -619,14 +804,100 @@ class LiveTrackingController extends GetxController {
     );
 
     distance.value = distanceInMeters / 1000;
-    double adjustedSpeed = 40.0 * getTrafficSpeedMultiplier();
+
+    // Enhanced ETA calculation with real-time factors
+    double adjustedSpeed = _calculateAdjustedSpeed();
     int minutes = (distance.value / adjustedSpeed * 60).round();
+
+    // Add buffer time for traffic and stops
+    int bufferMinutes = _calculateBufferTime();
+    minutes += bufferMinutes;
+
     estimatedTime.value = minutes < 1 ? "Less than 1 min" : "$minutes min";
 
     DateTime arrival = DateTime.now().add(Duration(minutes: minutes));
     estimatedArrival.value = DateFormat('hh:mm a').format(arrival);
 
     updateTripProgress();
+  }
+
+  // Calculate adjusted speed based on multiple factors
+  double _calculateAdjustedSpeed() {
+    double baseSpeed = 40.0; // Base speed in km/h
+
+    // Traffic adjustment
+    double trafficMultiplier = getTrafficSpeedMultiplier();
+
+    // Time of day adjustment
+    double timeMultiplier = _getTimeOfDayMultiplier();
+
+    // Weather adjustment (could be enhanced with real weather API)
+    double weatherMultiplier = _getWeatherMultiplier();
+
+    // Road type adjustment
+    double roadMultiplier = _getRoadTypeMultiplier();
+
+    return baseSpeed *
+        trafficMultiplier *
+        timeMultiplier *
+        weatherMultiplier *
+        roadMultiplier;
+  }
+
+  // Get time of day speed multiplier
+  double _getTimeOfDayMultiplier() {
+    int hour = DateTime.now().hour;
+
+    // Rush hour periods
+    if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
+      return 0.7; // 30% slower during rush hour
+    }
+
+    // Night time
+    if (hour >= 22 || hour <= 6) {
+      return 0.9; // 10% slower at night
+    }
+
+    // Normal hours
+    return 1.0;
+  }
+
+  // Get weather multiplier (placeholder for real weather API)
+  double _getWeatherMultiplier() {
+    // This could be enhanced with real weather data
+    // For now, return a default value
+    return 1.0;
+  }
+
+  // Get road type multiplier
+  double _getRoadTypeMultiplier() {
+    // This could be enhanced with real road data
+    // For now, return a default value
+    return 1.0;
+  }
+
+  // Calculate buffer time for ETA
+  int _calculateBufferTime() {
+    int bufferMinutes = 0;
+
+    // Add buffer for heavy traffic
+    if (trafficLevel.value == 2) {
+      bufferMinutes += 5;
+    } else if (trafficLevel.value == 1) {
+      bufferMinutes += 2;
+    }
+
+    // Add buffer for multiple turns
+    if (navigationSteps.length > 5) {
+      bufferMinutes += 3;
+    }
+
+    // Add buffer for current speed
+    if (currentSpeed.value < 10) {
+      bufferMinutes += 2; // Extra time if moving slowly
+    }
+
+    return bufferMinutes;
   }
 
   double getTrafficSpeedMultiplier() {
@@ -698,15 +969,19 @@ class LiveTrackingController extends GetxController {
 
   void updateNavigationView() async {
     if (mapController == null || currentPosition.value == null) return;
-    LatLng deviceLocation = LatLng(
-        currentPosition.value!.latitude, currentPosition.value!.longitude);
+
+    LatLng targetLocation = _predictedPosition ??
+        LatLng(
+            currentPosition.value!.latitude, currentPosition.value!.longitude);
+
+    // Smooth camera animation with easing
     await mapController!.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
-          target: deviceLocation,
+          target: targetLocation,
           zoom: navigationZoom.value,
-          tilt: 0.0, // Set to 0.0 for 2D view
-          bearing: mapBearing.value, // Use map bearing for camera rotation
+          tilt: _calculateOptimalTilt(), // Dynamic tilt based on speed
+          bearing: mapBearing.value,
         ),
       ),
     );
@@ -902,10 +1177,7 @@ class LiveTrackingController extends GetxController {
     required double destinationLatitude,
     required double destinationLongitude,
   }) async {
-    const retryOptions = RetryOptions(
-        maxAttempts: 3,
-        delayFactor: Duration(seconds: 1),
-        maxDelay: Duration(seconds: 5));
+    // Using retry() directly below; no need to keep a local RetryOptions var here
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String cacheKey =
         "$sourceLatitude,$sourceLongitude-$destinationLatitude,$destinationLongitude";
@@ -952,10 +1224,27 @@ class LiveTrackingController extends GetxController {
   }
 
   Future<void> fetchSpeedLimit(LatLng position) async {
-    speedLimit.value = "50";
-    if (currentSpeed.value > double.parse(speedLimit.value)) {
+    // This could be enhanced with real speed limit API data
+    // For now, we'll use a simple heuristic based on location
+    double speedLimit = 50.0; // Default speed limit
+
+    // Simple speed limit logic (could be enhanced with real data)
+    if (currentSpeed.value > 0) {
+      // Adjust speed limit based on current speed and context
+      if (currentSpeed.value > 80) {
+        speedLimit = 80.0; // Highway
+      } else if (currentSpeed.value > 50) {
+        speedLimit = 60.0; // Main road
+      } else {
+        speedLimit = 40.0; // City street
+      }
+    }
+
+    currentSpeedLimit.value = speedLimit;
+
+    if (currentSpeed.value > speedLimit) {
       queueAnnouncement(
-          "You are exceeding the speed limit of ${speedLimit.value} km/h.",
+          "You are exceeding the speed limit of ${speedLimit.toStringAsFixed(0)} km/h.",
           priority: 3);
     }
   }
@@ -1036,8 +1325,7 @@ class LiveTrackingController extends GetxController {
 
     List<dynamic> steps = directionsData['routes'][0]['legs'][0]['steps'];
     for (var step in steps) {
-      String instruction =
-          _stripHtmlTags(step['html_instructions'] ?? "Continue");
+      // Keep simplified instruction generation only
       double distance = (step['distance']['value'] ?? 0).toDouble();
       String maneuver = step['maneuver'] ?? "straight";
       LatLng location =
@@ -1078,10 +1366,7 @@ class LiveTrackingController extends GetxController {
     }
   }
 
-  String _stripHtmlTags(String htmlText) {
-    final RegExp exp = RegExp(r'<[^>]+>', multiLine: true);
-    return htmlText.replaceAll(exp, '').trim();
-  }
+  // Removed unused _stripHtmlTags
 
   void updateTrafficLevel(Map<String, dynamic> directionsData) {
     double duration =
@@ -1208,6 +1493,12 @@ class LiveTrackingController extends GetxController {
         "Auto navigation ${isAutoNavigationEnabled.value ? 'enabled' : 'disabled'}");
   }
 
+  void toggleLaneGuidance() {
+    isLaneGuidanceEnabled.value = !isLaneGuidanceEnabled.value;
+    ShowToastDialog.showToast(
+        "Lane guidance ${isLaneGuidanceEnabled.value ? 'enabled' : 'disabled'}");
+  }
+
   void toggleNightMode() {
     isNightMode.value = !isNightMode.value;
     if (mapController != null) {
@@ -1238,13 +1529,81 @@ class LiveTrackingController extends GetxController {
   void recalculateRoute() {
     if (currentPosition.value == null ||
         (_lastRerouteTime != null &&
-            DateTime.now().difference(_lastRerouteTime!).inSeconds < 10))
+            DateTime.now().difference(_lastRerouteTime!).inSeconds <
+                5)) // Reduced from 10s to 5s
       return;
 
     _lastRerouteTime = DateTime.now();
     polyLines.clear();
-    updateMarkersAndPolyline();
-    isOffRoute.value = false;
+
+    // Try to recalculate with different parameters
+    _recalculateWithAlternatives();
+  }
+
+  // Recalculate route with alternatives
+  void _recalculateWithAlternatives() async {
+    if (currentPosition.value == null) return;
+
+    try {
+      LatLng source = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+      LatLng destination = getTargetLocation();
+
+      // Try different routing modes
+      List<String> modes = [
+        'driving',
+        'driving',
+        'driving'
+      ]; // Multiple attempts
+
+      for (String mode in modes) {
+        final String url =
+            'https://maps.googleapis.com/maps/api/directions/json?'
+            'origin=${source.latitude},${source.longitude}&'
+            'destination=${destination.latitude},${destination.longitude}&'
+            'mode=$mode&'
+            'alternatives=true&'
+            'departure_time=now&'
+            'traffic_model=best_guess&'
+            'key=${Constant.mapAPIKey}';
+
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          Map<String, dynamic> data = json.decode(response.body);
+          if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
+            // Use the first available route
+            _updateRouteWithAlternative(data['routes'][0]);
+            isOffRoute.value = false;
+            return;
+          }
+        }
+      }
+
+      // If all attempts fail, fall back to direct route
+      _createDirectRoute(source, destination);
+    } catch (e) {
+      // Create direct route as fallback
+      if (currentPosition.value != null) {
+        LatLng source = LatLng(
+            currentPosition.value!.latitude, currentPosition.value!.longitude);
+        LatLng destination = getTargetLocation();
+        _createDirectRoute(source, destination);
+      }
+    }
+  }
+
+  // Create direct route as fallback
+  void _createDirectRoute(LatLng source, LatLng destination) {
+    List<LatLng> directRoute = [source, destination];
+    routePoints.value = directRoute;
+
+    polyLines.clear();
+    _addPolyLine(directRoute, "DirectRoute", Colors.red);
+
+    if (isVoiceEnabled.value) {
+      queueAnnouncement("Using direct route due to navigation issues.",
+          priority: 3);
+    }
   }
 
   void centerMapOnDriver() {
@@ -1304,11 +1663,9 @@ class LiveTrackingController extends GetxController {
 
   Future<double?> testLiveBearing() async {
     try {
-      CompassEvent? event =
-          await FlutterCompass.events!.first.timeout(Duration(seconds: 5));
-      if (event?.heading == null ||
-          event!.heading! < 0 ||
-          event.heading! > 360) {
+      CompassEvent event = await FlutterCompass.events!.first
+          .timeout(const Duration(seconds: 5));
+      if (event.heading == null || event.heading! < 0 || event.heading! > 360) {
         ShowToastDialog.showToast("Invalid compass data, please calibrate");
         return null;
       }
@@ -1360,4 +1717,177 @@ class LiveTrackingController extends GetxController {
       }
     });
   }
+
+  // Real-time traffic and route optimization
+  void _optimizeRouteForTraffic() async {
+    if (currentPosition.value == null || routePoints.isEmpty) return;
+
+    try {
+      // Get alternative routes
+      LatLng source = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+      LatLng destination = getTargetLocation();
+
+      // Request alternative routes from Google Directions API
+      final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=${source.latitude},${source.longitude}&'
+          'destination=${destination.latitude},${destination.longitude}&'
+          'alternatives=true&'
+          'departure_time=now&'
+          'traffic_model=best_guess&'
+          'key=${Constant.mapAPIKey}';
+
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['routes'].length > 1) {
+          // Find the fastest alternative route
+          Map<String, dynamic> fastestRoute = data['routes'][0];
+          int fastestDuration = fastestRoute['legs'][0]['duration_in_traffic']
+                  ?['value'] ??
+              fastestRoute['legs'][0]['duration']['value'];
+
+          for (var route in data['routes']) {
+            int duration = route['legs'][0]['duration_in_traffic']?['value'] ??
+                route['legs'][0]['duration']['value'];
+            if (duration < fastestDuration) {
+              fastestDuration = duration;
+              fastestRoute = route;
+            }
+          }
+
+          // Update route if we found a faster alternative
+          if (fastestRoute != data['routes'][0]) {
+            _updateRouteWithAlternative(fastestRoute);
+          }
+        }
+      }
+    } catch (e) {
+      // Handle errors silently
+    }
+  }
+
+  // Real-time traffic condition checking
+  void _checkRealTimeTrafficConditions() async {
+    if (currentPosition.value == null || routePoints.isEmpty) return;
+
+    try {
+      // Check if we're approaching known traffic areas
+      LatLng devicePos = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+
+      // Look ahead 2km for traffic conditions
+      double lookAheadDistance = 2000;
+      bool hasTrafficAhead = false;
+
+      for (int i = 0; i < routePoints.length; i++) {
+        double distance = await calculateDistance(
+          devicePos.latitude,
+          devicePos.longitude,
+          routePoints[i].latitude,
+          routePoints[i].longitude,
+        );
+
+        if (distance <= lookAheadDistance) {
+          // Check if this route segment has traffic
+          if (_isHighTrafficArea(routePoints[i])) {
+            hasTrafficAhead = true;
+            break;
+          }
+        }
+      }
+
+      if (hasTrafficAhead && trafficLevel.value < 2) {
+        trafficLevel.value = 2;
+        if (isVoiceEnabled.value) {
+          queueAnnouncement(
+              "Heavy traffic detected ahead. Consider alternative route.",
+              priority: 2);
+        }
+      }
+    } catch (e) {
+      // Handle errors silently to avoid disrupting navigation
+    }
+  }
+
+  // Check if a location is in a high traffic area
+  bool _isHighTrafficArea(LatLng location) {
+    // This could be enhanced with real traffic API data
+    // For now, we'll use a simple heuristic based on time and location
+    int hour = DateTime.now().hour;
+
+    // Rush hour periods
+    bool isRushHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
+
+    // Weekend vs weekday
+    bool isWeekend = DateTime.now().weekday >= 6;
+
+    // Simple traffic prediction (could be enhanced with real data)
+    return isRushHour && !isWeekend;
+  }
+
+  // Calculate optimal camera tilt based on speed and context
+  double _calculateOptimalTilt() {
+    if (currentSpeed.value < 10) return 0.0; // Flat view when slow/stopped
+    if (currentSpeed.value < 30) return 15.0; // Slight tilt for city driving
+    if (currentSpeed.value < 60) return 25.0; // Medium tilt for highway
+    return 35.0; // High tilt for fast highway driving
+  }
+
+  // Calculate dynamic zoom based on multiple factors
+  double _calculateDynamicZoom() {
+    double baseZoom = showDriverToPickupRoute.value ? 16.0 : 15.0;
+
+    // Speed-based adjustments
+    if (currentSpeed.value < 5)
+      baseZoom += 0.8; // Closer view when slow
+    else if (currentSpeed.value > 80) baseZoom -= 0.8; // Wider view when fast
+
+    // Turn-based adjustments
+    if (distanceToNextTurn.value < 100)
+      baseZoom += 0.5; // Closer view for turns
+    else if (distanceToNextTurn.value > 500)
+      baseZoom -= 0.3; // Wider view for straight roads
+
+    // Traffic-based adjustments
+    if (trafficLevel.value > 1) baseZoom += 0.3; // Closer view in heavy traffic
+
+    return baseZoom.clamp(14.0, 18.0);
+  }
+
+  // Update route with alternative
+  void _updateRouteWithAlternative(Map<String, dynamic> routeData) {
+    try {
+      String encodedPolyline = routeData['overview_polyline']['points'];
+      List<PointLatLng> decodedPoints =
+          polylinePoints.decodePolyline(encodedPolyline);
+      List<LatLng> newRoutePoints = decodedPoints
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      // Update route points
+      routePoints.value = newRoutePoints;
+
+      // Parse new navigation steps
+      parseNavigationSteps(routeData);
+
+      // Update polylines
+      polyLines.clear();
+      _addPolyLine(newRoutePoints, "OptimizedRoute", AppColors.primary);
+
+      // Announce route change
+      if (isVoiceEnabled.value) {
+        queueAnnouncement("Route optimized for traffic conditions.",
+            priority: 1);
+      }
+    } catch (e) {
+      // Handle errors silently
+    }
+  }
+
+  // Enhanced marker updates with smooth animations
+  // Removed unused _enhancedAddDeviceMarker
+
+  // Smooth marker animation
+  // Removed unused _animateMarkerSmoothly
 }
