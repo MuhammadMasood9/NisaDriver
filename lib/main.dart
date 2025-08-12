@@ -1,5 +1,4 @@
 import 'package:country_code_picker/country_code_picker.dart';
-import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/global_setting_conroller.dart';
 import 'package:driver/firebase_options.dart';
 import 'package:driver/ui/splash_screen.dart';
@@ -9,7 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
 
 import 'services/localization_service.dart';
 import 'utils/Preferences.dart';
@@ -44,6 +42,10 @@ void main() async {
   }
 
   await Preferences.initPref();
+
+  // Initialize GlobalSettingController at app startup
+  Get.put(GlobalSettingController());
+
   runApp(const MyApp());
 }
 
@@ -76,14 +78,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       fallbackLocale: LocalizationService.locale,
       translations: LocalizationService(),
       builder: EasyLoading.init(),
-      home: GetX<GlobalSettingController>(
-        init: GlobalSettingController(),
-        builder: (controller) {
-          return controller.isLoading.value
-              ? Constant.loader(context)
-              : const SplashScreen();
-        },
-      ),
+      home: const SplashScreen(),
     );
   }
 }

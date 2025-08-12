@@ -1,6 +1,4 @@
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/send_notification.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
@@ -95,7 +93,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
               Obx(() => GoogleMap(
                     compassEnabled: false,
                     rotateGesturesEnabled: true,
-                    myLocationEnabled: false,
+                    myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     mapType: MapType.normal,
                     zoomControlsEnabled: false,
@@ -107,6 +105,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                       bottom: bottomPanelMinHeight,
                       top: 140,
                     ),
+                    onCameraMoveStarted: () => controller.onMapDrag(),
                     onMapCreated: (GoogleMapController mapController) async {
                       controller.mapController = mapController;
                       if (_mapStyle != null) {
@@ -122,20 +121,17 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                       }
                     },
                     initialCameraPosition: CameraPosition(
-                      zoom: controller.navigationZoom.value,
                       target: LatLng(
-                        controller.currentPosition.value?.latitude ??
-                            Constant.currentLocation?.latitude ??
-                            45.521563,
-                        controller.currentPosition.value?.longitude ??
-                            Constant.currentLocation?.longitude ??
-                            -122.677433,
+                        Constant.currentLocation?.latitude ?? 37.7749,
+                        Constant.currentLocation?.longitude ?? -122.677433,
                       ),
                       tilt: 30,
-                      bearing: controller.mapBearing.value,
+                      // Removed map bearing - map will not rotate with movement
+                      // bearing: controller.mapBearing.value,
                     ),
                     onCameraMove: (CameraPosition position) {
                       controller.navigationZoom.value = position.zoom;
+                      controller.onMapDrag();
                     },
                     onTap: (LatLng position) {
                       controller.onMapTap(position);

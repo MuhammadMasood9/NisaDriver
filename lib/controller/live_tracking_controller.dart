@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:developer' as dev;
 import 'dart:typed_data';
@@ -19,10 +20,9 @@ import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:io' show Platform;
 import 'dart:io';
 import 'package:retry/retry.dart';
+import 'package:driver/services/realtime_location_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NavigationStep {
@@ -41,16 +41,18 @@ class NavigationStep {
   });
 }
 
+/// Live tracking controller that uses phone GPS location only
+/// No longer fetches location from real-time database
 class LiveTrackingController extends GetxController {
   GoogleMapController? mapController;
-  Timer? _locationUpdateTimer;
-  Timer? _estimationUpdateTimer;
-  Timer? _autoNavigationTimer;
-  Timer? _trafficUpdateTimer;
   FlutterTts? _flutterTts;
   StreamSubscription<Position>? _positionStream;
   DateTime? _lastRerouteTime;
   StreamSubscription<CompassEvent>? _compassSubscription;
+  final RealtimeLocationService _realtime = RealtimeLocationService();
+  // Removed real-time database subscription - only using phone GPS
+  // StreamSubscription<Map<String, dynamic>?>? _rtdbSubscription;
+  // bool _isApplyingRemoteUpdate = false;
   RxList<double> announcedDistances = <double>[].obs;
   Rx<DriverUserModel> driverUserModel = DriverUserModel().obs;
   Rx<OrderModel> orderModel = OrderModel().obs;
@@ -110,7 +112,7 @@ class LiveTrackingController extends GetxController {
   RxInt nextRoutePointIndex = 0.obs;
   Position? _previousPosition;
   DateTime? _previousTime;
-  LatLng? _predictedPosition; // New field for predictive positioning
+  LatLng? _displayLatLng; // Smoothed/map-matched position for display & publish
 
   RxList<String> currentLanes = <String>[].obs;
   RxString recommendedLane = "".obs;
@@ -121,6 +123,31 @@ class LiveTrackingController extends GetxController {
       false.obs; // New field for better route availability
   Map<String, dynamic>? _betterRouteData; // New field for better route data
   int _timeSaved = 0; // New field for time saved
+
+  // Google Maps API for road-snapping
+  static String get _googleMapsApiKey =>
+      Constant.mapAPIKey; // Use your existing API key
+  static const String _roadsApiBaseUrl =
+      'https://roads.googleapis.com/v1/snapToRoads';
+
+  // Enhanced location tracking
+  double _lastBearing = 0.0;
+
+  // User interaction tracking
+  DateTime? _lastUserInteraction;
+
+  // Off-route tracking
+  int _consecutiveOffRouteChecks = 0;
+  DateTime? _firstOffRouteTime;
+
+  // Location update batching removed (live updates)
+
+  // Track last accepted GPS update time for degraded fallback
+  DateTime? _lastAcceptedUpdateTime;
+
+  // Traffic-based rerouting
+  RxBool hasAlternativeRoute = false.obs;
+  Map<String, dynamic>? _alternativeRouteData;
 
   @override
   void onInit() {
@@ -139,22 +166,21 @@ class LiveTrackingController extends GetxController {
       updateNavigationView();
       updateMarkersAndPolyline();
     });
-
-    startEstimationUpdates();
-    startAutoNavigation();
-    startTrafficUpdates();
   }
 
   @override
   void onClose() {
-    _locationUpdateTimer?.cancel();
-    _estimationUpdateTimer?.cancel();
-    _autoNavigationTimer?.cancel();
-    _trafficUpdateTimer?.cancel();
+    // No timers to cancel (live updates)
     _positionStream?.cancel();
     _compassSubscription?.cancel();
+    // Removed real-time database subscription cleanup
+    // _rtdbSubscription?.cancel();
     mapController?.dispose();
     _flutterTts?.stop();
+    // Clean up realtime location entries when leaving the screen
+    _removeRealtimeLocationSafely(type.value == "orderModel"
+        ? orderModel.value.id
+        : intercityOrderModel.value.id);
     ShowToastDialog.closeLoader();
     super.onClose();
   }
@@ -226,156 +252,421 @@ class LiveTrackingController extends GetxController {
     });
   }
 
-  void _startLocationUpdates() {
-    _positionStream?.cancel();
-    // Use high accuracy without an aggressive time limit to avoid frequent timeouts
-    final LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.bestForNavigation,
-      // Slightly relaxed distance filter for stability; still very responsive
-      distanceFilter:
-          currentSpeed.value > 80 ? 10 : (currentSpeed.value > 40 ? 5 : 3),
+  void _publishRealtimeLocation() {
+    if (currentPosition.value == null) return;
+    final String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null || driverId.isEmpty) return;
+
+    final String? orderId = type.value == "orderModel"
+        ? orderModel.value.id
+        : intercityOrderModel.value.id;
+    if (orderId == null || orderId.isEmpty) return;
+
+    final LatLng cur = LatLng(
+      currentPosition.value!.latitude,
+      currentPosition.value!.longitude,
     );
 
-    _positionStream =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-      (Position position) => updateDeviceLocation(position),
-      onError: (error) {
-        // Avoid noisy toasts on benign timeouts; just restart with a short delay
-        if (error is TimeoutException) {
-          dev.log('Position stream timeout; restarting location updates');
-        } else {
-          ShowToastDialog.showToast(
-              "Error tracking location. Please check GPS.");
-          print("Error tracking location. Please check GPS.$error");
-        }
-        Future.delayed(const Duration(seconds: 2), _startLocationUpdates);
-      },
+    final String rideStatus = status.value;
+    final String phase = showDriverToPickupRoute.value
+        ? 'to_pickup'
+        : (showPickupToDestinationRoute.value ? 'to_destination' : 'idle');
+
+    _realtime.publishDriverLocation(
+      orderId: orderId,
+      driverId: driverId,
+      latitude: cur.latitude,
+      longitude: cur.longitude,
+      speedKmh: currentSpeed.value,
+      bearing: mapBearing.value,
+      accuracy: currentPosition.value!.accuracy,
+      rideStatus: rideStatus,
+      phase: phase,
     );
   }
 
-  void updateDeviceLocation(Position position) {
-    // Validate position accuracy
-    if (position.accuracy > 20) {
-      // Skip low accuracy positions to prevent jitter
-      return;
+  void _removeRealtimeLocationSafely(String? orderId) {
+    if (orderId == null || orderId.isEmpty) return;
+    final String? driverId = FireStoreUtils.getCurrentUid();
+    if (driverId == null || driverId.isEmpty) return;
+    _realtime.removeDriverLocation(orderId: orderId, driverId: driverId);
+  }
+
+  // Removed _ensureRealtimeSubscription method - no longer subscribing to database
+  // void _ensureRealtimeSubscription(String? orderId, String? driverId) {
+  //   // This method was used to subscribe to real-time database updates
+  //   // Now we only use phone GPS location
+  // }
+
+  // Old method replaced by _applyIntelligentSmoothing
+
+  // Simple holder for map-matching result
+  // Kept private to this file scope
+
+  Map<String, dynamic> _snapToRoute(LatLng p, List<LatLng> poly) {
+    LatLng bestPoint = p;
+    double bestDist = double.infinity;
+    for (int i = 0; i < poly.length - 1; i++) {
+      final LatLng a = poly[i];
+      final LatLng b = poly[i + 1];
+      final LatLng proj = _projectOnSegment(p, a, b);
+      final double d = Geolocator.distanceBetween(
+        p.latitude,
+        p.longitude,
+        proj.latitude,
+        proj.longitude,
+      );
+      if (d < bestDist) {
+        bestDist = d;
+        bestPoint = proj;
+      }
     }
+    return {'point': bestPoint, 'distance': bestDist};
+  }
 
-    currentPosition.value = position;
-    currentSpeed.value = position.speed * 3.6;
+  LatLng _projectOnSegment(LatLng p, LatLng a, LatLng b) {
+    // Local planar approximation
+    final double latRad = ((a.latitude + b.latitude) / 2) * pi / 180.0;
+    final double mPerDegLat = 111320.0;
+    final double mPerDegLng = 111320.0 * cos(latRad);
+    final double bx = (b.longitude - a.longitude) * mPerDegLng;
+    final double by = (b.latitude - a.latitude) * mPerDegLat;
+    final double px = (p.longitude - a.longitude) * mPerDegLng;
+    final double py = (p.latitude - a.latitude) * mPerDegLat;
+    final double segLen2 = bx * bx + by * by;
+    double t = segLen2 > 0 ? ((px * bx + py * by) / segLen2) : 0.0;
+    t = t.clamp(0.0, 1.0);
+    final double projX = bx * t;
+    final double projY = by * t;
+    final double projLng = (projX / mPerDegLng) + a.longitude;
+    final double projLat = (projY / mPerDegLat) + a.latitude;
+    return LatLng(projLat, projLng);
+  }
 
-    // Calculate acceleration for predictive movement
-    double? acceleration;
-    if (_previousPosition != null && _previousTime != null) {
-      double timeDiff =
-          DateTime.now().difference(_previousTime!).inMilliseconds / 1000.0;
-      if (timeDiff > 0) {
-        double speedDiff =
-            (currentSpeed.value - (_previousPosition!.speed * 3.6));
-        acceleration = speedDiff / timeDiff;
+  /// Start continuous GPS location updates from phone (no database)
+  void _startLocationUpdates() {
+    _positionStream?.cancel();
+
+    // Optimized location settings for smooth tracking using phone GPS
+    final LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.best,
+      // distanceFilter disabled for live updates
+    );
+
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
+    ).listen(
+      (Position position) {
+        // Process location update immediately
+        updateDeviceLocation(position);
+      },
+      onError: (error) {
+        dev.log('Location error: $error');
+      },
+      cancelOnError: false, // Keep stream alive on errors
+    );
+  }
+
+  void updateDeviceLocation(Position position) async {
+    // Enhanced GPS filtering with degraded fallback
+    const double strictAccuracy = 10.0;
+    const double degradedAccuracy = 20.0;
+
+    final DateTime now = DateTime.now();
+
+    if (position.accuracy > strictAccuracy) {
+      final Duration sinceLastAccept = _lastAcceptedUpdateTime == null
+          ? const Duration(days: 1)
+          : now.difference(_lastAcceptedUpdateTime!);
+
+      if (sinceLastAccept > const Duration(seconds: 3) &&
+          position.accuracy <= degradedAccuracy) {
+        // Accept a degraded fix to avoid freezing when GPS is temporarily poor
+        dev.log(
+            'Accepting degraded accuracy ${position.accuracy}m after ${sinceLastAccept.inMilliseconds}ms without good fix');
+      } else {
+        dev.log('Position rejected: poor accuracy ${position.accuracy}m');
+        return;
       }
     }
 
+    // Calculate speed with smoothing
+    double newSpeed = position.speed * 3.6;
+    if (_previousPosition != null && _previousTime != null) {
+      // Smooth speed changes to prevent jitter
+      double speedDiff = (newSpeed - currentSpeed.value).abs();
+      if (speedDiff > 20) {
+        // Large speed change, smooth it
+        newSpeed = currentSpeed.value + (newSpeed - currentSpeed.value) * 0.3;
+      }
+    }
+
+    currentPosition.value = position;
+    currentSpeed.value = newSpeed;
+
+    // Fast road snapping with timeout and fallback
+    final rawPosition = LatLng(position.latitude, position.longitude);
+    LatLng displayPosition = rawPosition;
+
+    // Try road snapping with quick timeout
+    try {
+      final roadSnapResult = await _snapToRoadsQuick(rawPosition);
+      if (roadSnapResult != null) {
+        final snappedLat = roadSnapResult['lat'] as double;
+        final snappedLng = roadSnapResult['lng'] as double;
+        displayPosition = LatLng(snappedLat, snappedLng);
+      }
+    } catch (e) {
+      // Use raw position if snapping fails
+      dev.log('Road snapping failed, using raw GPS: $e');
+    }
+
+    // Apply intelligent smoothing only when needed
+    _displayLatLng = _applyIntelligentSmoothing(displayPosition, position);
+
+    // Add position prediction to compensate for GPS lag
+    _displayLatLng = _addPositionPrediction(_displayLatLng!, position);
+
+    // Calculate bearing for marker rotation
+    final markerBearing = _calculateSmoothBearing(position);
+    mapBearing.value = markerBearing;
+
+    // Store for next iteration
     _previousPosition = position;
-    _previousTime = DateTime.now();
+    _previousTime = now;
+    _lastAcceptedUpdateTime = now;
 
-    _updateMapBearing(); // Calculate bearing for the map camera
-    _updatePredictivePosition(acceleration); // Add predictive positioning
+    // Update marker with smooth animation
+    _updateMarkerSmoothly();
 
-    addDeviceMarker(); // Update marker position and initial bearing
-
-    if (isFollowingDriver.value && isNavigationView.value) {
-      updateNavigationView();
+    // Immediately update polyline to remove traveled portion when marker moves
+    if (routePoints.isNotEmpty) {
+      updateDynamicPolyline();
     }
 
-    fetchSpeedLimit(LatLng(position.latitude, position.longitude));
-    updateRouteVisibility();
-    updateNavigationInstructions();
-    updateNextRoutePoint();
-    checkOffRoute();
-    updateTimeAndDistanceEstimates();
-    updateDynamicPolyline();
-
-    // Real-time traffic and route optimization
-    if (currentSpeed.value < 5 && trafficLevel.value > 0) {
-      _optimizeRouteForTraffic();
+    // Only update camera view if user is not manually controlling the map
+    if (isFollowingDriver.value &&
+        isNavigationView.value &&
+        !_isUserControllingMap()) {
+      _updateCameraSmooth();
     }
+
+    // Live refresh of navigation and ancillary info
+    _liveRefresh();
+
+    // Publish to Firebase Realtime Database
+    _publishRealtimeLocation();
+
+    // Update navigation elements when marker moves significantly
+    _updateNavigationOnMovement();
   }
 
-  // Add predictive positioning for smoother camera movement
-  void _updatePredictivePosition(double? acceleration) {
-    if (currentPosition.value == null || acceleration == null) return;
+  // Fast road snapping with timeout
+  Future<Map<String, dynamic>?> _snapToRoadsQuick(LatLng position) async {
+    try {
+      final url = Uri.parse(
+          '$_roadsApiBaseUrl?key=$_googleMapsApiKey&path=${position.latitude},${position.longitude}&interpolate=true');
 
-    // Predict position 2 seconds ahead based on current speed and acceleration
-    double predictedLat = currentPosition.value!.latitude;
-    double predictedLng = currentPosition.value!.longitude;
-
-    if (currentSpeed.value > 5) {
-      double timeAhead = 2.0; // 2 seconds ahead
-      double distance =
-          (currentSpeed.value / 3.6) * timeAhead; // Convert km/h to m/s
-
-      // Calculate predicted position based on bearing
-      double bearingRad = mapBearing.value * pi / 180;
-      double latChange =
-          distance * cos(bearingRad) / 111320; // Approximate meters to degrees
-      double lngChange = distance *
-          sin(bearingRad) /
-          (111320 * cos(currentPosition.value!.latitude * pi / 180));
-
-      predictedLat += latChange;
-      predictedLng += lngChange;
+      final response =
+          await http.get(url).timeout(const Duration(milliseconds: 500));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['snappedPoints'] != null && data['snappedPoints'].isNotEmpty) {
+          final snappedPoint = data['snappedPoints'][0];
+          final location = snappedPoint['location'];
+          return {
+            'lat': location['latitude'],
+            'lng': location['longitude'],
+          };
+        }
+      }
+    } catch (e) {
+      // Timeout or network error - fail fast
+      return null;
     }
-
-    // Store predicted position for camera movement
-    _predictedPosition = LatLng(predictedLat, predictedLng);
+    return null;
   }
 
-  void addDeviceMarker() {
-    if (currentPosition.value == null) return;
-    markers.removeWhere((key, value) => key.value == "Device");
-    addMarker(
-      latitude: currentPosition.value!.latitude,
-      longitude: currentPosition.value!.longitude,
-      id: "Device",
+  // Intelligent smoothing that adapts to movement patterns
+  LatLng _applyIntelligentSmoothing(LatLng newPosition, Position position) {
+    if (_displayLatLng == null) {
+      return newPosition; // First position, no smoothing needed
+    }
 
-      descriptor: driverIcon!,
-      rotation: compassHeading.value, // Use compass bearing for marker
+    // Calculate distance from last position for potential future use
+    // double distance = Geolocator.distanceBetween(
+    //   _displayLatLng!.latitude,
+    //   _displayLatLng!.longitude,
+    //   newPosition.latitude,
+    //   newPosition.longitude,
+    // );
+
+    // Adaptive smoothing based on movement and accuracy
+    double smoothingFactor;
+
+    if (currentSpeed.value < 2) {
+      // Stationary or very slow - minimal smoothing to prevent drift
+      smoothingFactor = 0.8;
+    } else if (currentSpeed.value > 50) {
+      // High speed - less smoothing for responsiveness
+      smoothingFactor = 0.9;
+    } else {
+      // Normal speed - moderate smoothing
+      smoothingFactor = 0.7;
+    }
+
+    // Adjust for GPS accuracy
+    if (position.accuracy <= 3) {
+      smoothingFactor += 0.1; // High accuracy, trust more
+    } else if (position.accuracy > 6) {
+      smoothingFactor -= 0.1; // Low accuracy, smooth more
+    }
+
+    // Apply route snapping if available
+    if (routePoints.isNotEmpty) {
+      final snap = _snapToRoute(newPosition, routePoints);
+      final LatLng snapPoint = snap['point'] as LatLng;
+      final double snapDist = (snap['distance'] as num).toDouble();
+
+      if (snapDist <= 15) {
+        // Closer threshold for better road adherence
+        newPosition = snapPoint;
+        smoothingFactor += 0.1; // Trust route snapping more
+      }
+    }
+
+    smoothingFactor = smoothingFactor.clamp(0.3, 0.95);
+
+    return LatLng(
+      _displayLatLng!.latitude +
+          smoothingFactor * (newPosition.latitude - _displayLatLng!.latitude),
+      _displayLatLng!.longitude +
+          smoothingFactor * (newPosition.longitude - _displayLatLng!.longitude),
     );
   }
 
-  void _updateMapBearing() {
-    if (currentPosition.value == null) return;
+  // Smooth bearing calculation
+  double _calculateSmoothBearing(Position position) {
+    double bearing = 0.0;
 
-    double newBearing;
+    // Use GPS heading if available and reliable
+    if (currentSpeed.value > 3 &&
+        position.headingAccuracy < 30 &&
+        position.heading >= 0) {
+      bearing = position.heading;
+    }
+    // Calculate bearing from movement
+    else if (_previousPosition != null && _displayLatLng != null) {
+      bearing = _calculateBearing(
+        LatLng(_previousPosition!.latitude, _previousPosition!.longitude),
+        _displayLatLng!,
+      );
+    }
+    // Use route direction if available
+    else if (routePoints.isNotEmpty && _displayLatLng != null) {
+      LatLng nextPoint = getNextRoutePoint(_displayLatLng!);
+      bearing = _calculateBearing(_displayLatLng!, nextPoint);
+    }
 
-    // Prioritize GPS heading if moving and accurate
-    if (currentSpeed.value > 5.0 &&
-        currentPosition.value!.headingAccuracy < 45.0 &&
-        currentPosition.value!.heading >= 0) {
-      newBearing = currentPosition.value!.heading;
-    }
-    // Otherwise, calculate bearing towards the next route point
-    else if (routePoints.isNotEmpty) {
-      LatLng devicePos = LatLng(
-          currentPosition.value!.latitude, currentPosition.value!.longitude);
-      LatLng nextPoint = getNextRoutePoint(devicePos);
-      newBearing = _calculateBearing(devicePos, nextPoint);
-    }
-    // Fallback to the last known bearing
-    else {
-      newBearing = mapBearing.value;
+    // Smooth bearing transitions to prevent marker spinning
+    if (_lastBearing != 0.0) {
+      double diff = (bearing - _lastBearing) % 360;
+      if (diff > 180) diff -= 360;
+      if (diff < -180) diff += 360;
+
+      // Adaptive smoothing - less smoothing at higher speeds
+      double smoothFactor = currentSpeed.value > 20 ? 0.4 : 0.2;
+      bearing = (_lastBearing + smoothFactor * diff) % 360;
     }
 
-    // Smooth the transition for the map camera
-    mapBearing.value = _smoothBearing(mapBearing.value, newBearing);
+    _lastBearing = bearing;
+    return bearing;
   }
 
-  double _smoothBearing(double oldBearing, double newBearing) {
-    double diff = (newBearing - oldBearing) % 360;
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
-    return (oldBearing + 0.3 * diff) % 360;
+  // Smooth marker updates without complex animations
+  void _updateMarkerSmoothly() {
+    if (_displayLatLng == null) return;
+
+    addMarker(
+      latitude: _displayLatLng!.latitude,
+      longitude: _displayLatLng!.longitude,
+      id: "Device",
+      descriptor: driverIcon!,
+      rotation: compassHeading
+          .value, // Use compass heading for marker rotation instead of mapBearing
+    );
   }
+
+  // Smooth camera updates
+  void _updateCameraSmooth() async {
+    if (mapController == null || _displayLatLng == null) return;
+
+    mapController!.moveCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: _displayLatLng!,
+          zoom: _calculateDynamicZoom(),
+          tilt: _calculateOptimalTilt(),
+        ),
+      ),
+    );
+  }
+
+  // Live per-update refresh – lightweight ops every update, heavier ops gated
+  void _liveRefresh() {
+    updateRouteVisibility();
+    updateNavigationInstructions();
+    updateNextRoutePoint();
+    updateTimeAndDistanceEstimates();
+    checkOffRoute();
+    fetchSpeedLimit(_displayLatLng ??
+        LatLng(
+            currentPosition.value!.latitude, currentPosition.value!.longitude));
+  }
+
+  // Position prediction to compensate for GPS lag
+  LatLng _addPositionPrediction(LatLng currentPos, Position position) {
+    // Only predict if we're moving at a reasonable speed
+    if (currentSpeed.value < 5 || _previousPosition == null) {
+      return currentPos; // No prediction for stationary or first position
+    }
+
+    // Calculate time since last position update
+    final timeDiff = DateTime.now().difference(_previousTime ?? DateTime.now());
+    final secondsAhead = timeDiff.inMilliseconds / 1000.0;
+
+    // Don't predict too far ahead (max 2 seconds)
+    if (secondsAhead > 2.0) {
+      return currentPos;
+    }
+
+    // Use bearing to predict forward position
+    final bearing = mapBearing.value * pi / 180;
+    final speedMps = currentSpeed.value / 3.6; // Convert km/h to m/s
+    final predictDistance =
+        speedMps * secondsAhead * 0.5; // Conservative prediction
+
+    // Calculate predicted coordinates
+    final latChange = predictDistance *
+        cos(bearing) /
+        111320; // Approximate meters to degrees
+    final lngChange = predictDistance *
+        sin(bearing) /
+        (111320 * cos(currentPos.latitude * pi / 180));
+
+    final predictedLat = currentPos.latitude + latChange;
+    final predictedLng = currentPos.longitude + lngChange;
+
+    return LatLng(predictedLat, predictedLng);
+  }
+
+  void addDeviceMarker() {
+    // This method is now handled by _updateMarkerSmoothly()
+    // Keeping for backward compatibility
+    _updateMarkerSmoothly();
+  }
+
+  // Old bearing methods replaced by _calculateSmoothBearing
 
   double _calculateBearing(LatLng start, LatLng end) {
     double startLat = start.latitude * pi / 180;
@@ -438,126 +729,13 @@ class LiveTrackingController extends GetxController {
     }
   }
 
-  void startEstimationUpdates() {
-    _estimationUpdateTimer?.cancel();
-    _estimationUpdateTimer =
-        Timer.periodic(const Duration(seconds: 5), (timer) {
-      updateTimeAndDistanceEstimates();
-    });
-  }
+  // Timers removed – all updates happen live on location/compass stream
 
-  void startAutoNavigation() {
-    _autoNavigationTimer?.cancel();
-    _autoNavigationTimer =
-        Timer.periodic(const Duration(milliseconds: 200), (timer) {
-      // Increased frequency
-      if (isAutoNavigationEnabled.value) {
-        updateAutoNavigation();
-      }
-    });
-  }
+  // Removed periodic better route checks (no timers); could be triggered manually if needed
 
-  void startTrafficUpdates() {
-    _trafficUpdateTimer?.cancel();
-    _trafficUpdateTimer = Timer.periodic(const Duration(minutes: 2), (timer) {
-      // More frequent updates
-      updateMarkersAndPolyline();
-      _checkRealTimeTrafficConditions();
-      _checkForBetterRoutes(); // Add route optimization check
-    });
-  }
+  // Removed unused current route duration calculation
 
-  // Check for better routes continuously
-  void _checkForBetterRoutes() async {
-    if (currentPosition.value == null || routePoints.isEmpty) return;
-
-    try {
-      LatLng source = LatLng(
-          currentPosition.value!.latitude, currentPosition.value!.longitude);
-      LatLng destination = getTargetLocation();
-
-      // Only check for better routes if we're not in heavy traffic
-      if (trafficLevel.value < 2) {
-        final String url =
-            'https://maps.googleapis.com/maps/api/directions/json?'
-            'origin=${source.latitude},${source.longitude}&'
-            'destination=${destination.latitude},${destination.longitude}&'
-            'alternatives=true&'
-            'departure_time=now&'
-            'traffic_model=best_guess&'
-            'key=${Constant.mapAPIKey}';
-
-        final response = await http.get(Uri.parse(url));
-        if (response.statusCode == 200) {
-          Map<String, dynamic> data = json.decode(response.body);
-          if (data['status'] == 'OK' && data['routes'].length > 1) {
-            // Find the fastest route
-            Map<String, dynamic> fastestRoute = data['routes'][0];
-            int fastestDuration = fastestRoute['legs'][0]['duration_in_traffic']
-                    ?['value'] ??
-                fastestRoute['legs'][0]['duration']['value'];
-
-            for (var route in data['routes']) {
-              int duration = route['legs'][0]['duration_in_traffic']
-                      ?['value'] ??
-                  route['legs'][0]['duration']['value'];
-              if (duration < fastestDuration) {
-                fastestDuration = duration;
-                fastestRoute = route;
-              }
-            }
-
-            // Check if the new route is significantly better (at least 2 minutes faster)
-            int currentDuration = _calculateCurrentRouteDuration();
-            if (fastestDuration < (currentDuration - 120)) {
-              // 2 minutes = 120 seconds
-              _suggestRouteChange(
-                  fastestRoute, fastestDuration, currentDuration);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      // Handle errors silently
-    }
-  }
-
-  // Calculate current route duration
-  int _calculateCurrentRouteDuration() {
-    if (routePoints.isEmpty) return 0;
-
-    // Estimate based on distance and current traffic
-    double totalDistance = 0;
-    for (int i = 0; i < routePoints.length - 1; i++) {
-      totalDistance += calculateDistanceBetweenPoints(
-        routePoints[i].latitude,
-        routePoints[i].longitude,
-        routePoints[i + 1].latitude,
-        routePoints[i + 1].longitude,
-      );
-    }
-
-    double adjustedSpeed = _calculateAdjustedSpeed();
-    return (totalDistance / adjustedSpeed * 3600).round(); // Convert to seconds
-  }
-
-  // Suggest route change to user
-  void _suggestRouteChange(
-      Map<String, dynamic> newRoute, int newDuration, int currentDuration) {
-    int timeSaved = currentDuration - newDuration;
-    int minutesSaved = (timeSaved / 60).round();
-
-    if (isVoiceEnabled.value) {
-      queueAnnouncement(
-          "Faster route available. You can save $minutesSaved minutes by taking an alternative route.",
-          priority: 2);
-    }
-
-    // Store the better route for user to accept
-    _betterRouteAvailable.value = true;
-    _betterRouteData = newRoute;
-    _timeSaved = minutesSaved;
-  }
+  // Removed unused suggest route change helper
 
   // Accept the better route
   void acceptBetterRoute() {
@@ -643,33 +821,53 @@ class LiveTrackingController extends GetxController {
   }
 
   void adjustCameraForNavigation(LatLng devicePos) {
+    // Don't adjust camera if user is manually controlling the map
+    if (_isUserControllingMap()) return;
+
     // Dynamic zoom based on speed and context
     navigationZoom.value = _calculateDynamicZoom();
 
     // Smooth camera movement
     if (mapController != null && isFollowingDriver.value) {
-      mapController!.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: _predictedPosition ?? devicePos,
-            zoom: navigationZoom.value,
-            tilt: _calculateOptimalTilt(),
-            bearing: mapBearing.value,
+      try {
+        mapController!.moveCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: _displayLatLng ?? devicePos,
+              zoom: navigationZoom.value,
+              tilt: _calculateOptimalTilt(),
+            ),
           ),
-        ),
-      );
+        );
+      } catch (_) {}
     }
   }
 
   void onMapTap(LatLng position) {
+    _onUserInteraction();
+  }
+
+  void onMapDrag() {
+    _onUserInteraction();
+  }
+
+  void onMapPinch() {
+    _onUserInteraction();
+  }
+
+  void _onUserInteraction() {
+    // User is manually controlling the map
     isFollowingDriver.value = false;
-    Timer(Duration(seconds: 8), () {
-      if (!isFollowingDriver.value) {
-        isFollowingDriver.value = true;
-        polyLines.clear(); // Clear polylines when recentering
-        updateNavigationView();
-      }
-    });
+    _lastUserInteraction = DateTime.now();
+  }
+
+  // Removed auto re-center timer; user can trigger centering via UI actions
+
+  bool _isUserControllingMap() {
+    if (_lastUserInteraction == null) return false;
+    final timeSinceInteraction =
+        DateTime.now().difference(_lastUserInteraction!);
+    return timeSinceInteraction.inSeconds < 5;
   }
 
   void updateLaneGuidance() {
@@ -720,30 +918,76 @@ class LiveTrackingController extends GetxController {
     }
 
     bool wasOffRoute = isOffRoute.value;
-    // Reduced threshold for faster off-route detection
-    isOffRoute.value = minDistanceToRoute > 20; // Reduced from 25m to 20m
+    // More intelligent off-route detection
+    bool currentlyOffRoute =
+        minDistanceToRoute > 50; // Increased threshold for major deviation
 
-    if (isOffRoute.value && !wasOffRoute) {
-      queueAnnouncement("You are off route. Recalculating route.", priority: 3);
-      polyLines.clear();
-      recalculateRoute();
-    } else if (!isOffRoute.value && wasOffRoute) {
-      queueAnnouncement("Back on route. Continue following the path.",
-          priority: 3);
-      polyLines.remove(PolylineId("ReturnToRoute"));
-      nextRoutePointIndex.value = closestIndex;
-      updateDynamicPolyline();
+    if (currentlyOffRoute) {
+      _consecutiveOffRouteChecks++;
+      if (_firstOffRouteTime == null) {
+        _firstOffRouteTime = DateTime.now();
+      }
+
+      // Only trigger reroute if consistently off route for 10 seconds AND moved significantly
+      final timeSinceFirstOffRoute =
+          DateTime.now().difference(_firstOffRouteTime!);
+      if (_consecutiveOffRouteChecks >= 5 &&
+          timeSinceFirstOffRoute.inSeconds >= 10) {
+        if (!wasOffRoute) {
+          isOffRoute.value = true;
+          queueAnnouncement("Recalculating route to get back on track.",
+              priority: 3);
+          _clearRoutePolylines();
+          recalculateRoute();
+        }
+      }
+    } else {
+      // Reset off-route tracking
+      _consecutiveOffRouteChecks = 0;
+      _firstOffRouteTime = null;
+
+      if (wasOffRoute) {
+        isOffRoute.value = false;
+        queueAnnouncement("Back on route. Continue following the path.",
+            priority: 3);
+        polyLines.remove(const PolylineId("ReturnToRoute"));
+        nextRoutePointIndex.value = closestIndex;
+        updateDynamicPolyline();
+      }
+    }
+  }
+
+  void _clearRoutePolylines() {
+    // Clear all route-related polylines
+    polyLines.removeWhere((key, value) =>
+        key.value.contains('route') ||
+        key.value.contains('Route') ||
+        key.value == 'polyline_id_0');
+  }
+
+  // Clear old breadcrumb trails and optimize polyline display
+  void _cleanupOldPolylines() {
+    // Remove breadcrumb trail if it's too old or if we're off route
+    if (isOffRoute.value || polyLines.length > 3) {
+      polyLines.removeWhere((key, value) =>
+          key.value == "BreadcrumbTrail" ||
+          key.value.contains("old") ||
+          key.value.contains("trail"));
     }
   }
 
   void updateDynamicPolyline() {
     if (routePoints.isEmpty || currentPosition.value == null) return;
 
+    // Clean up old polylines first
+    _cleanupOldPolylines();
+
     LatLng devicePos = LatLng(
         currentPosition.value!.latitude, currentPosition.value!.longitude);
     int closestIndex = 0;
     double minDistance = double.infinity;
 
+    // Find the closest route point to current position
     for (int i = 0; i < routePoints.length; i++) {
       double dist = calculateDistanceBetweenPoints(
         devicePos.latitude,
@@ -757,15 +1001,42 @@ class LiveTrackingController extends GetxController {
       }
     }
 
+    // Only update if we've moved significantly (more than 5 meters from last update)
+    if (_lastAcceptedUpdateTime != null &&
+        _previousPosition != null &&
+        minDistance < 5) {
+      return; // Skip update if movement is minimal
+    }
+
+    // Get remaining route points from current position onwards
     List<LatLng> remainingPoints = routePoints.sublist(closestIndex);
+
+    // Add current position as the starting point for smoother polyline
+    if (remainingPoints.isNotEmpty) {
+      remainingPoints.insert(0, devicePos);
+    }
+
     String polylineId = showDriverToPickupRoute.value
         ? "DeviceToPickup"
         : "DeviceToDestination";
     Color color =
         showDriverToPickupRoute.value ? AppColors.primary : Colors.black;
 
-    polyLines.clear();
-    _addPolyLine(remainingPoints, polylineId, color);
+    // Clear existing route polylines but keep breadcrumb trail
+    polyLines.removeWhere((key, value) =>
+        key.value == "DeviceToPickup" ||
+        key.value == "DeviceToDestination" ||
+        key.value == "polyline_id_0");
+
+    if (remainingPoints.length > 1) {
+      _addPolyLine(remainingPoints, polylineId, color);
+    }
+
+    // Update next route point index for navigation
+    nextRoutePointIndex.value = min(closestIndex + 5, routePoints.length - 1);
+
+    // Create breadcrumb trail showing recent travel path
+    _addBreadcrumbTrail(devicePos, closestIndex);
   }
 
   void updateNextRoutePoint() {
@@ -970,18 +1241,18 @@ class LiveTrackingController extends GetxController {
   void updateNavigationView() async {
     if (mapController == null || currentPosition.value == null) return;
 
-    LatLng targetLocation = _predictedPosition ??
+    LatLng base = _displayLatLng ??
         LatLng(
             currentPosition.value!.latitude, currentPosition.value!.longitude);
+    LatLng targetLocation = base;
 
     // Smooth camera animation with easing
-    await mapController!.animateCamera(
+    mapController!.moveCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
           target: targetLocation,
           zoom: navigationZoom.value,
-          tilt: _calculateOptimalTilt(), // Dynamic tilt based on speed
-          bearing: mapBearing.value,
+          tilt: _calculateOptimalTilt(),
         ),
       ),
     );
@@ -1047,7 +1318,13 @@ class LiveTrackingController extends GetxController {
             orderModel.value = OrderModel.fromJson(event.data()!);
             status.value = orderModel.value.status ?? "";
             updateRouteVisibility();
-            if (orderModel.value.status == Constant.rideComplete) Get.back();
+            // Removed real-time database subscription - only using phone GPS
+            // _ensureRealtimeSubscription(
+            //     orderModel.value.id, FireStoreUtils.getCurrentUid());
+            if (orderModel.value.status == Constant.rideComplete) {
+              _removeRealtimeLocationSafely(orderModel.value.id);
+              Get.back();
+            }
           }
         });
       } else {
@@ -1063,8 +1340,13 @@ class LiveTrackingController extends GetxController {
                 InterCityOrderModel.fromJson(event.data()!);
             status.value = intercityOrderModel.value.status ?? "";
             updateRouteVisibility();
-            if (intercityOrderModel.value.status == Constant.rideComplete)
+            // Removed real-time database subscription - only using phone GPS
+            // _ensureRealtimeSubscription(
+            //     intercityOrderModel.value.id, FireStoreUtils.getCurrentUid());
+            if (intercityOrderModel.value.status == Constant.rideComplete) {
+              _removeRealtimeLocationSafely(intercityOrderModel.value.id);
               Get.back();
+            }
           }
         });
       }
@@ -1431,7 +1713,7 @@ class LiveTrackingController extends GetxController {
     final Uint8List destination =
         await Constant().getBytesFromAsset('assets/images/dropoff.png', 50);
     final Uint8List driver =
-        await Constant().getBytesFromAsset('assets/images/ic_cab.png', 60);
+        await Constant().getBytesFromAsset('assets/images/ic_cab.png', 50);
     departureIcon = BitmapDescriptor.fromBytes(departure);
     destinationIcon = BitmapDescriptor.fromBytes(destination);
     driverIcon = BitmapDescriptor.fromBytes(driver);
@@ -1441,18 +1723,8 @@ class LiveTrackingController extends GetxController {
       List<LatLng> polylineCoordinates, String polylineId, Color color) {
     if (polylineCoordinates.isEmpty) return;
 
-    PolylineId id = PolylineId(polylineId);
-    Polyline polyline = Polyline(
-      polylineId: id,
-      points: polylineCoordinates,
-      color: color,
-      width: 6,
-      startCap: Cap.roundCap,
-      endCap: Cap.roundCap,
-      patterns:
-          isOffRoute.value ? [PatternItem.dash(10), PatternItem.gap(5)] : [],
-    );
-    polyLines[id] = polyline;
+    // Use smooth transition for better visual experience
+    _smoothPolylineTransition(polylineId, polylineCoordinates, color);
   }
 
   void updateCameraLocation(LatLng source, LatLng destination) async {
@@ -1466,7 +1738,7 @@ class LiveTrackingController extends GetxController {
     );
 
     CameraUpdate cameraUpdate = CameraUpdate.newLatLngBounds(bounds, 100);
-    await mapController!.animateCamera(cameraUpdate);
+    mapController!.moveCamera(cameraUpdate);
   }
 
   void toggleMapView() {
@@ -1676,20 +1948,21 @@ class LiveTrackingController extends GetxController {
     }
   }
 
+  /// Get current location using phone GPS only (no database fetching)
   Future<void> getCurrentLocation() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
+          desiredAccuracy: LocationAccuracy.best);
       updateDeviceLocation(position);
     } catch (e) {
-      ShowToastDialog.showToast("Error getting current location");
+      ShowToastDialog.showToast("Error getting current location from GPS");
     }
   }
 
   void simulateMovement() {
     if (currentPosition.value == null) return;
 
-    Timer.periodic(Duration(seconds: 2), (timer) {
+    Timer.periodic(Duration(milliseconds: 100), (timer) {
       if (currentPosition.value != null) {
         double newLat = currentPosition.value!.latitude +
             (Random().nextDouble() - 0.5) * 0.001;
@@ -1718,113 +1991,36 @@ class LiveTrackingController extends GetxController {
     });
   }
 
-  // Real-time traffic and route optimization
-  void _optimizeRouteForTraffic() async {
-    if (currentPosition.value == null || routePoints.isEmpty) return;
+  // Traffic optimization removed - handled by existing better route detection
 
-    try {
-      // Get alternative routes
-      LatLng source = LatLng(
-          currentPosition.value!.latitude, currentPosition.value!.longitude);
-      LatLng destination = getTargetLocation();
+  // Alternative route methods removed - handled by existing route optimization
 
-      // Request alternative routes from Google Directions API
-      final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
-          'origin=${source.latitude},${source.longitude}&'
-          'destination=${destination.latitude},${destination.longitude}&'
-          'alternatives=true&'
-          'departure_time=now&'
-          'traffic_model=best_guess&'
-          'key=${Constant.mapAPIKey}';
+  void acceptAlternativeRoute() {
+    if (_alternativeRouteData != null) {
+      _updateRouteWithAlternative(_alternativeRouteData!);
+      hasAlternativeRoute.value = false;
+      _alternativeRouteData = null;
 
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        Map<String, dynamic> data = json.decode(response.body);
-        if (data['status'] == 'OK' && data['routes'].length > 1) {
-          // Find the fastest alternative route
-          Map<String, dynamic> fastestRoute = data['routes'][0];
-          int fastestDuration = fastestRoute['legs'][0]['duration_in_traffic']
-                  ?['value'] ??
-              fastestRoute['legs'][0]['duration']['value'];
+      // Remove alternative route preview
+      polyLines.remove(const PolylineId("alternative_route"));
 
-          for (var route in data['routes']) {
-            int duration = route['legs'][0]['duration_in_traffic']?['value'] ??
-                route['legs'][0]['duration']['value'];
-            if (duration < fastestDuration) {
-              fastestDuration = duration;
-              fastestRoute = route;
-            }
-          }
-
-          // Update route if we found a faster alternative
-          if (fastestRoute != data['routes'][0]) {
-            _updateRouteWithAlternative(fastestRoute);
-          }
-        }
+      if (isVoiceEnabled.value) {
+        queueAnnouncement("Route updated. Following new path.", priority: 2);
       }
-    } catch (e) {
-      // Handle errors silently
     }
   }
 
-  // Real-time traffic condition checking
-  void _checkRealTimeTrafficConditions() async {
-    if (currentPosition.value == null || routePoints.isEmpty) return;
+  void rejectAlternativeRoute() {
+    hasAlternativeRoute.value = false;
+    _alternativeRouteData = null;
 
-    try {
-      // Check if we're approaching known traffic areas
-      LatLng devicePos = LatLng(
-          currentPosition.value!.latitude, currentPosition.value!.longitude);
-
-      // Look ahead 2km for traffic conditions
-      double lookAheadDistance = 2000;
-      bool hasTrafficAhead = false;
-
-      for (int i = 0; i < routePoints.length; i++) {
-        double distance = await calculateDistance(
-          devicePos.latitude,
-          devicePos.longitude,
-          routePoints[i].latitude,
-          routePoints[i].longitude,
-        );
-
-        if (distance <= lookAheadDistance) {
-          // Check if this route segment has traffic
-          if (_isHighTrafficArea(routePoints[i])) {
-            hasTrafficAhead = true;
-            break;
-          }
-        }
-      }
-
-      if (hasTrafficAhead && trafficLevel.value < 2) {
-        trafficLevel.value = 2;
-        if (isVoiceEnabled.value) {
-          queueAnnouncement(
-              "Heavy traffic detected ahead. Consider alternative route.",
-              priority: 2);
-        }
-      }
-    } catch (e) {
-      // Handle errors silently to avoid disrupting navigation
-    }
+    // Remove alternative route preview
+    polyLines.remove(const PolylineId("alternative_route"));
   }
 
-  // Check if a location is in a high traffic area
-  bool _isHighTrafficArea(LatLng location) {
-    // This could be enhanced with real traffic API data
-    // For now, we'll use a simple heuristic based on time and location
-    int hour = DateTime.now().hour;
+  // Removed periodic traffic checks (no timers)
 
-    // Rush hour periods
-    bool isRushHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
-
-    // Weekend vs weekday
-    bool isWeekend = DateTime.now().weekday >= 6;
-
-    // Simple traffic prediction (could be enhanced with real data)
-    return isRushHour && !isWeekend;
-  }
+  // Removed unused traffic area heuristic
 
   // Calculate optimal camera tilt based on speed and context
   double _calculateOptimalTilt() {
@@ -1890,4 +2086,79 @@ class LiveTrackingController extends GetxController {
 
   // Smooth marker animation
   // Removed unused _animateMarkerSmoothly
+
+  // Old road snapping and bearing methods replaced by optimized versions
+
+  // Create breadcrumb trail showing recent travel path
+  void _addBreadcrumbTrail(LatLng currentPos, int startIndex) {
+    if (startIndex <= 0 || routePoints.isEmpty) return;
+
+    // Show last 100-200 meters of traveled route as a subtle trail
+    int trailStartIndex = max(0, startIndex - 3);
+    List<LatLng> trailPoints = routePoints.sublist(trailStartIndex, startIndex);
+
+    if (trailPoints.length > 1) {
+      // Add current position to complete the trail
+      trailPoints.add(currentPos);
+
+      // Create a subtle breadcrumb trail
+      PolylineId trailId = const PolylineId("BreadcrumbTrail");
+      Polyline breadcrumbTrail = Polyline(
+        polylineId: trailId,
+        points: trailPoints,
+        color: Colors.grey.withOpacity(0.3),
+        width: 2,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        patterns: [PatternItem.dash(5), PatternItem.gap(3)],
+      );
+
+      polyLines[trailId] = breadcrumbTrail;
+    }
+  }
+
+  // Handle smooth polyline transitions when route changes
+  void _smoothPolylineTransition(
+      String newPolylineId, List<LatLng> newPoints, Color color) {
+    // Remove old polyline with the same ID
+    polyLines.remove(PolylineId(newPolylineId));
+
+    // Add new polyline with smooth animation effect
+    if (newPoints.length > 1) {
+      PolylineId id = PolylineId(newPolylineId);
+      Polyline polyline = Polyline(
+        polylineId: id,
+        points: newPoints,
+        color: color,
+        width: 3,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        patterns:
+            isOffRoute.value ? [PatternItem.dash(10), PatternItem.gap(5)] : [],
+        geodesic: true,
+      );
+
+      polyLines[id] = polyline;
+    }
+  }
+
+  // Update navigation elements when marker moves significantly
+  void _updateNavigationOnMovement() {
+    if (routePoints.isEmpty || currentPosition.value == null) return;
+
+    // Update navigation instructions
+    updateNavigationInstructions();
+
+    // Update next route point
+    updateNextRoutePoint();
+
+    // Update time and distance estimates
+    updateTimeAndDistanceEstimates();
+
+    // Check if we're approaching a turn
+    if (distanceToNextTurn.value < 100) {
+      checkUpcomingTurns(LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude));
+    }
+  }
 }

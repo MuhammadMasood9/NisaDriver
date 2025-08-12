@@ -18,52 +18,13 @@ class SplashController extends GetxController {
     super.onInit();
   }
 
-  redirectScreen() async {
-    if (Preferences.getBoolean(Preferences.isFinishOnBoardingKey) == false) {
-      Get.offAll(const LoginScreen());
+ redirectScreen() async {
+    // Use FireStoreUtils.isLogin() for robust login check
+    bool isLogin = await FireStoreUtils.isLogin();
+    if (isLogin) {
+      Get.offAll(const DashBoardScreen());
     } else {
-      bool isLogin = await FireStoreUtils.isLogin();
-      if (isLogin == true) {
-        await FireStoreUtils.getDriverProfile(
-                FirebaseAuth.instance.currentUser!.uid)
-            .then(
-          (value) {
-            if (value != null) {
-              DriverUserModel userModel = value;
-              bool isPlanExpire = false;
-              if (userModel.subscriptionPlan?.id != null) {
-                if (userModel.subscriptionExpiryDate == null) {
-                  if (userModel.subscriptionPlan?.expiryDay == '-1') {
-                    isPlanExpire = false;
-                  } else {
-                    isPlanExpire = true;
-                  }
-                } else {
-                  DateTime expiryDate =
-                      userModel.subscriptionExpiryDate!.toDate();
-                  isPlanExpire = expiryDate.isBefore(DateTime.now());
-                }
-              } else {
-                isPlanExpire = true;
-              }
-              if (userModel.subscriptionPlanId == null ||
-                  isPlanExpire == true) {
-                if (Constant.adminCommission?.isEnabled == false &&
-                    Constant.isSubscriptionModelApplied == false) {
-                  Get.offAll(const DashBoardScreen());
-                } else {
-                  Get.offAll(const DashBoardScreen(),
-                      arguments: {"isShow": true});
-                }
-              } else {
-                Get.offAll(const DashBoardScreen());
-              }
-            }
-          },
-        );
-      } else {
-        Get.offAll(const LoginScreen());
-      }
+      Get.offAll(const LoginScreen());
     }
   }
 }
