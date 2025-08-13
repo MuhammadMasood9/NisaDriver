@@ -6,7 +6,6 @@ import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/send_notification.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
-import 'package:driver/model/VehicleUpdateRequestModel.dart';
 import 'package:driver/model/admin_commission.dart';
 import 'package:driver/model/bank_details_model.dart';
 import 'package:driver/model/conversation_model.dart';
@@ -264,14 +263,14 @@ class FireStoreUtils {
         print("getDriverProfile: UUID is empty");
         return null;
       }
-      
+
       print("getDriverProfile: Fetching profile for UUID: $uuid");
-      
+
       final docSnapshot = await fireStore
           .collection(CollectionName.driverUsers)
           .doc(uuid)
           .get();
-      
+
       if (docSnapshot.exists) {
         final data = docSnapshot.data();
         if (data != null) {
@@ -352,16 +351,29 @@ class FireStoreUtils {
 
   static Future<bool> updateDriverUser(DriverUserModel userModel) async {
     bool isUpdate = false;
-    await fireStore
-        .collection(CollectionName.driverUsers)
-        .doc(userModel.id)
-        .set(userModel.toJson())
-        .whenComplete(() {
+    // Fallback to the currently authenticated UID if the model's id is missing
+    final String? resolvedUserId =
+        (userModel.id != null && userModel.id!.isNotEmpty)
+            ? userModel.id
+            : getCurrentUid();
+
+    if (resolvedUserId == null || resolvedUserId.isEmpty) {
+      log("Failed to update user: missing user id");
+      return false;
+    }
+
+    try {
+      await fireStore
+          .collection(CollectionName.driverUsers)
+          .doc(resolvedUserId)
+          // Merge to avoid wiping existing fields when only a subset is provided
+          .set(userModel.toJson(), SetOptions(merge: true));
       isUpdate = true;
-    }).catchError((error) {
+    } catch (error) {
       log("Failed to update user: $error");
       isUpdate = false;
-    });
+    }
+
     return isUpdate;
   }
 
@@ -566,7 +578,7 @@ class FireStoreUtils {
         .collection(CollectionName.orders)
         .where('serviceId', isEqualTo: driverUserModel.serviceId)
         .where('zoneId', whereIn: driverUserModel.zoneIds)
-        .where('status', isEqualTo: Constant.ridePlaced );
+        .where('status', isEqualTo: Constant.ridePlaced);
     GeoFirePoint center = Geoflutterfire()
         .point(latitude: latitude ?? 0.0, longitude: longLatitude ?? 0.0);
     Stream<List<DocumentSnapshot>> stream = Geoflutterfire()
@@ -762,7 +774,7 @@ class FireStoreUtils {
         await updatedDriverWallet(
           amount: "-${Constant.calculateAdminCommission(
             amount: (double.parse(orderModel.finalRate?.toString() ?? "0.0") -
-                    double.parse(couponAmount ?? "0.0"))
+                    double.parse(couponAmount))
                 .toString(),
             adminCommission: orderModel.adminCommission,
           )}",

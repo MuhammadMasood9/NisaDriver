@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:developer' as dev;
 import 'dart:typed_data';
+// removed duplicate import
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
@@ -41,12 +42,101 @@ class NavigationStep {
   });
 }
 
+// Enhanced off-route detection result
+class OffRouteResult {
+  final bool isOffRoute;
+  final double distance;
+  final int closestIndex;
+  final double deviation;
+  final OffRouteSeverity severity;
+
+  OffRouteResult({
+    required this.isOffRoute,
+    required this.distance,
+    required this.closestIndex,
+    required this.deviation,
+    required this.severity,
+  });
+}
+
+// Off-route severity levels
+enum OffRouteSeverity {
+  low,
+  medium,
+  high,
+  critical,
+}
+
+// Route health status
+enum RouteHealthStatus {
+  noRoute,
+  offRoute,
+  poor,
+  fair,
+  good,
+  excellent,
+}
+
+// Custom Tween for LatLng interpolation
+class LatLngTween extends Tween<LatLng> {
+  LatLngTween({required LatLng begin, required LatLng end})
+      : super(begin: begin, end: end);
+
+  @override
+  LatLng lerp(double t) {
+    return LatLng(
+      begin!.latitude + (end!.latitude - begin!.latitude) * t,
+      begin!.longitude + (end!.longitude - begin!.longitude) * t,
+    );
+  }
+}
+
 /// Live tracking controller that uses phone GPS location only
 /// No longer fetches location from real-time database
 class LiveTrackingController extends GetxController {
   GoogleMapController? mapController;
   FlutterTts? _flutterTts;
   StreamSubscription<Position>? _positionStream;
+
+  // Pixel offset for camera centering relative to the marker (X right+, Y down+)
+  int _cameraOffsetXPx = 0;
+  int _cameraOffsetYPx = 0;
+
+  // Optional fixed zoom override; when set, camera uses this zoom instead of dynamic
+  double? _fixedZoomLevel;
+
+  // Track zoom gesture state for better behavior during pinches
+  double? _lastCameraMoveZoom;
+
+  // Update camera centering offset in pixels. Positive X moves the marker left on screen,
+  // positive Y moves the marker up on screen (since we shift the camera the opposite way).
+  void setCameraOffset({int xPx = 0, int yPx = 0}) {
+    _cameraOffsetXPx = xPx;
+    _cameraOffsetYPx = yPx;
+  }
+
+  // Set a fixed zoom level to keep while following the driver
+  void setFixedZoom(double zoomLevel) {
+    _fixedZoomLevel = zoomLevel;
+  }
+
+  // Clear fixed zoom and resume dynamic zoom behavior
+  void clearFixedZoom() {
+    _fixedZoomLevel = null;
+  }
+
+  // Convenience: center on current driver position with a specific zoom now
+  Future<void> centerDriverWithZoom(double zoomLevel) async {
+    setFixedZoom(zoomLevel);
+    final LatLng target = _lastAnimatedPosition ??
+        _displayLatLng ??
+        (currentPosition.value != null
+            ? LatLng(currentPosition.value!.latitude,
+                currentPosition.value!.longitude)
+            : LatLng(0, 0));
+    _updateCameraSmooth(target: target);
+  }
+
   DateTime? _lastRerouteTime;
   StreamSubscription<CompassEvent>? _compassSubscription;
   final RealtimeLocationService _realtime = RealtimeLocationService();
@@ -136,18 +226,39 @@ class LiveTrackingController extends GetxController {
   // User interaction tracking
   DateTime? _lastUserInteraction;
 
-  // Off-route tracking
+  // Enhanced off-route tracking
   int _consecutiveOffRouteChecks = 0;
   DateTime? _firstOffRouteTime;
+  // Removed unused _lastOffRouteDistance
+  List<LatLng> _offRouteHistory = [];
+  bool _isRerouting = false;
+  Timer? _rerouteTimer;
+  Timer? _trafficCheckTimer;
 
   // Location update batching removed (live updates)
 
   // Track last accepted GPS update time for degraded fallback
   DateTime? _lastAcceptedUpdateTime;
 
-  // Traffic-based rerouting
+  // Enhanced traffic-based rerouting
   RxBool hasAlternativeRoute = false.obs;
   Map<String, dynamic>? _alternativeRouteData;
+  List<Map<String, dynamic>> _routeAlternatives = [];
+  int _currentRouteIndex = 0;
+  double _routeQualityScore = 0.0;
+
+  // Advanced rerouting parameters
+  static const double _offRouteThreshold = 30.0; // meters
+  static const double _criticalOffRouteThreshold = 100.0; // meters
+  // Removed unused _maxRerouteAttempts
+  static const Duration _rerouteCooldown = Duration(seconds: 3);
+  static const Duration _trafficUpdateInterval = Duration(minutes: 2);
+
+  // Animation system for smooth marker movement
+  AnimationController? _animationController;
+  Animation<LatLng>? _positionAnimation;
+  LatLng? _lastAnimatedPosition;
+  // Removed unused _tickerProvider
 
   @override
   void onInit() {
@@ -160,6 +271,9 @@ class LiveTrackingController extends GetxController {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
 
+    // Initialize enhanced rerouting system
+    _initializeEnhancedRerouting();
+
     // Fetch initial location and center immediately
     getCurrentLocation().then((_) {
       addDeviceMarker();
@@ -168,9 +282,57 @@ class LiveTrackingController extends GetxController {
     });
   }
 
+  // Initialize enhanced rerouting system
+  void _initializeEnhancedRerouting() {
+    // Enable predictive rerouting
+    enablePredictiveRerouting();
+
+    // Initialize route quality score
+    _routeQualityScore = 100.0;
+
+    // Set up periodic route health checks
+    Timer.periodic(const Duration(minutes: 2), (timer) {
+      if (routePoints.isNotEmpty && !_isRerouting) {
+        _checkRouteHealth();
+      }
+    });
+  }
+
+  // Check route health and suggest optimizations
+  void _checkRouteHealth() {
+    RouteHealthStatus health = getRouteHealthStatus();
+
+    switch (health) {
+      case RouteHealthStatus.poor:
+        if (isVoiceEnabled.value) {
+          queueAnnouncement("Route quality is poor. Consider optimization.",
+              priority: 2);
+        }
+        break;
+      case RouteHealthStatus.fair:
+        // Silent check, no announcement needed
+        break;
+      case RouteHealthStatus.good:
+      case RouteHealthStatus.excellent:
+        // Route is healthy
+        break;
+      default:
+        break;
+    }
+
+    // Auto-optimize if route is poor and we're not in critical situations
+    if (health == RouteHealthStatus.poor &&
+        !isOffRoute.value &&
+        currentSpeed.value > 5) {
+      triggerRouteOptimization();
+    }
+  }
+
   @override
   void onClose() {
-    // No timers to cancel (live updates)
+    // Cancel all timers
+    _rerouteTimer?.cancel();
+    _trafficCheckTimer?.cancel();
     _positionStream?.cancel();
     _compassSubscription?.cancel();
     // Removed real-time database subscription cleanup
@@ -183,6 +345,25 @@ class LiveTrackingController extends GetxController {
         : intercityOrderModel.value.id);
     ShowToastDialog.closeLoader();
     super.onClose();
+  }
+
+  // Initialize animation system with TickerProvider
+  void initAnimation(TickerProvider tickerProvider) {
+    _animationController = AnimationController(
+      vsync: tickerProvider,
+      duration: const Duration(milliseconds: 800), // Controls animation speed
+    )..addListener(() {
+        // This listener is called on every animation frame
+        if (_positionAnimation != null) {
+          _lastAnimatedPosition = _positionAnimation!.value;
+          _updateMarkerWithAnimatedValue();
+        }
+      });
+  }
+
+  // Clean up animation controller
+  void disposeAnimation() {
+    _animationController?.dispose();
   }
 
   void initializeTTS() async {
@@ -241,13 +422,7 @@ class LiveTrackingController extends GetxController {
     _compassSubscription = FlutterCompass.events?.listen((CompassEvent event) {
       if (event.heading != null) {
         compassHeading.value = event.heading!;
-        // Update marker rotation in real-time for responsiveness
-        if (markers.containsKey(const MarkerId("Device"))) {
-          final Marker marker = markers[const MarkerId("Device")]!;
-          markers[const MarkerId("Device")] = marker.copyWith(
-            rotationParam: compassHeading.value,
-          );
-        }
+        // Bearing on marker disabled: do not rotate marker with compass
       }
     });
   }
@@ -349,8 +524,10 @@ class LiveTrackingController extends GetxController {
 
     // Optimized location settings for smooth tracking using phone GPS
     final LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.best,
-      // distanceFilter disabled for live updates
+      accuracy: LocationAccuracy.bestForNavigation,
+      // Slightly relaxed distance filter for stability; still very responsive
+      distanceFilter:
+          currentSpeed.value > 80 ? 10 : (currentSpeed.value > 40 ? 5 : 3),
     );
 
     _positionStream = Geolocator.getPositionStream(
@@ -362,9 +539,23 @@ class LiveTrackingController extends GetxController {
       },
       onError: (error) {
         dev.log('Location error: $error');
+        if (error is TimeoutException) {
+          // Silently retry on timeout to avoid spam
+          Future.delayed(const Duration(seconds: 2), () {
+            if (!_positionStream!.isPaused) {
+              _startLocationUpdates();
+            }
+          });
+        } else {
+          ShowToastDialog.showToast(
+              "Error tracking location. Please check GPS.");
+        }
       },
       cancelOnError: false, // Keep stream alive on errors
     );
+
+    // Start traffic monitoring
+    _startTrafficMonitoring();
   }
 
   void updateDeviceLocation(Position position) async {
@@ -427,6 +618,30 @@ class LiveTrackingController extends GetxController {
     // Add position prediction to compensate for GPS lag
     _displayLatLng = _addPositionPrediction(_displayLatLng!, position);
 
+    // The smoothed/predicted position is now our ANIMATION TARGET
+    final LatLng animationTarget = _displayLatLng!;
+
+    // --- [NEW] The Animation Driving Logic ---
+    if (_animationController != null) {
+      // If this is the first point, jump directly to it
+      if (_lastAnimatedPosition == null) {
+        _lastAnimatedPosition = animationTarget;
+        _updateMarkerWithAnimatedValue();
+      } else {
+        // Create a new animation from the last animated position to the new target
+        _positionAnimation = LatLngTween(
+          begin: _lastAnimatedPosition!,
+          end: animationTarget,
+        ).animate(
+          CurvedAnimation(parent: _animationController!, curve: Curves.easeOut),
+        );
+        _animationController!.forward(from: 0.0);
+      }
+    } else {
+      // Fallback to old method if animation is not initialized
+      _updateMarkerSmoothly();
+    }
+
     // Calculate bearing for marker rotation
     final markerBearing = _calculateSmoothBearing(position);
     mapBearing.value = markerBearing;
@@ -436,19 +651,12 @@ class LiveTrackingController extends GetxController {
     _previousTime = now;
     _lastAcceptedUpdateTime = now;
 
-    // Update marker with smooth animation
-    _updateMarkerSmoothly();
-
-    // Immediately update polyline to remove traveled portion when marker moves
-    if (routePoints.isNotEmpty) {
-      updateDynamicPolyline();
-    }
-
     // Only update camera view if user is not manually controlling the map
     if (isFollowingDriver.value &&
         isNavigationView.value &&
         !_isUserControllingMap()) {
-      _updateCameraSmooth();
+      // Use animated position for smoother camera following
+      _updateCameraSmooth(target: _lastAnimatedPosition ?? animationTarget);
     }
 
     // Live refresh of navigation and ancillary info
@@ -598,18 +806,58 @@ class LiveTrackingController extends GetxController {
   }
 
   // Smooth camera updates
-  void _updateCameraSmooth() async {
-    if (mapController == null || _displayLatLng == null) return;
+  void _updateCameraSmooth({LatLng? target}) async {
+    if (mapController == null) return;
+
+    // Use the provided target or fallback to the last animated position
+    final LatLng cameraTarget = target ??
+        _lastAnimatedPosition ??
+        _displayLatLng ??
+        LatLng(
+            currentPosition.value!.latitude, currentPosition.value!.longitude);
+
+    // Apply screen offset so the marker is not exactly at the visual center
+    final LatLng adjustedTarget =
+        await _applyCameraOffsetToTarget(cameraTarget);
 
     mapController!.moveCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
-          target: _displayLatLng!,
-          zoom: _calculateDynamicZoom(),
+          target: adjustedTarget,
+          zoom: _getTargetZoom(),
           tilt: _calculateOptimalTilt(),
         ),
       ),
     );
+  }
+
+  // Determine the zoom to use: fixed override if present, otherwise dynamic
+  double _getTargetZoom() {
+    final double zoom = _fixedZoomLevel ?? _calculateDynamicZoom();
+    // Reasonable clamp for Google Maps zoom levels
+    if (zoom < 2.0) return 2.0;
+    if (zoom > 21.0) return 21.0;
+    return zoom;
+  }
+
+  // Convert the desired target to an off-centered LatLng using screen pixel offsets
+  Future<LatLng> _applyCameraOffsetToTarget(LatLng target) async {
+    if (mapController == null) return target;
+    if (_cameraOffsetXPx == 0 && _cameraOffsetYPx == 0) return target;
+    try {
+      final ScreenCoordinate screen =
+          await mapController!.getScreenCoordinate(target);
+      // Shift by configured pixels
+      final ScreenCoordinate shifted = ScreenCoordinate(
+        x: screen.x + _cameraOffsetXPx,
+        y: screen.y + _cameraOffsetYPx,
+      );
+      final LatLng shiftedLatLng = await mapController!.getLatLng(shifted);
+      return shiftedLatLng;
+    } catch (_) {
+      // If projection is not ready or fails, fall back to original target
+      return target;
+    }
   }
 
   // Live per-update refresh – lightweight ops every update, heavier ops gated
@@ -751,6 +999,113 @@ class LiveTrackingController extends GetxController {
     }
   }
 
+  // Public method to trigger route optimization
+  void triggerRouteOptimization() {
+    if (!_isRerouting && routePoints.isNotEmpty) {
+      optimizeRouteForConditions();
+    }
+  }
+
+  // Public method to force reroute
+  void forceReroute() {
+    if (!_isRerouting) {
+      recalculateRoute();
+    }
+  }
+
+  // Public method to check route health
+  RouteHealthStatus getRouteHealthStatus() {
+    if (routePoints.isEmpty) return RouteHealthStatus.noRoute;
+
+    if (isOffRoute.value) return RouteHealthStatus.offRoute;
+
+    if (_routeQualityScore < 30) return RouteHealthStatus.poor;
+    if (_routeQualityScore < 60) return RouteHealthStatus.fair;
+    if (_routeQualityScore < 80) return RouteHealthStatus.good;
+
+    return RouteHealthStatus.excellent;
+  }
+
+  // Get route statistics
+  Map<String, dynamic> getRouteStatistics() {
+    return {
+      'totalDistance': _calculateTotalRouteDistance(routePoints),
+      'estimatedDuration': _getCurrentRouteDuration(),
+      'qualityScore': _routeQualityScore,
+      'trafficLevel': trafficLevel.value,
+      'isOffRoute': isOffRoute.value,
+      'hasAlternatives': _routeAlternatives.isNotEmpty,
+      'lastOptimization': _lastRerouteTime?.toIso8601String(),
+    };
+  }
+
+  // Predictive rerouting based on traffic patterns
+  void enablePredictiveRerouting() {
+    // This could be enhanced with machine learning models
+    // For now, we'll use simple heuristics
+    Timer.periodic(const Duration(minutes: 2), (timer) {
+      if (routePoints.isNotEmpty && !_isRerouting) {
+        _predictAndPreventTrafficIssues();
+      }
+    });
+  }
+
+  // Predict and prevent traffic issues
+  void _predictAndPreventTrafficIssues() async {
+    try {
+      if (currentPosition.value == null) return;
+
+      LatLng source = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+      LatLng destination = getTargetLocation();
+
+      // Check traffic conditions ahead
+      Map<String, dynamic>? trafficData =
+          await _fetchTrafficData(source, destination);
+      if (trafficData != null) {
+        _analyzeTrafficPredictions(trafficData);
+      }
+    } catch (e) {
+      dev.log('Traffic prediction failed: $e');
+    }
+  }
+
+  // Analyze traffic predictions
+  void _analyzeTrafficPredictions(Map<String, dynamic> trafficData) {
+    try {
+      if (trafficData['routes'] == null || trafficData['routes'].isEmpty)
+        return;
+
+      var route = trafficData['routes'][0];
+      if (route['legs'] == null || route['legs'].isEmpty) return;
+
+      var leg = route['legs'][0];
+      double duration = (leg['duration']?['value'] ?? 0).toDouble();
+      double durationInTraffic =
+          (leg['duration_in_traffic']?['value'] ?? duration).toDouble();
+
+      // If traffic is significantly worse, suggest proactive reroute
+      if (durationInTraffic > duration * 1.3) {
+        if (isVoiceEnabled.value) {
+          queueAnnouncement("Heavy traffic ahead. Consider alternative route.",
+              priority: 2);
+        }
+
+        // Show traffic warning
+        _showTrafficWarning();
+      }
+    } catch (e) {
+      dev.log('Traffic prediction analysis failed: $e');
+    }
+  }
+
+  // Show traffic warning
+  void _showTrafficWarning() {
+    // This could show a visual warning on the map
+    // For now, we'll just log it
+    dev.log('Traffic warning: Heavy traffic detected ahead');
+  }
+
   // Check if better route is available
   bool get isBetterRouteAvailable => _betterRouteAvailable.value;
 
@@ -827,18 +1182,11 @@ class LiveTrackingController extends GetxController {
     // Dynamic zoom based on speed and context
     navigationZoom.value = _calculateDynamicZoom();
 
-    // Smooth camera movement
+    // Smooth camera movement using animated position
     if (mapController != null && isFollowingDriver.value) {
       try {
-        mapController!.moveCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: _displayLatLng ?? devicePos,
-              zoom: navigationZoom.value,
-              tilt: _calculateOptimalTilt(),
-            ),
-          ),
-        );
+        _updateCameraSmooth(
+            target: _lastAnimatedPosition ?? _displayLatLng ?? devicePos);
       } catch (_) {}
     }
   }
@@ -852,7 +1200,54 @@ class LiveTrackingController extends GetxController {
   }
 
   void onMapPinch() {
-    _onUserInteraction();
+    // Do not disable following; just lock current zoom so user controls zoom
+    _lockZoomToCurrent();
+  }
+
+  // Capture user zoom during camera movement (e.g., pinch) and lock it
+  void onCameraMoveUpdate(CameraPosition position) {
+    final double previousZoom = _lastCameraMoveZoom ?? position.zoom;
+    _lastCameraMoveZoom = position.zoom;
+    final bool isZoomGesture = (position.zoom - previousZoom).abs() > 0.02;
+
+    if (isZoomGesture) {
+      // User is pinching to zoom; keep following but lock zoom to user's choice
+      navigationZoom.value = position.zoom;
+      setFixedZoom(position.zoom);
+    } else {
+      // Likely a drag/pan; treat as manual control
+      _onUserInteraction();
+      navigationZoom.value = position.zoom;
+    }
+  }
+
+  Future<void> _lockZoomToCurrent() async {
+    if (mapController == null) return;
+    try {
+      final double zoom = await mapController!.getZoomLevel();
+      setFixedZoom(zoom);
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  // Re-center on driver after user interaction ends
+  void onMapIdle() {
+    // Re-enable following and clear manual control window
+    isFollowingDriver.value = true;
+    _lastUserInteraction = null;
+
+    if (mapController == null) return;
+
+    // Determine best target and re-center smoothly
+    LatLng target = _lastAnimatedPosition ??
+        _displayLatLng ??
+        (currentPosition.value != null
+            ? LatLng(currentPosition.value!.latitude,
+                currentPosition.value!.longitude)
+            : LatLng(0, 0));
+
+    _updateCameraSmooth(target: target);
   }
 
   void _onUserInteraction() {
@@ -897,13 +1292,55 @@ class LiveTrackingController extends GetxController {
   }
 
   void checkOffRoute() async {
-    if (routePoints.isEmpty || currentPosition.value == null) return;
+    if (routePoints.isEmpty || currentPosition.value == null || _isRerouting)
+      return;
 
     LatLng devicePos = LatLng(
         currentPosition.value!.latitude, currentPosition.value!.longitude);
+
+    // Enhanced off-route detection with multiple algorithms
+    OffRouteResult result = await _analyzeOffRouteStatus(devicePos);
+
+    bool wasOffRoute = isOffRoute.value;
+    bool currentlyOffRoute = result.isOffRoute;
+
+    if (currentlyOffRoute) {
+      _consecutiveOffRouteChecks++;
+      _offRouteHistory.add(devicePos);
+
+      if (_firstOffRouteTime == null) {
+        _firstOffRouteTime = DateTime.now();
+      }
+
+      // Enhanced rerouting logic
+      if (_shouldTriggerReroute(result)) {
+        if (!wasOffRoute) {
+          isOffRoute.value = true;
+          _triggerIntelligentReroute(result);
+        }
+      }
+    } else {
+      // Reset off-route tracking
+      _consecutiveOffRouteChecks = 0;
+      _firstOffRouteTime = null;
+      _offRouteHistory.clear();
+
+      if (wasOffRoute) {
+        isOffRoute.value = false;
+        queueAnnouncement("Back on route. Continue following the path.",
+            priority: 3);
+        _restoreRouteDisplay();
+      }
+    }
+  }
+
+  // Enhanced off-route analysis
+  Future<OffRouteResult> _analyzeOffRouteStatus(LatLng devicePos) async {
     double minDistanceToRoute = double.infinity;
     int closestIndex = 0;
+    double routeDeviation = 0.0;
 
+    // Find closest route point
     for (int i = 0; i < routePoints.length; i++) {
       double distance = await calculateDistance(
         devicePos.latitude,
@@ -917,44 +1354,172 @@ class LiveTrackingController extends GetxController {
       }
     }
 
-    bool wasOffRoute = isOffRoute.value;
-    // More intelligent off-route detection
-    bool currentlyOffRoute =
-        minDistanceToRoute > 50; // Increased threshold for major deviation
+    // Calculate route deviation pattern
+    if (_offRouteHistory.length >= 3) {
+      routeDeviation = _calculateRouteDeviationPattern();
+    }
 
-    if (currentlyOffRoute) {
-      _consecutiveOffRouteChecks++;
-      if (_firstOffRouteTime == null) {
-        _firstOffRouteTime = DateTime.now();
-      }
+    // Multi-factor off-route detection
+    bool isOffRoute = _evaluateOffRouteStatus(
+        minDistanceToRoute, closestIndex, routeDeviation);
 
-      // Only trigger reroute if consistently off route for 10 seconds AND moved significantly
-      final timeSinceFirstOffRoute =
-          DateTime.now().difference(_firstOffRouteTime!);
-      if (_consecutiveOffRouteChecks >= 5 &&
-          timeSinceFirstOffRoute.inSeconds >= 10) {
-        if (!wasOffRoute) {
-          isOffRoute.value = true;
-          queueAnnouncement("Recalculating route to get back on track.",
-              priority: 3);
-          _clearRoutePolylines();
-          recalculateRoute();
-        }
-      }
-    } else {
-      // Reset off-route tracking
-      _consecutiveOffRouteChecks = 0;
-      _firstOffRouteTime = null;
+    return OffRouteResult(
+      isOffRoute: isOffRoute,
+      distance: minDistanceToRoute,
+      closestIndex: closestIndex,
+      deviation: routeDeviation,
+      severity: _calculateOffRouteSeverity(minDistanceToRoute, routeDeviation),
+    );
+  }
 
-      if (wasOffRoute) {
-        isOffRoute.value = false;
-        queueAnnouncement("Back on route. Continue following the path.",
-            priority: 3);
-        polyLines.remove(const PolylineId("ReturnToRoute"));
-        nextRoutePointIndex.value = closestIndex;
-        updateDynamicPolyline();
+  // Evaluate off-route status using multiple factors
+  bool _evaluateOffRouteStatus(
+      double distance, int closestIndex, double deviation) {
+    // Base threshold
+    if (distance <= _offRouteThreshold) return false;
+
+    // Critical threshold - immediate reroute
+    if (distance >= _criticalOffRouteThreshold) return true;
+
+    // Pattern-based detection
+    if (deviation > 0.7 && distance > _offRouteThreshold * 0.8) return true;
+
+    // Speed-based detection
+    if (currentSpeed.value > 20 && distance > _offRouteThreshold * 0.6)
+      return true;
+
+    // Time-based detection
+    if (_consecutiveOffRouteChecks >= 3) return true;
+
+    return false;
+  }
+
+  // Calculate off-route severity
+  OffRouteSeverity _calculateOffRouteSeverity(
+      double distance, double deviation) {
+    if (distance >= _criticalOffRouteThreshold)
+      return OffRouteSeverity.critical;
+    if (distance >= _offRouteThreshold * 1.5) return OffRouteSeverity.high;
+    if (deviation > 0.5) return OffRouteSeverity.medium;
+    return OffRouteSeverity.low;
+  }
+
+  // Calculate route deviation pattern
+  double _calculateRouteDeviationPattern() {
+    if (_offRouteHistory.length < 3) return 0.0;
+
+    double totalDeviation = 0.0;
+    for (int i = 1; i < _offRouteHistory.length; i++) {
+      LatLng prev = _offRouteHistory[i - 1];
+      LatLng curr = _offRouteHistory[i];
+
+      // Calculate if movement is away from route
+      double distance = Geolocator.distanceBetween(
+        prev.latitude,
+        prev.longitude,
+        curr.latitude,
+        curr.longitude,
+      );
+
+      if (distance > 0) {
+        totalDeviation += distance;
       }
     }
+
+    return totalDeviation / (_offRouteHistory.length - 1);
+  }
+
+  // Determine if reroute should be triggered
+  bool _shouldTriggerReroute(OffRouteResult result) {
+    // Critical off-route - immediate reroute
+    if (result.severity == OffRouteSeverity.critical) return true;
+
+    // Consistent off-route pattern
+    if (_consecutiveOffRouteChecks >= 3 && result.distance > _offRouteThreshold)
+      return true;
+
+    // Significant deviation pattern
+    if (result.deviation > 0.6 && result.distance > _offRouteThreshold * 0.8)
+      return true;
+
+    // Time-based trigger
+    if (_firstOffRouteTime != null) {
+      final timeSinceFirstOffRoute =
+          DateTime.now().difference(_firstOffRouteTime!);
+      if (timeSinceFirstOffRoute.inSeconds >= 8) return true;
+    }
+
+    return false;
+  }
+
+  // Trigger intelligent rerouting
+  void _triggerIntelligentReroute(OffRouteResult result) {
+    if (_isRerouting) return;
+
+    _isRerouting = true;
+    queueAnnouncement("Recalculating route to get back on track.", priority: 3);
+
+    // Clear current route display
+    _clearRoutePolylines();
+
+    // Choose rerouting strategy based on severity
+    switch (result.severity) {
+      case OffRouteSeverity.critical:
+        _emergencyReroute();
+        break;
+      case OffRouteSeverity.high:
+        _aggressiveReroute();
+        break;
+      case OffRouteSeverity.medium:
+        _standardReroute();
+        break;
+      case OffRouteSeverity.low:
+        _conservativeReroute();
+        break;
+    }
+  }
+
+  // Emergency reroute for critical situations
+  void _emergencyReroute() {
+    _rerouteTimer?.cancel();
+    _rerouteTimer = Timer(const Duration(seconds: 1), () {
+      recalculateRoute();
+      _isRerouting = false;
+    });
+  }
+
+  // Aggressive reroute for high severity
+  void _aggressiveReroute() {
+    _rerouteTimer?.cancel();
+    _rerouteTimer = Timer(const Duration(seconds: 2), () {
+      recalculateRoute();
+      _isRerouting = false;
+    });
+  }
+
+  // Standard reroute
+  void _standardReroute() {
+    _rerouteTimer?.cancel();
+    _rerouteTimer = Timer(const Duration(seconds: 3), () {
+      recalculateRoute();
+      _isRerouting = false;
+    });
+  }
+
+  // Conservative reroute
+  void _conservativeReroute() {
+    _rerouteTimer?.cancel();
+    _rerouteTimer = Timer(const Duration(seconds: 5), () {
+      recalculateRoute();
+      _isRerouting = false;
+    });
+  }
+
+  // Restore route display after getting back on track
+  void _restoreRouteDisplay() {
+    polyLines.remove(const PolylineId("ReturnToRoute"));
+    polyLines.remove(const PolylineId("OffRoutePath"));
+    updateDynamicPolyline();
   }
 
   void _clearRoutePolylines() {
@@ -967,23 +1532,23 @@ class LiveTrackingController extends GetxController {
 
   // Clear old breadcrumb trails and optimize polyline display
   void _cleanupOldPolylines() {
-    // Remove breadcrumb trail if it's too old or if we're off route
-    if (isOffRoute.value || polyLines.length > 3) {
-      polyLines.removeWhere((key, value) =>
-          key.value == "BreadcrumbTrail" ||
-          key.value.contains("old") ||
-          key.value.contains("trail"));
-    }
+    // Always remove breadcrumb trail immediately to avoid lingering traces
+    polyLines.removeWhere((key, value) => key.value == "BreadcrumbTrail");
   }
 
-  void updateDynamicPolyline() {
-    if (routePoints.isEmpty || currentPosition.value == null) return;
+  void updateDynamicPolyline({bool force = false}) {
+    if (routePoints.isEmpty) return;
 
-    // Clean up old polylines first
+    // Clean up old polylines first (remove any previous route, previews, trails)
+    _clearRoutePolylines();
     _cleanupOldPolylines();
 
-    LatLng devicePos = LatLng(
-        currentPosition.value!.latitude, currentPosition.value!.longitude);
+    // Use animated position if available, otherwise fallback to current position
+    LatLng devicePos = _lastAnimatedPosition ??
+        _displayLatLng ??
+        LatLng(
+            currentPosition.value!.latitude, currentPosition.value!.longitude);
+
     int closestIndex = 0;
     double minDistance = double.infinity;
 
@@ -1001,10 +1566,11 @@ class LiveTrackingController extends GetxController {
       }
     }
 
-    // Only update if we've moved significantly (more than 5 meters from last update)
-    if (_lastAcceptedUpdateTime != null &&
+    // Only update if we've moved significantly (more than 3 meters) unless forced
+    if (!force &&
+        _lastAcceptedUpdateTime != null &&
         _previousPosition != null &&
-        minDistance < 5) {
+        minDistance < 3) {
       return; // Skip update if movement is minimal
     }
 
@@ -1022,28 +1588,34 @@ class LiveTrackingController extends GetxController {
     Color color =
         showDriverToPickupRoute.value ? AppColors.primary : Colors.black;
 
-    // Clear existing route polylines but keep breadcrumb trail
+    // Clear existing route polylines immediately (also remove any breadcrumb)
     polyLines.removeWhere((key, value) =>
         key.value == "DeviceToPickup" ||
         key.value == "DeviceToDestination" ||
-        key.value == "polyline_id_0");
+        key.value == "polyline_id_0" ||
+        key.value == "BreadcrumbTrail");
 
     if (remainingPoints.length > 1) {
-      _addPolyLine(remainingPoints, polylineId, color);
+      // Draw a single clean polyline from the current position to destination
+      _smoothPolylineTransition(polylineId, remainingPoints, color);
     }
 
     // Update next route point index for navigation
     nextRoutePointIndex.value = min(closestIndex + 5, routePoints.length - 1);
 
-    // Create breadcrumb trail showing recent travel path
-    _addBreadcrumbTrail(devicePos, closestIndex);
+    // Breadcrumbs disabled: ensure any existing trail is removed immediately
+    polyLines.remove(const PolylineId("BreadcrumbTrail"));
   }
 
   void updateNextRoutePoint() {
-    if (routePoints.isEmpty || currentPosition.value == null) return;
+    if (routePoints.isEmpty) return;
 
-    LatLng devicePos = LatLng(
-        currentPosition.value!.latitude, currentPosition.value!.longitude);
+    // Use animated position if available, otherwise fallback to current position
+    LatLng devicePos = _lastAnimatedPosition ??
+        _displayLatLng ??
+        LatLng(
+            currentPosition.value!.latitude, currentPosition.value!.longitude);
+
     int closestIndex = 0;
     double minDistance = double.infinity;
 
@@ -1246,16 +1818,8 @@ class LiveTrackingController extends GetxController {
             currentPosition.value!.latitude, currentPosition.value!.longitude);
     LatLng targetLocation = base;
 
-    // Smooth camera animation with easing
-    mapController!.moveCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: targetLocation,
-          zoom: navigationZoom.value,
-          tilt: _calculateOptimalTilt(),
-        ),
-      ),
-    );
+    // Smooth camera animation with easing using animated position
+    _updateCameraSmooth(target: _lastAnimatedPosition ?? targetLocation);
   }
 
   void updateNavigationInstructions() async {
@@ -1377,6 +1941,8 @@ class LiveTrackingController extends GetxController {
           descriptor: departureIcon!,
           rotation: 0.0,
         );
+        // Ensure no stale route polylines before drawing new
+        polyLines.removeWhere((key, value) => key.value == "DeviceToPickup");
         getPolyline(
           sourceLatitude: currentPosition.value!.latitude,
           sourceLongitude: currentPosition.value!.longitude,
@@ -1395,6 +1961,8 @@ class LiveTrackingController extends GetxController {
           descriptor: destinationIcon!,
           rotation: 0.0,
         );
+        polyLines
+            .removeWhere((key, value) => key.value == "DeviceToDestination");
         getPolyline(
           sourceLatitude: currentPosition.value!.latitude,
           sourceLongitude: currentPosition.value!.longitude,
@@ -1415,6 +1983,7 @@ class LiveTrackingController extends GetxController {
           descriptor: departureIcon!,
           rotation: 0.0,
         );
+        polyLines.removeWhere((key, value) => key.value == "DeviceToPickup");
         getPolyline(
           sourceLatitude: currentPosition.value!.latitude,
           sourceLongitude: currentPosition.value!.longitude,
@@ -1436,6 +2005,8 @@ class LiveTrackingController extends GetxController {
           descriptor: destinationIcon!,
           rotation: 0.0,
         );
+        polyLines
+            .removeWhere((key, value) => key.value == "DeviceToDestination");
         getPolyline(
           sourceLatitude: currentPosition.value!.latitude,
           sourceLongitude: currentPosition.value!.longitude,
@@ -1559,8 +2130,9 @@ class LiveTrackingController extends GetxController {
               showPickupToDestinationRoute.value)) {
         routePoints.value = polylineCoordinates;
       }
-      _addPolyLine(polylineCoordinates, polylineId, color);
-      updateDynamicPolyline();
+      // Immediately render a clean polyline based on current position
+      _clearRoutePolylines();
+      updateDynamicPolyline(force: true);
       return;
     }
 
@@ -1597,8 +2169,9 @@ class LiveTrackingController extends GetxController {
       updateTrafficLevel(directionsData);
     }
 
-    _addPolyLine(polylineCoordinates, polylineId, color);
-    updateDynamicPolyline();
+    // Immediately render a clean polyline based on current position
+    _clearRoutePolylines();
+    updateDynamicPolyline(force: true);
   }
 
   void parseNavigationSteps(Map<String, dynamic> directionsData) {
@@ -1713,7 +2286,7 @@ class LiveTrackingController extends GetxController {
     final Uint8List destination =
         await Constant().getBytesFromAsset('assets/images/dropoff.png', 50);
     final Uint8List driver =
-        await Constant().getBytesFromAsset('assets/images/ic_cab.png', 50);
+        await Constant().getBytesFromAsset('assets/images/ic_cab.png', 70);
     departureIcon = BitmapDescriptor.fromBytes(departure);
     destinationIcon = BitmapDescriptor.fromBytes(destination);
     driverIcon = BitmapDescriptor.fromBytes(driver);
@@ -1742,11 +2315,22 @@ class LiveTrackingController extends GetxController {
   }
 
   void toggleMapView() {
+    // Reset zoom to dynamic when toggling view
+    clearFixedZoom();
     isFollowingDriver.value = true;
     isNavigationView.value = true;
     polyLines.clear(); // Clear polylines when toggling view
     updateNavigationView();
     updateMarkersAndPolyline();
+
+    // Re-center with dynamic zoom after toggling
+    final LatLng target = _lastAnimatedPosition ??
+        _displayLatLng ??
+        (currentPosition.value != null
+            ? LatLng(currentPosition.value!.latitude,
+                currentPosition.value!.longitude)
+            : LatLng(0, 0));
+    _updateCameraSmooth(target: target);
   }
 
   void toggleVoiceGuidance() {
@@ -1802,17 +2386,43 @@ class LiveTrackingController extends GetxController {
     if (currentPosition.value == null ||
         (_lastRerouteTime != null &&
             DateTime.now().difference(_lastRerouteTime!).inSeconds <
-                5)) // Reduced from 10s to 5s
+                _rerouteCooldown.inSeconds) ||
+        _isRerouting) {
       return;
+    }
 
     _lastRerouteTime = DateTime.now();
+    _isRerouting = true;
+
+    // Clear current route display
     polyLines.clear();
+
+    // Show rerouting indicator
+    _showReroutingIndicator();
 
     // Try to recalculate with different parameters
     _recalculateWithAlternatives();
   }
 
-  // Recalculate route with alternatives
+  // Show rerouting indicator
+  void _showReroutingIndicator() {
+    if (currentPosition.value == null) return;
+
+    // Create a simple rerouting indicator
+    List<LatLng> indicatorPoints = [
+      LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
+      getTargetLocation(),
+    ];
+
+    _addPolyLine(
+        indicatorPoints, "rerouting_indicator", Colors.orange.withOpacity(0.5));
+
+    if (isVoiceEnabled.value) {
+      queueAnnouncement("Calculating new route...", priority: 2);
+    }
+  }
+
+  // Enhanced route recalculation with alternatives
   void _recalculateWithAlternatives() async {
     if (currentPosition.value == null) return;
 
@@ -1821,39 +2431,58 @@ class LiveTrackingController extends GetxController {
           currentPosition.value!.latitude, currentPosition.value!.longitude);
       LatLng destination = getTargetLocation();
 
-      // Try different routing modes
-      List<String> modes = [
-        'driving',
-        'driving',
-        'driving'
-      ]; // Multiple attempts
+      // Try multiple routing strategies
+      List<Map<String, dynamic>> routingStrategies = [
+        {
+          'mode': 'driving',
+          'alternatives': true,
+          'avoid': 'tolls',
+          'traffic_model': 'best_guess',
+        },
+        {
+          'mode': 'driving',
+          'alternatives': true,
+          'avoid': 'highways',
+          'traffic_model': 'best_guess',
+        },
+        {
+          'mode': 'driving',
+          'alternatives': false,
+          'traffic_model': 'best_guess',
+        },
+      ];
 
-      for (String mode in modes) {
-        final String url =
-            'https://maps.googleapis.com/maps/api/directions/json?'
-            'origin=${source.latitude},${source.longitude}&'
-            'destination=${destination.latitude},${destination.longitude}&'
-            'mode=$mode&'
-            'alternatives=true&'
-            'departure_time=now&'
-            'traffic_model=best_guess&'
-            'key=${Constant.mapAPIKey}';
+      for (int i = 0; i < routingStrategies.length; i++) {
+        var strategy = routingStrategies[i];
 
-        final response = await http.get(Uri.parse(url));
-        if (response.statusCode == 200) {
-          Map<String, dynamic> data = json.decode(response.body);
-          if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
-            // Use the first available route
-            _updateRouteWithAlternative(data['routes'][0]);
+        try {
+          Map<String, dynamic>? routeData =
+              await _fetchRouteWithStrategy(source, destination, strategy);
+          if (routeData != null) {
+            _updateRouteWithAlternative(routeData);
             isOffRoute.value = false;
+            _isRerouting = false;
+
+            // Remove rerouting indicator
+            polyLines.remove(const PolylineId("rerouting_indicator"));
+
+            if (isVoiceEnabled.value) {
+              queueAnnouncement("New route calculated successfully.",
+                  priority: 2);
+            }
             return;
           }
+        } catch (e) {
+          dev.log('Routing strategy $i failed: $e');
+          continue;
         }
       }
 
-      // If all attempts fail, fall back to direct route
+      // If all strategies fail, create direct route
       _createDirectRoute(source, destination);
+      _isRerouting = false;
     } catch (e) {
+      dev.log('Route recalculation failed: $e');
       // Create direct route as fallback
       if (currentPosition.value != null) {
         LatLng source = LatLng(
@@ -1861,7 +2490,44 @@ class LiveTrackingController extends GetxController {
         LatLng destination = getTargetLocation();
         _createDirectRoute(source, destination);
       }
+      _isRerouting = false;
     }
+  }
+
+  // Fetch route with specific strategy
+  Future<Map<String, dynamic>?> _fetchRouteWithStrategy(
+      LatLng source, LatLng destination, Map<String, dynamic> strategy) async {
+    try {
+      String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=${source.latitude},${source.longitude}&'
+          'destination=${destination.latitude},${destination.longitude}&'
+          'mode=${strategy['mode']}&'
+          'key=${Constant.mapAPIKey}';
+
+      if (strategy['alternatives'] == true) {
+        url += '&alternatives=true';
+      }
+
+      if (strategy['avoid'] != null) {
+        url += '&avoid=${strategy['avoid']}';
+      }
+
+      if (strategy['traffic_model'] != null) {
+        url += '&traffic_model=${strategy['traffic_model']}&departure_time=now';
+      }
+
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
+          return data['routes'][0];
+        }
+      }
+    } catch (e) {
+      dev.log('Route fetch with strategy failed: $e');
+    }
+    return null;
   }
 
   // Create direct route as fallback
@@ -2051,7 +2717,7 @@ class LiveTrackingController extends GetxController {
     return baseZoom.clamp(14.0, 18.0);
   }
 
-  // Update route with alternative
+  // Enhanced route update with alternative
   void _updateRouteWithAlternative(Map<String, dynamic> routeData) {
     try {
       String encodedPolyline = routeData['overview_polyline']['points'];
@@ -2067,18 +2733,171 @@ class LiveTrackingController extends GetxController {
       // Parse new navigation steps
       parseNavigationSteps(routeData);
 
-      // Update polylines
+      // Update polylines with smooth transition
       polyLines.clear();
       _addPolyLine(newRoutePoints, "OptimizedRoute", AppColors.primary);
 
+      // Update route quality score
+      _routeQualityScore = _calculateRouteQualityScore(
+          _getCurrentRouteDuration(),
+          _getCurrentRouteDuration(), // Assuming no traffic data in routeData
+          _calculateTotalRouteDistance(newRoutePoints),
+          0);
+
       // Announce route change
       if (isVoiceEnabled.value) {
-        queueAnnouncement("Route optimized for traffic conditions.",
+        queueAnnouncement("Route optimized and updated successfully.",
             priority: 1);
       }
+
+      // Update navigation elements
+      updateNavigationInstructions();
+      updateNextRoutePoint();
+      updateTimeAndDistanceEstimates();
     } catch (e) {
-      // Handle errors silently
+      dev.log('Route update failed: $e');
+      if (isVoiceEnabled.value) {
+        queueAnnouncement("Route update failed. Using current route.",
+            priority: 3);
+      }
     }
+  }
+
+  // Calculate total route distance
+  double _calculateTotalRouteDistance(List<LatLng> points) {
+    if (points.length < 2) return 0.0;
+
+    double totalDistance = 0.0;
+    for (int i = 0; i < points.length - 1; i++) {
+      totalDistance += Geolocator.distanceBetween(
+        points[i].latitude,
+        points[i].longitude,
+        points[i + 1].latitude,
+        points[i + 1].longitude,
+      );
+    }
+    return totalDistance;
+  }
+
+  // Optimize route for current conditions
+  void optimizeRouteForConditions() async {
+    if (currentPosition.value == null || routePoints.isEmpty) return;
+
+    try {
+      LatLng source = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+      LatLng destination = getTargetLocation();
+
+      // Check if optimization is needed
+      if (_shouldOptimizeRoute()) {
+        Map<String, dynamic>? optimizedRoute =
+            await _fetchOptimizedRoute(source, destination);
+        if (optimizedRoute != null) {
+          _updateRouteWithAlternative(optimizedRoute);
+          if (isVoiceEnabled.value) {
+            queueAnnouncement("Route optimized for current conditions.",
+                priority: 2);
+          }
+        }
+      }
+    } catch (e) {
+      dev.log('Route optimization failed: $e');
+    }
+  }
+
+  // Check if route should be optimized
+  bool _shouldOptimizeRoute() {
+    // Optimize if traffic is heavy
+    if (trafficLevel.value >= 2) return true;
+
+    // Optimize if we're moving slowly
+    if (currentSpeed.value < 10 && currentSpeed.value > 0) return true;
+
+    // Optimize if route quality is poor
+    if (_routeQualityScore < 50) return true;
+
+    // Optimize if we've been on the same route for a while
+    if (_lastRerouteTime != null) {
+      final timeSinceLastReroute = DateTime.now().difference(_lastRerouteTime!);
+      if (timeSinceLastReroute.inMinutes > 10) return true;
+    }
+
+    return false;
+  }
+
+  // Fetch optimized route
+  Future<Map<String, dynamic>?> _fetchOptimizedRoute(
+      LatLng source, LatLng destination) async {
+    try {
+      final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=${source.latitude},${source.longitude}&'
+          'destination=${destination.latitude},${destination.longitude}&'
+          'mode=driving&'
+          'alternatives=true&'
+          'departure_time=now&'
+          'traffic_model=best_guess&'
+          'key=${Constant.mapAPIKey}';
+
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
+          // Return the best route based on current conditions
+          return _selectBestRouteForConditions(data['routes']);
+        }
+      }
+    } catch (e) {
+      dev.log('Optimized route fetch failed: $e');
+    }
+    return null;
+  }
+
+  // Select best route for current conditions
+  Map<String, dynamic> _selectBestRouteForConditions(List<dynamic> routes) {
+    if (routes.isEmpty) return routes.first;
+
+    // Score each route based on current conditions
+    List<Map<String, dynamic>> scoredRoutes = [];
+
+    for (var route in routes) {
+      var leg = route['legs'][0];
+      double duration = (leg['duration']?['value'] ?? 0).toDouble();
+      double durationInTraffic =
+          (leg['duration_in_traffic']?['value'] ?? duration).toDouble();
+      double distance = (leg['distance']?['value'] ?? 0).toDouble();
+
+      double score =
+          _calculateRouteScore(duration, durationInTraffic, distance);
+      scoredRoutes.add({
+        'route': route,
+        'score': score,
+      });
+    }
+
+    // Sort by score and return the best
+    scoredRoutes.sort((a, b) => b['score'].compareTo(a['score']));
+    return scoredRoutes.first['route'];
+  }
+
+  // Calculate route score for current conditions
+  double _calculateRouteScore(
+      double duration, double durationInTraffic, double distance) {
+    double baseScore = 100.0;
+
+    // Traffic penalty
+    double trafficPenalty = (durationInTraffic - duration) / duration * 60;
+
+    // Distance penalty (prefer shorter routes in heavy traffic)
+    double distancePenalty = distance / 1000 * (trafficLevel.value + 1);
+
+    // Speed penalty (prefer faster routes when moving slowly)
+    if (currentSpeed.value < 20) {
+      double speedPenalty = (20 - currentSpeed.value) * 2;
+      baseScore -= speedPenalty;
+    }
+
+    return baseScore - trafficPenalty - distancePenalty;
   }
 
   // Enhanced marker updates with smooth animations
@@ -2087,35 +2906,338 @@ class LiveTrackingController extends GetxController {
   // Smooth marker animation
   // Removed unused _animateMarkerSmoothly
 
+  // Update marker with animated value
+  void _updateMarkerWithAnimatedValue() {
+    if (_lastAnimatedPosition == null || driverIcon == null) return;
+
+    addMarker(
+      latitude: _lastAnimatedPosition!.latitude,
+      longitude: _lastAnimatedPosition!.longitude,
+      id: "Device",
+      descriptor: driverIcon!,
+      rotation: 0.0,
+    );
+
+    // Remove any existing route polylines immediately to prevent traces
+    _clearRoutePolylines();
+    polyLines.removeWhere((key, value) =>
+        key.value == "DeviceToPickup" || key.value == "DeviceToDestination");
+    polyLines.remove(const PolylineId("BreadcrumbTrail"));
+
+    // Rebuild the active route polyline from the new position only
+    if (routePoints.isNotEmpty) {
+      updateDynamicPolyline(force: true);
+    }
+  }
+
+  // Start traffic monitoring
+  void _startTrafficMonitoring() {
+    _trafficCheckTimer?.cancel();
+    _trafficCheckTimer = Timer.periodic(_trafficUpdateInterval, (timer) {
+      if (routePoints.isNotEmpty && currentPosition.value != null) {
+        _checkRealTimeTrafficConditions();
+        _checkForBetterRoutes();
+      }
+    });
+  }
+
+  // Check real-time traffic conditions
+  void _checkRealTimeTrafficConditions() async {
+    try {
+      if (currentPosition.value == null) return;
+
+      LatLng source = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+      LatLng destination = getTargetLocation();
+
+      // Fetch updated traffic data
+      Map<String, dynamic>? trafficData =
+          await _fetchTrafficData(source, destination);
+      if (trafficData != null) {
+        _updateTrafficLevelFromData(trafficData);
+      }
+    } catch (e) {
+      dev.log('Traffic check failed: $e');
+    }
+  }
+
+  // Fetch traffic data from Google Directions API
+  Future<Map<String, dynamic>?> _fetchTrafficData(
+      LatLng source, LatLng destination) async {
+    try {
+      final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=${source.latitude},${source.longitude}&'
+          'destination=${destination.latitude},${destination.longitude}&'
+          'mode=driving&'
+          'departure_time=now&'
+          'traffic_model=best_guess&'
+          'key=${Constant.mapAPIKey}';
+
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          return data;
+        }
+      }
+    } catch (e) {
+      dev.log('Traffic data fetch failed: $e');
+    }
+    return null;
+  }
+
+  // Update traffic level from API data
+  void _updateTrafficLevelFromData(Map<String, dynamic> trafficData) {
+    try {
+      if (trafficData['routes'] == null || trafficData['routes'].isEmpty)
+        return;
+
+      var route = trafficData['routes'][0];
+      if (route['legs'] == null || route['legs'].isEmpty) return;
+
+      var leg = route['legs'][0];
+      double duration = (leg['duration']?['value'] ?? 0).toDouble();
+      double durationInTraffic =
+          (leg['duration_in_traffic']?['value'] ?? duration).toDouble();
+
+      if (duration > 0) {
+        double trafficRatio = durationInTraffic / duration;
+        int newTrafficLevel = trafficRatio > 1.5
+            ? 2
+            : trafficRatio > 1.2
+                ? 1
+                : 0;
+
+        if (newTrafficLevel != trafficLevel.value) {
+          trafficLevel.value = newTrafficLevel;
+          if (isVoiceEnabled.value && newTrafficLevel > 0) {
+            queueAnnouncement(
+                "Traffic conditions updated: ${getTrafficLevelText()}",
+                priority: 1);
+          }
+        }
+      }
+    } catch (e) {
+      dev.log('Traffic level update failed: $e');
+    }
+  }
+
+  // Check for better routes
+  void _checkForBetterRoutes() async {
+    try {
+      if (currentPosition.value == null || routePoints.isEmpty) return;
+
+      LatLng source = LatLng(
+          currentPosition.value!.latitude, currentPosition.value!.longitude);
+      LatLng destination = getTargetLocation();
+
+      // Fetch alternative routes
+      Map<String, dynamic>? alternativesData =
+          await _fetchAlternativeRoutes(source, destination);
+      if (alternativesData != null) {
+        _evaluateRouteAlternatives(alternativesData);
+      }
+    } catch (e) {
+      dev.log('Better route check failed: $e');
+    }
+  }
+
+  // Fetch alternative routes
+  Future<Map<String, dynamic>?> _fetchAlternativeRoutes(
+      LatLng source, LatLng destination) async {
+    try {
+      final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=${source.latitude},${source.longitude}&'
+          'destination=${destination.latitude},${destination.longitude}&'
+          'mode=driving&'
+          'alternatives=true&'
+          'departure_time=now&'
+          'traffic_model=best_guess&'
+          'key=${Constant.mapAPIKey}';
+
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['routes'].length > 1) {
+          return data;
+        }
+      }
+    } catch (e) {
+      dev.log('Alternative routes fetch failed: $e');
+    }
+    return null;
+  }
+
+  // Evaluate route alternatives
+  void _evaluateRouteAlternatives(Map<String, dynamic> alternativesData) {
+    try {
+      List<dynamic> routes = alternativesData['routes'];
+      if (routes.length <= 1) return;
+
+      _routeAlternatives.clear();
+      _currentRouteIndex = 0;
+
+      // Find current route index
+      for (int i = 0; i < routes.length; i++) {
+        var route = routes[i];
+        if (_isCurrentRoute(route)) {
+          _currentRouteIndex = i;
+          break;
+        }
+      }
+
+      // Evaluate alternatives
+      for (int i = 0; i < routes.length; i++) {
+        if (i == _currentRouteIndex) continue;
+
+        var route = routes[i];
+        var leg = route['legs'][0];
+
+        double duration = (leg['duration']?['value'] ?? 0).toDouble();
+        double durationInTraffic =
+            (leg['duration_in_traffic']?['value'] ?? duration).toDouble();
+        double distance = (leg['distance']?['value'] ?? 0).toDouble();
+
+        // Calculate route quality score
+        double qualityScore = _calculateRouteQualityScore(
+            duration, durationInTraffic, distance, i);
+
+        _routeAlternatives.add({
+          'route': route,
+          'index': i,
+          'qualityScore': qualityScore,
+          'duration': duration,
+          'durationInTraffic': durationInTraffic,
+          'distance': distance,
+        });
+      }
+
+      // Sort by quality score
+      _routeAlternatives
+          .sort((a, b) => b['qualityScore'].compareTo(a['qualityScore']));
+
+      // Check if better route is available
+      if (_routeAlternatives.isNotEmpty) {
+        var bestAlternative = _routeAlternatives.first;
+        double currentDuration = _getCurrentRouteDuration();
+        double timeSaved =
+            (currentDuration - bestAlternative['durationInTraffic']) /
+                60; // Convert to minutes
+
+        if (timeSaved > 2 &&
+            bestAlternative['qualityScore'] > _routeQualityScore * 1.1) {
+          _suggestBetterRoute(bestAlternative, timeSaved);
+        }
+      }
+    } catch (e) {
+      dev.log('Route alternatives evaluation failed: $e');
+    }
+  }
+
+  // Check if route is current route
+  bool _isCurrentRoute(Map<String, dynamic> route) {
+    try {
+      String encodedPolyline = route['overview_polyline']['points'];
+      List<PointLatLng> decodedPoints =
+          polylinePoints.decodePolyline(encodedPolyline);
+
+      if (decodedPoints.length != routePoints.length) return false;
+
+      // Compare first and last points
+      if (decodedPoints.isNotEmpty && routePoints.isNotEmpty) {
+        double firstPointDiff = Geolocator.distanceBetween(
+          decodedPoints.first.latitude,
+          decodedPoints.first.longitude,
+          routePoints.first.latitude,
+          routePoints.first.longitude,
+        );
+
+        double lastPointDiff = Geolocator.distanceBetween(
+          decodedPoints.last.latitude,
+          decodedPoints.last.longitude,
+          routePoints.last.latitude,
+          routePoints.last.longitude,
+        );
+
+        return firstPointDiff < 50 && lastPointDiff < 50; // 50m tolerance
+      }
+    } catch (e) {
+      dev.log('Route comparison failed: $e');
+    }
+    return false;
+  }
+
+  // Calculate route quality score
+  double _calculateRouteQualityScore(double duration, double durationInTraffic,
+      double distance, int routeIndex) {
+    double baseScore = 100.0;
+
+    // Duration penalty
+    double durationPenalty = (durationInTraffic - duration) / duration * 50;
+
+    // Distance penalty (prefer shorter routes)
+    double distancePenalty = distance / 1000 * 2; // 2 points per km
+
+    // Route index penalty (prefer lower index routes)
+    double indexPenalty = routeIndex * 5;
+
+    return baseScore - durationPenalty - distancePenalty - indexPenalty;
+  }
+
+  // Get current route duration
+  double _getCurrentRouteDuration() {
+    if (navigationSteps.isEmpty) return 0.0;
+
+    double totalDuration = 0.0;
+    for (var step in navigationSteps) {
+      totalDuration += step.duration;
+    }
+    return totalDuration;
+  }
+
+  // Suggest better route
+  void _suggestBetterRoute(Map<String, dynamic> alternative, double timeSaved) {
+    _betterRouteAvailable.value = true;
+    _betterRouteData = alternative['route'];
+    _timeSaved = timeSaved.round();
+
+    if (isVoiceEnabled.value) {
+      queueAnnouncement(
+          "Better route available. Save ${timeSaved.toStringAsFixed(0)} minutes.",
+          priority: 2);
+    }
+
+    // Show alternative route preview
+    _showAlternativeRoutePreview(alternative['route']);
+  }
+
+  // Show alternative route preview
+  void _showAlternativeRoutePreview(Map<String, dynamic> route) {
+    try {
+      String encodedPolyline = route['overview_polyline']['points'];
+      List<PointLatLng> decodedPoints =
+          polylinePoints.decodePolyline(encodedPolyline);
+      List<LatLng> alternativePoints = decodedPoints
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      if (alternativePoints.length > 1) {
+        _addPolyLine(alternativePoints, "alternative_route",
+            Colors.blue.withOpacity(0.6));
+        hasAlternativeRoute.value = true;
+        _alternativeRouteData = route;
+      }
+    } catch (e) {
+      dev.log('Alternative route preview failed: $e');
+    }
+  }
+
   // Old road snapping and bearing methods replaced by optimized versions
 
   // Create breadcrumb trail showing recent travel path
-  void _addBreadcrumbTrail(LatLng currentPos, int startIndex) {
-    if (startIndex <= 0 || routePoints.isEmpty) return;
-
-    // Show last 100-200 meters of traveled route as a subtle trail
-    int trailStartIndex = max(0, startIndex - 3);
-    List<LatLng> trailPoints = routePoints.sublist(trailStartIndex, startIndex);
-
-    if (trailPoints.length > 1) {
-      // Add current position to complete the trail
-      trailPoints.add(currentPos);
-
-      // Create a subtle breadcrumb trail
-      PolylineId trailId = const PolylineId("BreadcrumbTrail");
-      Polyline breadcrumbTrail = Polyline(
-        polylineId: trailId,
-        points: trailPoints,
-        color: Colors.grey.withOpacity(0.3),
-        width: 2,
-        startCap: Cap.roundCap,
-        endCap: Cap.roundCap,
-        patterns: [PatternItem.dash(5), PatternItem.gap(3)],
-      );
-
-      polyLines[trailId] = breadcrumbTrail;
-    }
-  }
+  // Breadcrumb trail intentionally disabled to prevent lingering traces
 
   // Handle smooth polyline transitions when route changes
   void _smoothPolylineTransition(

@@ -34,6 +34,11 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
   @override
   void initState() {
     super.initState();
+
+    // Initialize controller and animation system
+    final controller = Get.put(LiveTrackingController());
+    controller.initAnimation(this);
+
     _loadMapStyle();
     _initAnimations();
   }
@@ -67,6 +72,8 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
 
   @override
   void dispose() {
+    // Clean up controller's animation resources
+    Get.find<LiveTrackingController>().disposeAnimation();
     _pulseController.dispose();
     super.dispose();
   }
@@ -93,7 +100,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
               Obx(() => GoogleMap(
                     compassEnabled: false,
                     rotateGesturesEnabled: true,
-                    myLocationEnabled: true,
+                    myLocationEnabled: false,
                     myLocationButtonEnabled: false,
                     mapType: MapType.normal,
                     zoomControlsEnabled: false,
@@ -105,7 +112,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                       bottom: bottomPanelMinHeight,
                       top: 140,
                     ),
-                    onCameraMoveStarted: () => controller.onMapDrag(),
+                    onCameraMoveStarted: () => controller.onMapPinch(),
                     onMapCreated: (GoogleMapController mapController) async {
                       controller.mapController = mapController;
                       if (_mapStyle != null) {
@@ -130,8 +137,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                       // bearing: controller.mapBearing.value,
                     ),
                     onCameraMove: (CameraPosition position) {
-                      controller.navigationZoom.value = position.zoom;
-                      controller.onMapDrag();
+                      controller.onCameraMoveUpdate(position);
+                    },
+                    onCameraIdle: () {
+                      controller.onMapIdle();
                     },
                     onTap: (LatLng position) {
                       controller.onMapTap(position);
@@ -657,33 +666,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     );
   }
 
-  // Real-time traffic indicator widget
-  Widget _buildTrafficIndicator(LiveTrackingController controller) {
-    return Obx(() => Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: controller.getTrafficLevelColor().withOpacity(0.9),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: controller.getTrafficLevelColor().withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.traffic,
-              color: Colors.white,
-              size: 20,
-            ),
-            onPressed: () => _showTrafficInfoDialog(context, controller),
-            tooltip: controller.getTrafficLevelText(),
-          ),
-        ));
-  }
+  // Removed unused _buildTrafficIndicator
 
   Widget _buildBottomSheet(
       BuildContext context, LiveTrackingController controller) {
@@ -1014,7 +997,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
               ),
               child: Text(
                 isRideInProgress ? "Complete Ride".tr : "Pickup Customer".tr,
-                style: AppTypography.buttonlight(context),
+                style: AppTypography.boldLabel(context).copyWith(
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -1032,7 +1017,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
               ),
               child: Text(
                 "Cancel Ride".tr,
-                style: AppTypography.button(context).copyWith(
+                style: AppTypography.boldLabel(context).copyWith(
                   color: Colors.red.shade600,
                 ),
               ),
@@ -1461,66 +1446,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     );
   }
 
-  void _showTrafficInfoDialog(
-      BuildContext context, LiveTrackingController controller) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: AppColors.background,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            "Traffic Level".tr,
-            style: AppTypography.appTitle(context),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(
-                  "Light Traffic".tr,
-                  style: AppTypography.caption(Get.context!),
-                ),
-                onTap: () {
-                  controller.reportTraffic(0);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: Text(
-                  "Moderate Traffic".tr,
-                  style: AppTypography.caption(Get.context!),
-                ),
-                onTap: () {
-                  controller.reportTraffic(1);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: Text(
-                  "Heavy Traffic".tr,
-                  style: AppTypography.caption(Get.context!),
-                ),
-                onTap: () {
-                  controller.reportTraffic(2);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel".tr,
-                  style: AppTypography.boldLabel(Get.context!)
-                      .copyWith(color: AppColors.grey600)),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // Removed unused _showTrafficInfoDialog
 
   IconData _getManeuverIcon(String maneuver) {
     switch (maneuver.toLowerCase()) {

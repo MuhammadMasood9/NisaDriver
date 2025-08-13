@@ -292,6 +292,8 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                         value.user!.uid);
 
                                 if (userModel != null) {
+                                  // Ensure id is set for any subsequent updates
+                                  userModel.id = value.user!.uid;
                                   // Your existing subscription check logic
                                   bool isPlanExpire = true;
                                   if (userModel.subscriptionPlan?.id != null) {

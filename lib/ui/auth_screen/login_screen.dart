@@ -17,7 +17,6 @@ import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/ui/terms_and_condition/terms_and_condition_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/notification_service.dart';
-import 'package:driver/utils/preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -27,10 +26,10 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
-  
+
   // Static set to track logged errors across instances
   static final Set<String> _loggedErrors = <String>{};
-  
+
   // Method to clear logged errors (useful for testing or resetting)
   static void clearLoggedErrors() {
     _loggedErrors.clear();
@@ -43,7 +42,7 @@ class LoginScreen extends StatelessWidget {
       'assets/images/intro_2.png',
       'assets/images/intro_3.png',
     ];
-    
+
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -57,7 +56,7 @@ class LoginScreen extends StatelessWidget {
             _loggedErrors.add('asset:$assetPath');
             print('Asset image failed to load: $assetPath - Using placeholder');
           }
-          
+
           // If even the asset image fails, show a placeholder with gradient
           return Container(
             width: double.infinity,
@@ -226,9 +225,11 @@ class LoginScreen extends StatelessWidget {
                                           // Only log once per session to reduce noise
                                           if (!_loggedErrors.contains(url)) {
                                             _loggedErrors.add(url);
-                                            print('Image load failed for: $url - Using fallback intro image');
+                                            print(
+                                                'Image load failed for: $url - Using fallback intro image');
                                           }
-                                          return _buildIntroImageSlider(context, index);
+                                          return _buildIntroImageSlider(
+                                              context, index);
                                         },
                                         httpHeaders: const {
                                           'Cache-Control': 'max-age=3600',
@@ -237,8 +238,10 @@ class LoginScreen extends StatelessWidget {
                                         maxHeightDiskCache: 1000,
                                         memCacheWidth: 1000,
                                         memCacheHeight: 1000,
-                                        fadeInDuration: const Duration(milliseconds: 300),
-                                        fadeOutDuration: const Duration(milliseconds: 300),
+                                        fadeInDuration:
+                                            const Duration(milliseconds: 300),
+                                        fadeOutDuration:
+                                            const Duration(milliseconds: 300),
                                         fadeInCurve: Curves.easeIn,
                                         fadeOutCurve: Curves.easeOut,
                                         useOldImageOnUrlChange: true,
@@ -496,13 +499,14 @@ class LoginScreen extends StatelessWidget {
       Get.to(() => const InformationScreen(),
           arguments: {"userModel": userModel});
     } else {
-      final userExit = await FireStoreUtils.userExitOrNot(value.user!.uid);
-      if (userExit) {
+      final userExists = await FireStoreUtils.userExitOrNot(value.user!.uid);
+      if (userExists) {
         final userModel =
             await FireStoreUtils.getDriverProfile(value.user!.uid);
 
         String token = await NotificationService.getToken();
         userModel!.fcmToken = token;
+        userModel.id = value.user!.uid; // ensure id is present for update
         await FireStoreUtils.updateDriverUser(userModel);
         // Retain your existing driver-specific logic for subscription checks
         Get.offAll(() => const DashBoardScreen()); // Simplified for example
@@ -554,8 +558,13 @@ class LoginScreen extends StatelessWidget {
         ..fullName =
             "${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}"
         ..profileVerify = true;
-      Get.to(() => const InformationScreen(),
-          arguments: {"userModel": userModel});
+      // If the user exists, go to dashboard, otherwise go to information screen
+      if (userExit == true) {
+        Get.offAll(() => const DashBoardScreen());
+      } else {
+        Get.to(() => const InformationScreen(),
+            arguments: {"userModel": userModel});
+      }
     }
   }
 }

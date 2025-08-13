@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:driver/constant/constant.dart';
@@ -87,6 +86,7 @@ class LoginController extends GetxController {
             if (userExit == true) {
               String token = await NotificationService.getToken();
               DriverUserModel userModel = DriverUserModel();
+              userModel.id = userCredential.user!.uid; // ensure id is present
               userModel.fcmToken = token;
               await FireStoreUtils.updateDriverUser(userModel);
               await FireStoreUtils.getDriverProfile(
@@ -237,9 +237,7 @@ class LoginController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    debugPrint("FormKey initialized: ${formKey.value != null}");
-    if (formKey.value == null) {
-      formKey.value = GlobalKey<FormState>();
-    }
+    // Ensure formKey exists (it's initialized above already)
+    formKey.value = formKey.value;
   }
 }
