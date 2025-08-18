@@ -800,8 +800,7 @@ class LiveTrackingController extends GetxController {
       longitude: _displayLatLng!.longitude,
       id: "Device",
       descriptor: driverIcon!,
-      rotation: compassHeading
-          .value, // Use compass heading for marker rotation instead of mapBearing
+      rotation: 0.0, // Keep marker straight (no rotation) in all conditions
     );
   }
 
@@ -996,6 +995,9 @@ class LiveTrackingController extends GetxController {
       if (isVoiceEnabled.value) {
         queueAnnouncement("Route updated to faster alternative.", priority: 1);
       }
+      
+      // Update progress with new route
+      updateTripProgress();
     }
   }
 
@@ -1520,6 +1522,9 @@ class LiveTrackingController extends GetxController {
     polyLines.remove(const PolylineId("ReturnToRoute"));
     polyLines.remove(const PolylineId("OffRoutePath"));
     updateDynamicPolyline();
+    
+    // Update progress when back on route
+    updateTripProgress();
   }
 
   void _clearRoutePolylines() {
@@ -1602,6 +1607,9 @@ class LiveTrackingController extends GetxController {
 
     // Update next route point index for navigation
     nextRoutePointIndex.value = min(closestIndex + 5, routePoints.length - 1);
+
+    // Update progress when route polyline is updated
+    updateTripProgress();
 
     // Breadcrumbs disabled: ensure any existing trail is removed immediately
     polyLines.remove(const PolylineId("BreadcrumbTrail"));
@@ -1752,40 +1760,147 @@ class LiveTrackingController extends GetxController {
   }
 
   void updateTripProgress() {
-    double totalDistance;
-    double progressPercentage;
+    double progressPercentage = 0.0;
+
+    if (currentPosition.value == null) {
+      tripProgressValue.value = 0.0;
+      tripProgress.value = "0%";
+      return;
+    }
 
     if (type.value == "orderModel") {
       if (orderModel.value.status == Constant.rideInProgress) {
-        totalDistance = calculateDistanceBetweenPoints(
-          orderModel.value.sourceLocationLAtLng!.latitude!,
-          orderModel.value.sourceLocationLAtLng!.longitude!,
-          orderModel.value.destinationLocationLAtLng!.latitude!,
-          orderModel.value.destinationLocationLAtLng!.longitude!,
+        // Calculate progress based on route completion
+        progressPercentage = _calculateRouteProgress(
+          LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
+          LatLng(orderModel.value.sourceLocationLAtLng!.latitude!, orderModel.value.sourceLocationLAtLng!.longitude!),
+          LatLng(orderModel.value.destinationLocationLAtLng!.latitude!, orderModel.value.destinationLocationLAtLng!.longitude!),
         );
-        double coveredDistance = totalDistance - distance.value;
-        progressPercentage = (coveredDistance / totalDistance) * 100;
+      } else if (orderModel.value.status == Constant.rideActive) {
+        // Going to pickup - calculate progress from current position to pickup
+        progressPercentage = _calculatePickupProgress(
+          LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
+          LatLng(orderModel.value.sourceLocationLAtLng!.latitude!, orderModel.value.sourceLocationLAtLng!.longitude!),
+        );
       } else {
-        progressPercentage = 0;
+        progressPercentage = 0.0;
       }
     } else {
       if (intercityOrderModel.value.status == Constant.rideInProgress) {
-        totalDistance = calculateDistanceBetweenPoints(
-          intercityOrderModel.value.sourceLocationLAtLng!.latitude!,
-          intercityOrderModel.value.sourceLocationLAtLng!.longitude!,
-          intercityOrderModel.value.destinationLocationLAtLng!.latitude!,
-          intercityOrderModel.value.destinationLocationLAtLng!.longitude!,
+        // Calculate progress based on route completion
+        progressPercentage = _calculateRouteProgress(
+          LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
+          LatLng(intercityOrderModel.value.sourceLocationLAtLng!.latitude!, intercityOrderModel.value.sourceLocationLAtLng!.longitude!),
+          LatLng(intercityOrderModel.value.destinationLocationLAtLng!.latitude!, intercityOrderModel.value.destinationLocationLAtLng!.longitude!),
         );
-        double coveredDistance = totalDistance - distance.value;
-        progressPercentage = (coveredDistance / totalDistance) * 100;
+      } else if (intercityOrderModel.value.status == Constant.rideActive) {
+        // Going to pickup - calculate progress from current position to pickup
+        progressPercentage = _calculatePickupProgress(
+          LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
+          LatLng(intercityOrderModel.value.sourceLocationLAtLng!.latitude!, intercityOrderModel.value.sourceLocationLAtLng!.longitude!),
+        );
       } else {
-        progressPercentage = 0;
+        progressPercentage = 0.0;
       }
     }
 
     progressPercentage = progressPercentage.clamp(0.0, 100.0);
     tripProgressValue.value = progressPercentage / 100;
     tripProgress.value = "${progressPercentage.toStringAsFixed(0)}%";
+  }
+
+  // Calculate progress when going to pickup location
+  double _calculatePickupProgress(LatLng currentPos, LatLng pickupLocation) {
+    // For pickup progress, we'll use a simple distance-based calculation
+    // This could be enhanced with actual route progress if route is available
+    double totalDistance = calculateDistanceBetweenPoints(
+      currentPos.latitude,
+      currentPos.longitude,
+      pickupLocation.latitude,
+      pickupLocation.longitude,
+    );
+    
+    // If we're very close to pickup, show high progress
+    if (totalDistance < 0.1) { // Less than 100 meters
+      return 95.0;
+    }
+    
+    // Simple linear progress based on distance
+    // This is a rough approximation - could be improved with actual route progress
+    return (1.0 - (totalDistance / 10.0)) * 100; // Assume max 10km to pickup
+  }
+
+  // Calculate progress when traveling from pickup to destination
+  double _calculateRouteProgress(LatLng currentPos, LatLng pickupLocation, LatLng destinationLocation) {
+    if (routePoints.isEmpty) {
+      // Fallback to simple distance-based calculation
+      double totalTripDistance = calculateDistanceBetweenPoints(
+        pickupLocation.latitude,
+        pickupLocation.longitude,
+        destinationLocation.latitude,
+        destinationLocation.longitude,
+      );
+      
+      double remainingDistance = calculateDistanceBetweenPoints(
+        currentPos.latitude,
+        currentPos.longitude,
+        destinationLocation.latitude,
+        destinationLocation.longitude,
+      );
+      
+      if (totalTripDistance <= 0) return 0.0;
+      
+      double coveredDistance = totalTripDistance - remainingDistance;
+      return (coveredDistance / totalTripDistance) * 100;
+    } else {
+      // Use route-based progress calculation
+      return _calculateRouteBasedProgress(currentPos);
+    }
+  }
+
+  // Calculate progress based on actual route points
+  double _calculateRouteBasedProgress(LatLng currentPos) {
+    if (routePoints.isEmpty) return 0.0;
+    
+    // Find the closest route point to current position
+    int closestIndex = 0;
+    double minDistance = double.infinity;
+    
+    for (int i = 0; i < routePoints.length; i++) {
+      double distance = calculateDistanceBetweenPoints(
+        currentPos.latitude,
+        currentPos.longitude,
+        routePoints[i].latitude,
+        routePoints[i].longitude,
+      );
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+      }
+    }
+    
+    // Calculate progress based on position along the route
+    double progress = (closestIndex / (routePoints.length - 1)) * 100;
+    
+    // Ensure we don't show 100% until we're very close to destination
+    if (closestIndex >= routePoints.length - 1) {
+      // Check if we're actually at the destination
+      double distanceToDestination = calculateDistanceBetweenPoints(
+        currentPos.latitude,
+        currentPos.longitude,
+        routePoints.last.latitude,
+        routePoints.last.longitude,
+      );
+      
+      if (distanceToDestination < 0.05) { // Within 50 meters
+        progress = 100.0;
+      } else {
+        progress = 95.0; // Close but not quite there
+      }
+    }
+    
+    return progress;
   }
 
   Future<double> calculateDistance(
@@ -1864,6 +1979,8 @@ class LiveTrackingController extends GetxController {
         wasShowingDestination != showPickupToDestinationRoute.value) {
       polyLines.clear(); // Clear polylines when route visibility changes
       updateMarkersAndPolyline();
+      // Update progress when route phase changes
+      updateTripProgress();
     }
   }
 
@@ -1882,6 +1999,8 @@ class LiveTrackingController extends GetxController {
             orderModel.value = OrderModel.fromJson(event.data()!);
             status.value = orderModel.value.status ?? "";
             updateRouteVisibility();
+            // Update progress when order status changes
+            updateTripProgress();
             // Removed real-time database subscription - only using phone GPS
             // _ensureRealtimeSubscription(
             //     orderModel.value.id, FireStoreUtils.getCurrentUid());
@@ -1904,6 +2023,8 @@ class LiveTrackingController extends GetxController {
                 InterCityOrderModel.fromJson(event.data()!);
             status.value = intercityOrderModel.value.status ?? "";
             updateRouteVisibility();
+            // Update progress when order status changes
+            updateTripProgress();
             // Removed real-time database subscription - only using phone GPS
             // _ensureRealtimeSubscription(
             //     intercityOrderModel.value.id, FireStoreUtils.getCurrentUid());
@@ -2022,6 +2143,7 @@ class LiveTrackingController extends GetxController {
 
     updateTimeAndDistanceEstimates();
     updateNavigationView();
+    updateTripProgress();
   }
 
   Future<Map<String, dynamic>?> fetchDirections({
@@ -2167,6 +2289,8 @@ class LiveTrackingController extends GetxController {
       routePoints.value = polylineCoordinates;
       parseNavigationSteps(directionsData);
       updateTrafficLevel(directionsData);
+      // Update progress when route is loaded
+      updateTripProgress();
     }
 
     // Immediately render a clean polyline based on current position
@@ -2470,6 +2594,9 @@ class LiveTrackingController extends GetxController {
               queueAnnouncement("New route calculated successfully.",
                   priority: 2);
             }
+            
+            // Update progress with new route
+            updateTripProgress();
             return;
           }
         } catch (e) {
@@ -2542,6 +2669,9 @@ class LiveTrackingController extends GetxController {
       queueAnnouncement("Using direct route due to navigation issues.",
           priority: 3);
     }
+    
+    // Update progress with direct route
+    updateTripProgress();
   }
 
   void centerMapOnDriver() {
@@ -2673,6 +2803,9 @@ class LiveTrackingController extends GetxController {
       if (isVoiceEnabled.value) {
         queueAnnouncement("Route updated. Following new path.", priority: 2);
       }
+      
+      // Update progress with new route
+      updateTripProgress();
     }
   }
 
@@ -2754,6 +2887,7 @@ class LiveTrackingController extends GetxController {
       updateNavigationInstructions();
       updateNextRoutePoint();
       updateTimeAndDistanceEstimates();
+      updateTripProgress();
     } catch (e) {
       dev.log('Route update failed: $e');
       if (isVoiceEnabled.value) {
@@ -2798,6 +2932,9 @@ class LiveTrackingController extends GetxController {
             queueAnnouncement("Route optimized for current conditions.",
                 priority: 2);
           }
+          
+          // Update progress with optimized route
+          updateTripProgress();
         }
       }
     } catch (e) {
@@ -2915,7 +3052,7 @@ class LiveTrackingController extends GetxController {
       longitude: _lastAnimatedPosition!.longitude,
       id: "Device",
       descriptor: driverIcon!,
-      rotation: 0.0,
+      rotation: 0.0, // Keep marker straight (no rotation) in all conditions
     );
 
     // Remove any existing route polylines immediately to prevent traces
@@ -2928,6 +3065,9 @@ class LiveTrackingController extends GetxController {
     if (routePoints.isNotEmpty) {
       updateDynamicPolyline(force: true);
     }
+    
+    // Update progress when marker position changes
+    updateTripProgress();
   }
 
   // Start traffic monitoring
@@ -3276,6 +3416,9 @@ class LiveTrackingController extends GetxController {
 
     // Update time and distance estimates
     updateTimeAndDistanceEstimates();
+
+    // Update trip progress
+    updateTripProgress();
 
     // Check if we're approaching a turn
     if (distanceToNextTurn.value < 100) {

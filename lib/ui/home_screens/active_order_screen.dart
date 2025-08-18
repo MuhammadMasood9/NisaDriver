@@ -478,24 +478,10 @@ class ActiveOrderScreen extends StatelessWidget {
   }
 
   void _trackRide(OrderModel orderModel) {
-    if (Constant.mapType == "inappmap") {
+  
       Get.to(() => const LiveTrackingScreen(),
           arguments: {"orderModel": orderModel, "type": "orderModel"});
-    } else {
-      if (orderModel.status == Constant.rideInProgress) {
-        Utils.redirectMap(
-          latitude: orderModel.destinationLocationLAtLng!.latitude!,
-          longLatitude: orderModel.destinationLocationLAtLng!.longitude!,
-          name: orderModel.destinationLocationName.toString(),
-        );
-      } else {
-        Utils.redirectMap(
-          latitude: orderModel.sourceLocationLAtLng!.latitude!,
-          longLatitude: orderModel.sourceLocationLAtLng!.longitude!,
-          name: orderModel.sourceLocationName.toString(),
-        );
-      }
-    }
+   
   }
 
   Future<void> _openChat(OrderModel orderModel) async {
