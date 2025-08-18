@@ -19,33 +19,13 @@ class SplashController extends GetxController {
     await redirectScreen();
   }
 
-  Future<void> redirectScreen() async {
-    try {
-      // Prefer currentUser, but also wait briefly for auth state in case it isn't ready yet
-      User? user = FirebaseAuth.instance.currentUser;
-      user ??= await FirebaseAuth.instance
-          .authStateChanges()
-          .first
-          .timeout(const Duration(seconds: 2), onTimeout: () => null);
-
-      if (user != null) {
-        // Do not block navigation on Firestore checks; user is authenticated
-        try {
-          // Optional: warm up Firestore/user doc
-          await FireStoreUtils.userExitOrNot(user.uid);
-        } catch (_) {}
-        Get.offAll(const DashBoardScreen());
-      } else {
-        Get.offAll(const LoginScreen());
-      }
-    } catch (_) {
-      // Fallback: if FirebaseAuth already has a user, go to dashboard
-      final User? fallback = FirebaseAuth.instance.currentUser;
-      if (fallback != null) {
-        Get.offAll(const DashBoardScreen());
-      } else {
-        Get.offAll(const LoginScreen());
-      }
+  redirectScreen() async {
+    // Use FireStoreUtils.isLogin() for robust login check
+    bool isLogin = await FireStoreUtils.isLogin();
+    if (isLogin) {
+      Get.offAll(const DashBoardScreen());
+    } else {
+      Get.offAll(const LoginScreen());
     }
   }
 }

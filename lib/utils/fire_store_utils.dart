@@ -420,10 +420,8 @@ class FireStoreUtils {
   static Future<bool> userExitOrNot(String uid) async {
     bool isExit = false;
 
-    await fireStore.collection(CollectionName.driverUsers).doc(uid).get().then(
+    await fireStore.collection(CollectionName.users).doc(uid).get().then(
       (value) {
-        log("message :${value.exists}");
-        log("message :${value.id}");
         if (value.exists) {
           isExit = true;
         } else {

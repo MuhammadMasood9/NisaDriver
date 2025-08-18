@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:developer' as dev;
-import 'dart:typed_data';
+// Removed unnecessary import
 // removed duplicate import
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
@@ -24,7 +24,10 @@ import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:retry/retry.dart';
 import 'package:driver/services/realtime_location_service.dart';
+import 'package:driver/services/background_location_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:driver/controller/dash_board_controller.dart';
+import 'package:flutter/services.dart';
 
 class NavigationStep {
   final String instruction;
@@ -140,6 +143,8 @@ class LiveTrackingController extends GetxController {
   DateTime? _lastRerouteTime;
   StreamSubscription<CompassEvent>? _compassSubscription;
   final RealtimeLocationService _realtime = RealtimeLocationService();
+  final BackgroundLocationService _backgroundLocation =
+      BackgroundLocationService();
   // Removed real-time database subscription - only using phone GPS
   // StreamSubscription<Map<String, dynamic>?>? _rtdbSubscription;
   // bool _isApplyingRemoteUpdate = false;
@@ -209,7 +214,7 @@ class LiveTrackingController extends GetxController {
 
   final List<Map<String, dynamic>> _ttsQueue = [];
   bool _isSpeaking = false;
-  RxBool _betterRouteAvailable =
+  final RxBool _betterRouteAvailable =
       false.obs; // New field for better route availability
   Map<String, dynamic>? _betterRouteData; // New field for better route data
   int _timeSaved = 0; // New field for time saved
@@ -230,7 +235,7 @@ class LiveTrackingController extends GetxController {
   int _consecutiveOffRouteChecks = 0;
   DateTime? _firstOffRouteTime;
   // Removed unused _lastOffRouteDistance
-  List<LatLng> _offRouteHistory = [];
+  final List<LatLng> _offRouteHistory = [];
   bool _isRerouting = false;
   Timer? _rerouteTimer;
   Timer? _trafficCheckTimer;
@@ -265,7 +270,15 @@ class LiveTrackingController extends GetxController {
     super.onInit();
     addMarkerSetup();
     initializeTTS();
-    initializeLocationServices(); // This now also starts location tracking
+
+    // Check if driver is online before initializing location services
+    if (_isDriverOnline()) {
+      initializeLocationServices(); // This now also starts location tracking
+    } else {
+      dev.log(
+          'Driver is offline, location tracking will start when going online');
+    }
+
     _initializeCompass();
     getArgument();
     isFollowingDriver.value = true;
@@ -280,6 +293,14 @@ class LiveTrackingController extends GetxController {
       updateNavigationView();
       updateMarkersAndPolyline();
     });
+
+    // Listen to app lifecycle changes for background tracking
+    _initializeAppLifecycleListener();
+
+    // Start background tracking if driver is already online
+    if (_isDriverOnline()) {
+      _startBackgroundLocationTracking();
+    }
   }
 
   // Initialize enhanced rerouting system
@@ -339,6 +360,10 @@ class LiveTrackingController extends GetxController {
     // _rtdbSubscription?.cancel();
     mapController?.dispose();
     _flutterTts?.stop();
+
+    // Stop background location tracking
+    _stopBackgroundLocationTracking();
+
     // Clean up realtime location entries when leaving the screen
     _removeRealtimeLocationSafely(type.value == "orderModel"
         ? orderModel.value.id
@@ -429,6 +454,13 @@ class LiveTrackingController extends GetxController {
 
   void _publishRealtimeLocation() {
     if (currentPosition.value == null) return;
+
+    // Check if driver is online before publishing location
+    if (!_isDriverOnline()) {
+      dev.log('Driver is offline, skipping location update');
+      return;
+    }
+
     final String? driverId = FireStoreUtils.getCurrentUid();
     if (driverId == null || driverId.isEmpty) return;
 
@@ -460,11 +492,245 @@ class LiveTrackingController extends GetxController {
     );
   }
 
+  /// Check if the driver is currently online
+  bool _isDriverOnline() {
+    try {
+      // Get the dashboard controller to check online status
+      final dashBoardController = Get.find<DashBoardController>();
+      return dashBoardController.isOnline.value;
+    } catch (e) {
+      // If dashboard controller is not found, assume offline for safety
+      dev.log('Dashboard controller not found, assuming offline: $e');
+      return false;
+    }
+  }
+
+  /// Public method to manually start location tracking (useful for external calls)
+  void startLocationTracking() {
+    if (_isDriverOnline()) {
+      dev.log('Manually starting location tracking');
+      initializeLocationServices();
+    } else {
+      dev.log('Cannot start location tracking: driver is offline');
+    }
+  }
+
+  /// Public method to manually stop location tracking
+  void stopLocationTracking() {
+    dev.log('Manually stopping location tracking');
+    _positionStream?.pause();
+    _removeAllRealtimeLocations();
+  }
+
+  /// Check if background location tracking is active
+  bool get isBackgroundTrackingActive => _backgroundLocation.isTracking;
+
+  /// Get background tracking status information
+  Map<String, String?> get backgroundTrackingInfo =>
+      _backgroundLocation.trackingInfo;
+
+  /// Force start background tracking (for testing)
+  Future<void> forceStartBackgroundTracking() async {
+    dev.log('Force starting background tracking');
+    await _startBackgroundLocationTracking();
+  }
+
+  /// Trigger manual location update (for testing)
+  Future<void> triggerManualLocationUpdate() async {
+    dev.log('Triggering manual location update');
+    if (_backgroundLocation.isTracking) {
+      await _backgroundLocation.triggerManualLocationUpdate();
+    } else {
+      dev.log('Background tracking not active, cannot trigger manual update');
+    }
+  }
+
+  /// Force immediate location update (for testing)
+  Future<void> forceImmediateLocationUpdate() async {
+    dev.log('Forcing immediate location update');
+    if (_backgroundLocation.isTracking) {
+      await _backgroundLocation.forceImmediateUpdate();
+    } else {
+      dev.log('Background tracking not active, cannot force update');
+    }
+  }
+
+  /// Get detailed background tracking status
+  Map<String, dynamic> getDetailedBackgroundTrackingStatus() {
+    if (_backgroundLocation.isTracking) {
+      return _backgroundLocation.getDetailedTrackingStatus();
+    } else {
+      return {
+        'isTracking': false,
+        'message': 'Background tracking not active',
+      };
+    }
+  }
+
+  /// Check if background tracking is working and get status
+  Map<String, dynamic> getBackgroundTrackingStatus() {
+    return {
+      'isOnline': _isDriverOnline(),
+      'hasCurrentPosition': currentPosition.value != null,
+      'isBackgroundTrackingActive': _backgroundLocation.isTracking,
+      'backgroundTrackingInfo': _backgroundLocation.trackingInfo,
+      'foregroundStreamActive':
+          _positionStream != null && !_positionStream!.isPaused,
+    };
+  }
+
+  /// Handle driver online/offline status changes
+  void onDriverStatusChanged(bool isOnline) {
+    if (isOnline) {
+      dev.log('Driver went online, resuming location tracking');
+      // Resume location updates if not already running
+      if (_positionStream == null || _positionStream!.isPaused) {
+        _startLocationUpdates();
+      }
+
+      // Start background location tracking if there's an active order
+      _startBackgroundLocationTracking();
+    } else {
+      dev.log('Driver went offline, pausing location tracking');
+      // Pause location updates but keep the stream alive
+      _positionStream?.pause();
+      // Remove any existing location data from Firebase
+      _removeAllRealtimeLocations();
+
+      // Stop background location tracking
+      _stopBackgroundLocationTracking();
+    }
+  }
+
+  /// Remove all realtime location entries for the current driver
+  void _removeAllRealtimeLocations() {
+    try {
+      final String? driverId = FireStoreUtils.getCurrentUid();
+      if (driverId == null || driverId.isEmpty) return;
+
+      // Remove location for current order if exists
+      if (type.value == "orderModel" && orderModel.value.id != null) {
+        _removeRealtimeLocationSafely(orderModel.value.id);
+      } else if (type.value == "interCityOrderModel" &&
+          intercityOrderModel.value.id != null) {
+        _removeRealtimeLocationSafely(intercityOrderModel.value.id);
+      }
+    } catch (e) {
+      dev.log('Error removing realtime locations: $e');
+    }
+  }
+
   void _removeRealtimeLocationSafely(String? orderId) {
     if (orderId == null || orderId.isEmpty) return;
     final String? driverId = FireStoreUtils.getCurrentUid();
     if (driverId == null || driverId.isEmpty) return;
     _realtime.removeDriverLocation(orderId: orderId, driverId: driverId);
+  }
+
+  /// Start background location tracking for the current order
+  Future<void> _startBackgroundLocationTracking() async {
+    try {
+      if (!_isDriverOnline()) {
+        dev.log('Driver is offline, not starting background tracking');
+        return;
+      }
+
+      final String? driverId = FireStoreUtils.getCurrentUid();
+      if (driverId == null || driverId.isEmpty) return;
+
+      String? orderId;
+      if (type.value == "orderModel" && orderModel.value.id != null) {
+        orderId = orderModel.value.id;
+      } else if (type.value == "interCityOrderModel" &&
+          intercityOrderModel.value.id != null) {
+        orderId = intercityOrderModel.value.id;
+      }
+
+      // If no active order, create a temporary tracking session for background
+      if (orderId == null || orderId.isEmpty) {
+        orderId =
+            "background_tracking_${DateTime.now().millisecondsSinceEpoch}";
+        dev.log('No active order, using temporary order ID: $orderId');
+      }
+
+      // Get current position for initial location
+      if (currentPosition.value != null) {
+        final success = await _backgroundLocation.startBackgroundTracking(
+          orderId: orderId,
+          driverId: driverId,
+          initialLatitude: currentPosition.value!.latitude,
+          initialLongitude: currentPosition.value!.longitude,
+        );
+
+        if (success) {
+          dev.log('Background location tracking started for order: $orderId');
+        } else {
+          dev.log('Failed to start background location tracking');
+        }
+      } else {
+        dev.log('No current position available for background tracking');
+      }
+    } catch (e) {
+      dev.log('Error starting background location tracking: $e');
+    }
+  }
+
+  /// Stop background location tracking
+  Future<void> _stopBackgroundLocationTracking() async {
+    try {
+      await _backgroundLocation.stopBackgroundTracking();
+      dev.log('Background location tracking stopped');
+    } catch (e) {
+      dev.log('Error stopping background location tracking: $e');
+    }
+  }
+
+  /// Initialize app lifecycle listener for background tracking
+  void _initializeAppLifecycleListener() {
+    // Listen to app lifecycle changes
+    SystemChannels.lifecycle.setMessageHandler((msg) async {
+      dev.log('App lifecycle message: $msg');
+
+      if (msg == AppLifecycleState.paused.toString()) {
+        // App going to background - start background tracking if driver is online
+        _onAppGoingToBackground();
+      } else if (msg == AppLifecycleState.resumed.toString()) {
+        // App coming to foreground - stop background tracking, resume foreground
+        _onAppComingToForeground();
+      }
+
+      return null;
+    });
+
+    dev.log('App lifecycle listener initialized for background tracking');
+  }
+
+  /// Handle app going to background
+  void _onAppGoingToBackground() {
+    dev.log('App going to background - starting background location tracking');
+
+    if (_isDriverOnline() && currentPosition.value != null) {
+      // Start background tracking immediately
+      _startBackgroundLocationTracking();
+
+      // Also pause foreground tracking to save resources
+      _positionStream?.pause();
+      dev.log('Foreground tracking paused, background tracking active');
+    }
+  }
+
+  /// Handle app coming to foreground
+  void _onAppComingToForeground() {
+    dev.log('App coming to foreground - stopping background tracking');
+
+    // Stop background tracking since we're back in foreground
+    _stopBackgroundLocationTracking();
+
+    // Resume foreground tracking if it was paused
+    if (_positionStream != null && _positionStream!.isPaused) {
+      _positionStream!.resume();
+      dev.log('Foreground tracking resumed');
+    }
   }
 
   // Removed _ensureRealtimeSubscription method - no longer subscribing to database
@@ -520,14 +786,19 @@ class LiveTrackingController extends GetxController {
 
   /// Start continuous GPS location updates from phone (no database)
   void _startLocationUpdates() {
+    // Check if driver is online before starting location updates
+    if (!_isDriverOnline()) {
+      dev.log('Driver is offline, not starting location updates');
+      return;
+    }
+
     _positionStream?.cancel();
 
     // Optimized location settings for smooth tracking using phone GPS
     final LocationSettings locationSettings = LocationSettings(
       accuracy: LocationAccuracy.bestForNavigation,
-      // Slightly relaxed distance filter for stability; still very responsive
-      distanceFilter:
-          currentSpeed.value > 80 ? 10 : (currentSpeed.value > 40 ? 5 : 3),
+      // Continuous updates without distance filtering
+      distanceFilter: 0,
     );
 
     _positionStream = Geolocator.getPositionStream(
@@ -559,6 +830,12 @@ class LiveTrackingController extends GetxController {
   }
 
   void updateDeviceLocation(Position position) async {
+    // Check if driver is online before processing location updates
+    if (!_isDriverOnline()) {
+      dev.log('Driver is offline, skipping location processing');
+      return;
+    }
+
     // Enhanced GPS filtering with degraded fallback
     const double strictAccuracy = 10.0;
     const double degradedAccuracy = 20.0;
@@ -995,7 +1272,7 @@ class LiveTrackingController extends GetxController {
       if (isVoiceEnabled.value) {
         queueAnnouncement("Route updated to faster alternative.", priority: 1);
       }
-      
+
       // Update progress with new route
       updateTripProgress();
     }
@@ -1075,11 +1352,14 @@ class LiveTrackingController extends GetxController {
   // Analyze traffic predictions
   void _analyzeTrafficPredictions(Map<String, dynamic> trafficData) {
     try {
-      if (trafficData['routes'] == null || trafficData['routes'].isEmpty)
+      if (trafficData['routes'] == null || trafficData['routes'].isEmpty) {
         return;
+      }
 
       var route = trafficData['routes'][0];
-      if (route['legs'] == null || route['legs'].isEmpty) return;
+      if (route['legs'] == null || route['legs'].isEmpty) {
+        return;
+      }
 
       var leg = route['legs'][0];
       double duration = (leg['duration']?['value'] ?? 0).toDouble();
@@ -1522,7 +1802,7 @@ class LiveTrackingController extends GetxController {
     polyLines.remove(const PolylineId("ReturnToRoute"));
     polyLines.remove(const PolylineId("OffRoutePath"));
     updateDynamicPolyline();
-    
+
     // Update progress when back on route
     updateTripProgress();
   }
@@ -1772,15 +2052,20 @@ class LiveTrackingController extends GetxController {
       if (orderModel.value.status == Constant.rideInProgress) {
         // Calculate progress based on route completion
         progressPercentage = _calculateRouteProgress(
-          LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
-          LatLng(orderModel.value.sourceLocationLAtLng!.latitude!, orderModel.value.sourceLocationLAtLng!.longitude!),
-          LatLng(orderModel.value.destinationLocationLAtLng!.latitude!, orderModel.value.destinationLocationLAtLng!.longitude!),
+          LatLng(currentPosition.value!.latitude,
+              currentPosition.value!.longitude),
+          LatLng(orderModel.value.sourceLocationLAtLng!.latitude!,
+              orderModel.value.sourceLocationLAtLng!.longitude!),
+          LatLng(orderModel.value.destinationLocationLAtLng!.latitude!,
+              orderModel.value.destinationLocationLAtLng!.longitude!),
         );
       } else if (orderModel.value.status == Constant.rideActive) {
         // Going to pickup - calculate progress from current position to pickup
         progressPercentage = _calculatePickupProgress(
-          LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
-          LatLng(orderModel.value.sourceLocationLAtLng!.latitude!, orderModel.value.sourceLocationLAtLng!.longitude!),
+          LatLng(currentPosition.value!.latitude,
+              currentPosition.value!.longitude),
+          LatLng(orderModel.value.sourceLocationLAtLng!.latitude!,
+              orderModel.value.sourceLocationLAtLng!.longitude!),
         );
       } else {
         progressPercentage = 0.0;
@@ -1789,15 +2074,20 @@ class LiveTrackingController extends GetxController {
       if (intercityOrderModel.value.status == Constant.rideInProgress) {
         // Calculate progress based on route completion
         progressPercentage = _calculateRouteProgress(
-          LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
-          LatLng(intercityOrderModel.value.sourceLocationLAtLng!.latitude!, intercityOrderModel.value.sourceLocationLAtLng!.longitude!),
-          LatLng(intercityOrderModel.value.destinationLocationLAtLng!.latitude!, intercityOrderModel.value.destinationLocationLAtLng!.longitude!),
+          LatLng(currentPosition.value!.latitude,
+              currentPosition.value!.longitude),
+          LatLng(intercityOrderModel.value.sourceLocationLAtLng!.latitude!,
+              intercityOrderModel.value.sourceLocationLAtLng!.longitude!),
+          LatLng(intercityOrderModel.value.destinationLocationLAtLng!.latitude!,
+              intercityOrderModel.value.destinationLocationLAtLng!.longitude!),
         );
       } else if (intercityOrderModel.value.status == Constant.rideActive) {
         // Going to pickup - calculate progress from current position to pickup
         progressPercentage = _calculatePickupProgress(
-          LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude),
-          LatLng(intercityOrderModel.value.sourceLocationLAtLng!.latitude!, intercityOrderModel.value.sourceLocationLAtLng!.longitude!),
+          LatLng(currentPosition.value!.latitude,
+              currentPosition.value!.longitude),
+          LatLng(intercityOrderModel.value.sourceLocationLAtLng!.latitude!,
+              intercityOrderModel.value.sourceLocationLAtLng!.longitude!),
         );
       } else {
         progressPercentage = 0.0;
@@ -1819,19 +2109,21 @@ class LiveTrackingController extends GetxController {
       pickupLocation.latitude,
       pickupLocation.longitude,
     );
-    
+
     // If we're very close to pickup, show high progress
-    if (totalDistance < 0.1) { // Less than 100 meters
+    if (totalDistance < 0.1) {
+      // Less than 100 meters
       return 95.0;
     }
-    
+
     // Simple linear progress based on distance
     // This is a rough approximation - could be improved with actual route progress
     return (1.0 - (totalDistance / 10.0)) * 100; // Assume max 10km to pickup
   }
 
   // Calculate progress when traveling from pickup to destination
-  double _calculateRouteProgress(LatLng currentPos, LatLng pickupLocation, LatLng destinationLocation) {
+  double _calculateRouteProgress(
+      LatLng currentPos, LatLng pickupLocation, LatLng destinationLocation) {
     if (routePoints.isEmpty) {
       // Fallback to simple distance-based calculation
       double totalTripDistance = calculateDistanceBetweenPoints(
@@ -1840,16 +2132,16 @@ class LiveTrackingController extends GetxController {
         destinationLocation.latitude,
         destinationLocation.longitude,
       );
-      
+
       double remainingDistance = calculateDistanceBetweenPoints(
         currentPos.latitude,
         currentPos.longitude,
         destinationLocation.latitude,
         destinationLocation.longitude,
       );
-      
+
       if (totalTripDistance <= 0) return 0.0;
-      
+
       double coveredDistance = totalTripDistance - remainingDistance;
       return (coveredDistance / totalTripDistance) * 100;
     } else {
@@ -1861,11 +2153,11 @@ class LiveTrackingController extends GetxController {
   // Calculate progress based on actual route points
   double _calculateRouteBasedProgress(LatLng currentPos) {
     if (routePoints.isEmpty) return 0.0;
-    
+
     // Find the closest route point to current position
     int closestIndex = 0;
     double minDistance = double.infinity;
-    
+
     for (int i = 0; i < routePoints.length; i++) {
       double distance = calculateDistanceBetweenPoints(
         currentPos.latitude,
@@ -1873,16 +2165,16 @@ class LiveTrackingController extends GetxController {
         routePoints[i].latitude,
         routePoints[i].longitude,
       );
-      
+
       if (distance < minDistance) {
         minDistance = distance;
         closestIndex = i;
       }
     }
-    
+
     // Calculate progress based on position along the route
     double progress = (closestIndex / (routePoints.length - 1)) * 100;
-    
+
     // Ensure we don't show 100% until we're very close to destination
     if (closestIndex >= routePoints.length - 1) {
       // Check if we're actually at the destination
@@ -1892,14 +2184,15 @@ class LiveTrackingController extends GetxController {
         routePoints.last.latitude,
         routePoints.last.longitude,
       );
-      
-      if (distanceToDestination < 0.05) { // Within 50 meters
+
+      if (distanceToDestination < 0.05) {
+        // Within 50 meters
         progress = 100.0;
       } else {
         progress = 95.0; // Close but not quite there
       }
     }
-    
+
     return progress;
   }
 
@@ -2007,6 +2300,10 @@ class LiveTrackingController extends GetxController {
             if (orderModel.value.status == Constant.rideComplete) {
               _removeRealtimeLocationSafely(orderModel.value.id);
               Get.back();
+            } else if (orderModel.value.status == Constant.rideActive ||
+                orderModel.value.status == Constant.rideInProgress) {
+              // Start background tracking for active rides
+              _startBackgroundLocationTracking();
             }
           }
         });
@@ -2031,6 +2328,11 @@ class LiveTrackingController extends GetxController {
             if (intercityOrderModel.value.status == Constant.rideComplete) {
               _removeRealtimeLocationSafely(intercityOrderModel.value.id);
               Get.back();
+            } else if (intercityOrderModel.value.status ==
+                    Constant.rideActive ||
+                intercityOrderModel.value.status == Constant.rideInProgress) {
+              // Start background tracking for active rides
+              _startBackgroundLocationTracking();
             }
           }
         });
@@ -2594,7 +2896,7 @@ class LiveTrackingController extends GetxController {
               queueAnnouncement("New route calculated successfully.",
                   priority: 2);
             }
-            
+
             // Update progress with new route
             updateTripProgress();
             return;
@@ -2669,7 +2971,7 @@ class LiveTrackingController extends GetxController {
       queueAnnouncement("Using direct route due to navigation issues.",
           priority: 3);
     }
-    
+
     // Update progress with direct route
     updateTripProgress();
   }
@@ -2803,7 +3105,7 @@ class LiveTrackingController extends GetxController {
       if (isVoiceEnabled.value) {
         queueAnnouncement("Route updated. Following new path.", priority: 2);
       }
-      
+
       // Update progress with new route
       updateTripProgress();
     }
@@ -2834,18 +3136,23 @@ class LiveTrackingController extends GetxController {
     double baseZoom = showDriverToPickupRoute.value ? 16.0 : 15.0;
 
     // Speed-based adjustments
-    if (currentSpeed.value < 5)
+    if (currentSpeed.value < 5) {
       baseZoom += 0.8; // Closer view when slow
-    else if (currentSpeed.value > 80) baseZoom -= 0.8; // Wider view when fast
+    } else if (currentSpeed.value > 80) {
+      baseZoom -= 0.8; // Wider view when fast
+    }
 
     // Turn-based adjustments
-    if (distanceToNextTurn.value < 100)
+    if (distanceToNextTurn.value < 100) {
       baseZoom += 0.5; // Closer view for turns
-    else if (distanceToNextTurn.value > 500)
+    } else if (distanceToNextTurn.value > 500) {
       baseZoom -= 0.3; // Wider view for straight roads
+    }
 
     // Traffic-based adjustments
-    if (trafficLevel.value > 1) baseZoom += 0.3; // Closer view in heavy traffic
+    if (trafficLevel.value > 1) {
+      baseZoom += 0.3; // Closer view in heavy traffic
+    }
 
     return baseZoom.clamp(14.0, 18.0);
   }
@@ -2932,7 +3239,7 @@ class LiveTrackingController extends GetxController {
             queueAnnouncement("Route optimized for current conditions.",
                 priority: 2);
           }
-          
+
           // Update progress with optimized route
           updateTripProgress();
         }
@@ -3065,7 +3372,7 @@ class LiveTrackingController extends GetxController {
     if (routePoints.isNotEmpty) {
       updateDynamicPolyline(force: true);
     }
-    
+
     // Update progress when marker position changes
     updateTripProgress();
   }
@@ -3130,11 +3437,14 @@ class LiveTrackingController extends GetxController {
   // Update traffic level from API data
   void _updateTrafficLevelFromData(Map<String, dynamic> trafficData) {
     try {
-      if (trafficData['routes'] == null || trafficData['routes'].isEmpty)
+      if (trafficData['routes'] == null || trafficData['routes'].isEmpty) {
         return;
+      }
 
       var route = trafficData['routes'][0];
-      if (route['legs'] == null || route['legs'].isEmpty) return;
+      if (route['legs'] == null || route['legs'].isEmpty) {
+        return;
+      }
 
       var leg = route['legs'][0];
       double duration = (leg['duration']?['value'] ?? 0).toDouble();
@@ -3365,7 +3675,7 @@ class LiveTrackingController extends GetxController {
 
       if (alternativePoints.length > 1) {
         _addPolyLine(alternativePoints, "alternative_route",
-            Colors.blue.withOpacity(0.6));
+            Colors.blue.withValues(alpha: 0.6));
         hasAlternativeRoute.value = true;
         _alternativeRouteData = route;
       }

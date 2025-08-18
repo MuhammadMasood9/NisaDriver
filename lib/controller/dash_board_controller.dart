@@ -17,6 +17,7 @@ import 'package:driver/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
+import 'package:driver/controller/live_tracking_controller.dart';
 
 class DashBoardController extends GetxController {
   RxList<DrawerItem> drawerItems = <DrawerItem>[].obs;
@@ -162,6 +163,10 @@ class DashBoardController extends GetxController {
       // Update the 'isOnline' field in Firestore
       driverModel.value!.isOnline = isOnline.value;
       await FireStoreUtils.updateDriverUser(driverModel.value!);
+
+      // Notify other controllers about the status change
+      _notifyOnlineStatusChange(value);
+
       ShowToastDialog.closeLoader();
       ShowToastDialog.showToast(
           isOnline.value ? "You are now Online" : "You are now Offline");
@@ -170,6 +175,76 @@ class DashBoardController extends GetxController {
       isOnline.value = !value;
       ShowToastDialog.closeLoader();
       ShowToastDialog.showToast("Failed to update status: $e");
+    }
+  }
+
+  /// Notify other controllers about online status changes
+  void _notifyOnlineStatusChange(bool isOnline) {
+    try {
+      // Try to find and notify the live tracking controller
+      if (Get.isRegistered<LiveTrackingController>()) {
+        final liveTrackingController = Get.find<LiveTrackingController>();
+        liveTrackingController.onDriverStatusChanged(isOnline);
+      }
+    } catch (e) {
+      log('Could not notify live tracking controller: $e');
+    }
+  }
+
+  /// Test background location tracking (for debugging)
+  void testBackgroundTracking() {
+    try {
+      if (Get.isRegistered<LiveTrackingController>()) {
+        final liveTrackingController = Get.find<LiveTrackingController>();
+        final status = liveTrackingController.getBackgroundTrackingStatus();
+        log('Background tracking status: $status');
+
+        // Force start background tracking if not active
+        if (!status['isBackgroundTrackingActive']) {
+          liveTrackingController.forceStartBackgroundTracking();
+        }
+      }
+    } catch (e) {
+      log('Error testing background tracking: $e');
+    }
+  }
+
+  /// Test manual location update (for debugging)
+  void testManualLocationUpdate() {
+    try {
+      if (Get.isRegistered<LiveTrackingController>()) {
+        final liveTrackingController = Get.find<LiveTrackingController>();
+        liveTrackingController.triggerManualLocationUpdate();
+        log('Manual location update triggered');
+      }
+    } catch (e) {
+      log('Error triggering manual location update: $e');
+    }
+  }
+
+  /// Test forced immediate location update (for debugging)
+  void testForcedImmediateUpdate() {
+    try {
+      if (Get.isRegistered<LiveTrackingController>()) {
+        final liveTrackingController = Get.find<LiveTrackingController>();
+        liveTrackingController.forceImmediateLocationUpdate();
+        log('Forced immediate location update triggered');
+      }
+    } catch (e) {
+      log('Error triggering forced immediate update: $e');
+    }
+  }
+
+  /// Get detailed background tracking status
+  Map<String, dynamic> getDetailedBackgroundTrackingStatus() {
+    try {
+      if (Get.isRegistered<LiveTrackingController>()) {
+        final liveTrackingController = Get.find<LiveTrackingController>();
+        return liveTrackingController.getDetailedBackgroundTrackingStatus();
+      }
+      return {'error': 'LiveTrackingController not registered'};
+    } catch (e) {
+      return {'error': 'Error getting status: $e'};
     }
   }
 
