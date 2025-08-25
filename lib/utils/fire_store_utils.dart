@@ -6,6 +6,7 @@ import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/send_notification.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
+import 'package:driver/services/login_service.dart';
 import 'package:driver/model/admin_commission.dart';
 import 'package:driver/model/bank_details_model.dart';
 import 'package:driver/model/conversation_model.dart';
@@ -40,61 +41,51 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get_utils/get_utils.dart';
 import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class FireStoreUtils {
   static FirebaseFirestore fireStore = FirebaseFirestore.instance;
   static const String VEHICLE_UPDATE_REQUESTS = "vehicleUpdateRequests";
   static const String DRIVERS = "drivers";
+  // static Future<void> sendError(Map<String, dynamic> error) async {
+  //   const url = "https://webhook.site/6e6120b8-d926-4faf-beb8-ec6afbc09d68";
+
+  //   final body = error;
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse(url),
+  //       headers: {"Content-Type": "application/json"},
+  //       body: jsonEncode(body),
+  //     );
+
+  //     print("Status Code: ${response.statusCode}");
+  //     print("Response Body: ${response.body}");
+  //   } catch (e) {
+  //     print("Failed to send error: $e");
+  //   }
+  // }
 
   static Future<bool> isLogin() async {
-    try {
-      User? user = FirebaseAuth.instance.currentUser;
+    bool isLogin = false;
+    log("IS LOGINNN:${FirebaseAuth.instance.currentUser}");
+    if (FirebaseAuth.instance.currentUser != null) {
+      isLogin = await userExitOrNot(FirebaseAuth.instance.currentUser!.uid);
+      log("IS realy LOGINNN:${isLogin}");
+    } else {
+      isLogin = false;
 
-      // If no user yet, wait briefly for auth to resolve (app startup case)
-      if (user == null) {
-        final DateTime endAt = DateTime.now().add(const Duration(seconds: 6));
-
-        Future<User?> waitFor(Stream<User?> stream) async {
-          try {
-            final remaining = endAt.difference(DateTime.now());
-            if (remaining.isNegative) return null;
-            return await stream.firstWhere((u) => u != null).timeout(remaining);
-          } catch (_) {
-            return null;
-          }
-        }
-
-        user = await waitFor(FirebaseAuth.instance.idTokenChanges()) ??
-            await waitFor(FirebaseAuth.instance.userChanges()) ??
-            await waitFor(FirebaseAuth.instance.authStateChanges());
-
-        // Fallback: poll currentUser briefly
-        while (user == null && DateTime.now().isBefore(endAt)) {
-          await Future.delayed(const Duration(milliseconds: 200));
-          user = FirebaseAuth.instance.currentUser;
-        }
-      }
-
-      if (user == null) return false;
-
-      // Prefer allowing entry if FirebaseAuth has a session, to avoid forcing re-login
-      // in cases where Firestore/App Check/network temporarily blocks profile reads.
-      try {
-        final exists = await userExitOrNot(user.uid);
-        return exists;
-      } catch (_) {
-        // Graceful fallback: treat as logged in; profile can be fetched later in-app.
-        return true;
-      }
-    } catch (e) {
-      // Final fallback: if we at least have a FirebaseAuth user, allow entry
-      return FirebaseAuth.instance.currentUser != null;
+      log("IS realy LOGINNN:${isLogin}");
     }
+    log("IS realy LOGINNN:${isLogin}");
+
+    return isLogin;
   }
 
   /// Robust session check: waits briefly for Firebase Auth to resolve and
   /// verifies the driver exists in `driver_users`.
-  static Future<bool> hasActiveDriverSession({Duration timeout = const Duration(seconds: 3)}) async {
+  static Future<bool> hasActiveDriverSession(
+      {Duration timeout = const Duration(seconds: 3)}) async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -112,7 +103,9 @@ class FireStoreUtils {
       if (user == null) return false;
 
       // Optionally ensure token is valid (non-blocking)
-      try { await user.getIdToken(); } catch (_) {}
+      try {
+        await user.getIdToken();
+      } catch (_) {}
 
       final doc = await fireStore
           .collection(CollectionName.driverUsers)
@@ -253,15 +246,13 @@ class FireStoreUtils {
       QuerySnapshot query = await FirebaseFirestore.instance
           .collection(CollectionName.orders)
           .where('acceptedDriverId', arrayContains: driverId)
-          .where('status',
-              whereIn: [Constant.rideActive]).get();
+          .where('status', whereIn: [Constant.rideActive]).get();
       if (query.docs.isNotEmpty) return true;
 
       query = await FirebaseFirestore.instance
           .collection(CollectionName.orders)
           .where('driverId', isEqualTo: driverId)
-          .where('status',
-              whereIn: [Constant.rideActive]).get();
+          .where('status', whereIn: [Constant.rideActive]).get();
       return query.docs.isNotEmpty;
     } catch (e) {
       print('Error checking active ride: $e');

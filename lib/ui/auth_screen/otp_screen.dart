@@ -13,6 +13,7 @@ import 'package:driver/ui/auth_screen/information_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/notification_service.dart';
+import 'package:driver/services/login_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -242,7 +243,8 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                          color: AppColors.darkBackground.withValues(alpha: 0.3),
+                          color:
+                              AppColors.darkBackground.withValues(alpha: 0.3),
                           blurRadius: 16,
                           offset: const Offset(0, 8))
                     ],
@@ -294,10 +296,12 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                 if (userModel != null) {
                                   // Refresh and save FCM token on login for phone auth
                                   try {
-                                    final token = await NotificationService.getToken();
+                                    final token =
+                                        await NotificationService.getToken();
                                     userModel.fcmToken = token;
                                     userModel.id = value.user!.uid;
-                                    await FireStoreUtils.updateDriverUser(userModel);
+                                    await FireStoreUtils.updateDriverUser(
+                                        userModel);
                                   } catch (_) {}
                                   // Ensure id is set for any subsequent updates
                                   userModel.id = value.user!.uid;
@@ -318,6 +322,14 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                   }
 
                                   ShowToastDialog.closeLoader();
+                                  // Update shared preferences for login persistence
+                                  try {
+                                    await LoginService.updateLoginStatus(
+                                        value.user);
+                                  } catch (e) {
+                                    print('Error updating login status: $e');
+                                  }
+
                                   if (userModel.subscriptionPlanId == null ||
                                       isPlanExpire) {
                                     if (Constant.adminCommission?.isEnabled ==
@@ -339,6 +351,14 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                 }
                               } else {
                                 ShowToastDialog.closeLoader();
+                                // Update shared preferences for login persistence
+                                try {
+                                  await LoginService.updateLoginStatus(
+                                      value.user);
+                                } catch (e) {
+                                  print('Error updating login status: $e');
+                                }
+
                                 DriverUserModel userModel = DriverUserModel(
                                   id: value.user!.uid,
                                   countryCode: controller.countryCode.value,
