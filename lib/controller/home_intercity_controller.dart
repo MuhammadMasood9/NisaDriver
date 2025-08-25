@@ -49,9 +49,9 @@ class HomeIntercityController extends GetxController {
     });
 
     await FireStoreUtils.getService().then((value) {
-      value.forEach((element) {
+      for (var element in value) {
         selectedService.value = element;
-      });
+      }
     });
   }
 

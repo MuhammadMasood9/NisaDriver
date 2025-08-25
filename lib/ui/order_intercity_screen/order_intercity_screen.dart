@@ -13,7 +13,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class OrderIntercityScreen extends StatelessWidget {
-  const OrderIntercityScreen({Key? key}) : super(key: key);
+  const OrderIntercityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +133,7 @@ class OrderIntercityScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
       ),
       child: Row(
@@ -180,7 +180,7 @@ class OrderIntercityScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

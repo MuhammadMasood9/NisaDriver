@@ -13,12 +13,20 @@ class UserView extends StatelessWidget {
   final String? distanceType;
 
   const UserView({
-    Key? key,
+    super.key,
     this.userId,
     this.amount,
     this.distance,
     this.distanceType,
-  }) : super(key: key);
+  });
+
+  String _formatDistance(String? rawDistance, String? unit) {
+    final int decimals = Constant.currencyModel?.decimalDigits ?? 2;
+    final double? parsed = double.tryParse((rawDistance ?? '').toString());
+    final String value = parsed != null ? parsed.toStringAsFixed(decimals) : '--';
+    final String suffix = unit ?? '';
+    return suffix.isNotEmpty ? '$value $suffix' : value;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +92,7 @@ class UserView extends StatelessWidget {
                                 Text(
                                   "(0 Reviews)",
                                   style: AppTypography.caption(context)
-                                      ?.copyWith(color: Colors.grey),
+                                      .copyWith(color: Colors.grey),
                                 ),
                               ],
                             ),
@@ -93,7 +101,7 @@ class UserView extends StatelessWidget {
                                 const Icon(Icons.location_on, size: 10),
                                 const SizedBox(width: 3),
                                 Text(
-                                  "${(double.parse(distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} $distanceType",
+                                  _formatDistance(distance, distanceType),
                                   style: AppTypography.boldLabel(context),
                                 ),
                               ],
@@ -164,7 +172,7 @@ class UserView extends StatelessWidget {
                               Text(
                                 "(${userModel.reviewsCount} Reviews)",
                                 style: AppTypography.caption(context)
-                                    ?.copyWith(color: Colors.grey),
+                                    .copyWith(color: Colors.grey),
                               ),
                             ],
                           ),
@@ -173,7 +181,7 @@ class UserView extends StatelessWidget {
                               const Icon(Icons.location_on, size: 10),
                               const SizedBox(width: 3),
                               Text(
-                                "${(double.parse(distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} $distanceType",
+                                _formatDistance(distance, distanceType),
                                 style: AppTypography.boldLabel(context),
                               ),
                             ],

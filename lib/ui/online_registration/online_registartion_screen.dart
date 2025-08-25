@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class OnlineRegistrationScreen extends StatelessWidget {
-  const OnlineRegistrationScreen({Key? key}) : super(key: key);
+  const OnlineRegistrationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +82,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -201,7 +201,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -235,7 +235,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -317,17 +317,17 @@ class OnlineRegistrationScreen extends StatelessWidget {
 
     if (isVerified) {
       statusColor = AppColors.success;
-      backgroundColor = statusColor.withOpacity(0.1);
+      backgroundColor = statusColor.withValues(alpha: 0.1);
       statusText = "Verified".tr;
       statusIcon = Icons.check_circle;
     } else if (isUnderReview) {
       statusColor = AppColors.ratingColour;
-      backgroundColor = statusColor.withOpacity(0.1);
+      backgroundColor = statusColor.withValues(alpha: 0.1);
       statusText = "Under Review".tr;
       statusIcon = Icons.hourglass_top_rounded;
     } else {
       statusColor = AppColors.darkModePrimary;
-      backgroundColor = statusColor.withOpacity(0.1);
+      backgroundColor = statusColor.withValues(alpha: 0.1);
       statusText = "Upload Required".tr;
       statusIcon = Icons.upload_file_rounded;
     }
@@ -409,16 +409,16 @@ class OnlineRegistrationScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: AppColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6)),
             child: const Icon(
               Icons.info_outline,
@@ -432,7 +432,7 @@ class OnlineRegistrationScreen extends StatelessWidget {
               "Your documents will be reviewed by our team. You'll be notified once the verification is complete."
                   .tr,
               style: AppTypography.label(context)
-                  .copyWith(color: AppColors.primary.withOpacity(0.8)),
+                  .copyWith(color: AppColors.primary.withValues(alpha: 0.8)),
             ),
           ),
         ],

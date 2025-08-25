@@ -170,7 +170,9 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
 
   void _handleMapTap(LatLng position) {
     if (_currentState == RouteSetupState.searching ||
-        _currentState == RouteSetupState.rideFound) return;
+        _currentState == RouteSetupState.rideFound) {
+      return;
+    }
 
     if (_currentState == RouteSetupState.none) {
       _setOrigin(position);
@@ -450,8 +452,8 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
             polygonId: PolygonId(zone.id!),
             points: polygonPoints,
             strokeWidth: 2,
-            strokeColor: AppColors.primary.withOpacity(0.8),
-            fillColor: AppColors.primary.withOpacity(0.1),
+            strokeColor: AppColors.primary.withValues(alpha: 0.8),
+            fillColor: AppColors.primary.withValues(alpha: 0.1),
           ));
         }
       }
@@ -801,9 +803,9 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1027,7 +1029,7 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
           topLeft: Radius.circular(24), topRight: Radius.circular(24)),
       boxShadow: [
         BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             spreadRadius: 2)
       ],
@@ -1300,7 +1302,7 @@ class _LocationSearchBottomSheetState extends State<LocationSearchBottomSheet> {
                   if (_isFetchingDetails)
                     Positioned.fill(
                       child: Container(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         child: const Center(
                           child: CircularProgressIndicator(),
                         ),

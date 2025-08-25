@@ -1,10 +1,8 @@
 import 'package:driver/constant/constant.dart';
-import 'package:driver/model/driver_rules_model.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/service_model.dart';
 import 'package:driver/model/vehicle_type_model.dart';
 import 'package:driver/model/zone_model.dart';
-import 'package:driver/themes/app_colors.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

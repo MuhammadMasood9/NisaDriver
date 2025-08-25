@@ -6,7 +6,7 @@ class ShowToastDialog {
   }
 
   static showLoader(String message) {
-    EasyLoading.show(status: message);
+    EasyLoading.show(status: message, maskType: EasyLoadingMaskType.black);
   }
 
   static closeLoader() {

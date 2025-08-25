@@ -11,74 +11,93 @@ import 'package:get/get.dart';
 
 import 'services/localization_service.dart';
 import 'utils/Preferences.dart';
+import 'themes/app_colors.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+	WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+	// Initialize Firebase
+	await Firebase.initializeApp(
+		options: DefaultFirebaseOptions.currentPlatform,
+	);
 
-  // Initialize Firebase App Check
-  try {
-    await FirebaseAppCheck.instance.activate(
-      // Use Play Integrity for Android in production
-      androidProvider:
-          kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-      // Use DeviceCheck for iOS in production
-      appleProvider:
-          kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
-    );
+	// Initialize Firebase App Check
+	try {
+		await FirebaseAppCheck.instance.activate(
+			// Use Play Integrity for Android in production
+			androidProvider:
+					kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+			// Use DeviceCheck for iOS in production
+			appleProvider:
+					kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+		);
 
-    if (kDebugMode) {
-      print('Firebase App Check activated successfully');
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      print('Firebase App Check activation failed: $e');
-    }
-    // Continue without App Check if activation fails
-  }
+		if (kDebugMode) {
+			print('Firebase App Check activated successfully');
+		}
+	} catch (e) {
+		if (kDebugMode) {
+			print('Firebase App Check activation failed: $e');
+		}
+		// Continue without App Check if activation fails
+	}
 
-  await Preferences.initPref();
+	await Preferences.initPref();
 
-  // Initialize GlobalSettingController at app startup
-  Get.put(GlobalSettingController());
+	// Configure global loader appearance/behavior
+	_configLoading();
 
-  runApp(const MyApp());
+	// Initialize GlobalSettingController at app startup
+	Get.put(GlobalSettingController());
+
+	runApp(const MyApp());
+}
+
+void _configLoading() {
+	EasyLoading.instance
+		..indicatorType = EasyLoadingIndicatorType.fadingCircle
+		..loadingStyle = EasyLoadingStyle.custom
+		..maskType = EasyLoadingMaskType.black
+		..userInteractions = false
+		..dismissOnTap = false
+		..indicatorSize = 42.0
+		..radius = 10.0
+		..backgroundColor = Colors.white
+		..indicatorColor = AppColors.primary
+		..textColor = AppColors.darkBackground
+		..progressColor = AppColors.primary;
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+	const MyApp({super.key});
 
-  @override
-  State<MyApp> createState() => _MyAppState();
+	@override
+	State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  // This widget is the root of your application.
-  // DarkThemeProvider themeChangeProvider = DarkThemeProvider();
+	// This widget is the root of your application.
+	// DarkThemeProvider themeChangeProvider = DarkThemeProvider();
 
-  @override
-  void initState() {
-    WidgetsBinding.instance.addObserver(this);
-    super.initState();
-  }
+	@override
+	void initState() {
+		WidgetsBinding.instance.addObserver(this);
+		super.initState();
+	}
 
-  @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'NisaRide'.tr,
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        CountryLocalizations.delegate,
-      ],
-      locale: LocalizationService.locale,
-      fallbackLocale: LocalizationService.locale,
-      translations: LocalizationService(),
-      builder: EasyLoading.init(),
-      home: const SplashScreen(),
-    );
-  }
+	@override
+	Widget build(BuildContext context) {
+		return GetMaterialApp(
+			title: 'NisaRide'.tr,
+			debugShowCheckedModeBanner: false,
+			localizationsDelegates: const [
+				CountryLocalizations.delegate,
+			],
+			locale: LocalizationService.locale,
+			fallbackLocale: LocalizationService.locale,
+			translations: LocalizationService(),
+			builder: EasyLoading.init(),
+			home: const SplashScreen(),
+		);
+	}
 }

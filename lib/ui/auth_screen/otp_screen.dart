@@ -12,6 +12,7 @@ import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/auth_screen/information_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
+import 'package:driver/utils/notification_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,7 +21,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({Key? key}) : super(key: key);
+  const OtpScreen({super.key});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -177,7 +178,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                   borderWidth: 0.5,
                                   activeColor: AppColors.primary,
                                   selectedColor:
-                                      AppColors.primary.withOpacity(0.7),
+                                      AppColors.primary.withValues(alpha: 0.7),
                                   inactiveColor: Colors.grey[200]!,
                                   activeFillColor: Colors.white,
                                   inactiveFillColor: AppColors.background,
@@ -236,12 +237,12 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [
                       AppColors.darkBackground,
-                      AppColors.darkBackground.withOpacity(0.9)
+                      AppColors.darkBackground.withValues(alpha: 0.9)
                     ]),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                          color: AppColors.darkBackground.withOpacity(0.3),
+                          color: AppColors.darkBackground.withValues(alpha: 0.3),
                           blurRadius: 16,
                           offset: const Offset(0, 8))
                     ],
@@ -285,13 +286,19 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                               final userExit =
                                   await FireStoreUtils.userExitOrNot(
                                       value.user!.uid);
-                              ShowToastDialog.closeLoader();
                               if (userExit) {
                                 DriverUserModel? userModel =
                                     await FireStoreUtils.getDriverProfile(
                                         value.user!.uid);
 
                                 if (userModel != null) {
+                                  // Refresh and save FCM token on login for phone auth
+                                  try {
+                                    final token = await NotificationService.getToken();
+                                    userModel.fcmToken = token;
+                                    userModel.id = value.user!.uid;
+                                    await FireStoreUtils.updateDriverUser(userModel);
+                                  } catch (_) {}
                                   // Ensure id is set for any subsequent updates
                                   userModel.id = value.user!.uid;
                                   // Your existing subscription check logic
@@ -310,6 +317,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                     }
                                   }
 
+                                  ShowToastDialog.closeLoader();
                                   if (userModel.subscriptionPlanId == null ||
                                       isPlanExpire) {
                                     if (Constant.adminCommission?.isEnabled ==
@@ -324,8 +332,13 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                   } else {
                                     Get.offAll(() => const DashBoardScreen());
                                   }
+                                } else {
+                                  ShowToastDialog.closeLoader();
+                                  ShowToastDialog.showToast(
+                                      "Profile not found".tr);
                                 }
                               } else {
+                                ShowToastDialog.closeLoader();
                                 DriverUserModel userModel = DriverUserModel(
                                   id: value.user!.uid,
                                   countryCode: controller.countryCode.value,

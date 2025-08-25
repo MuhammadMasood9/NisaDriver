@@ -323,13 +323,19 @@ final isLoggingOut = false.obs;
 
       if (orderDate.isAfter(startOfToday)) todayRidesCount++;
       if (orderDate.isAfter(startOfYesterday) &&
-          orderDate.isBefore(startOfToday)) yesterdaySum += earning;
+          orderDate.isBefore(startOfToday)) {
+        yesterdaySum += earning;
+      }
       if (orderDate.isAfter(startOfWeekDate)) weeklySum += earning;
       if (orderDate.isAfter(startOfLastWeek) &&
-          orderDate.isBefore(startOfWeekDate)) lastWeekSum += earning;
+          orderDate.isBefore(startOfWeekDate)) {
+        lastWeekSum += earning;
+      }
       if (orderDate.isAfter(startOfMonth)) monthlySum += earning;
       if (orderDate.isAfter(startOfLastMonth) &&
-          orderDate.isBefore(endOfLastMonth)) lastMonthSum += earning;
+          orderDate.isBefore(endOfLastMonth)) {
+        lastMonthSum += earning;
+      }
       if (orderDate.isAfter(startOfYear)) yearlySum += earning;
       lifetimeSum += earning;
     }
@@ -392,19 +398,22 @@ final isLoggingOut = false.obs;
       final hour = date.hour;
       final dayOfWeek = date.weekday;
 
-      if (hour >= 6 && hour < 12)
+      if (hour >= 6 && hour < 12) {
         morning++;
-      else if (hour >= 12 && hour < 17)
+      } else if (hour >= 12 && hour < 17)
         afternoon++;
       else if (hour >= 17 && hour < 21)
         evening++;
       else
         night++;
 
-      if (dayOfWeek >= 1 && dayOfWeek <= 5) // Monday to Friday
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        // Monday to Friday
         weekday++;
-      else // Saturday and Sunday
+      } else {
+        // Saturday and Sunday
         weekend++;
+      }
     }
 
     morningRides.value = morning;
@@ -424,9 +433,9 @@ final isLoggingOut = false.obs;
       final hour = order.createdDate!.toDate().hour;
       final earning = double.tryParse(order.finalRate ?? '0') ?? 0.0;
 
-      if (paymentMethod.contains('cash'))
+      if (paymentMethod.contains('cash')) {
         cash++;
-      else if (paymentMethod.contains('card') ||
+      } else if (paymentMethod.contains('card') ||
           paymentMethod.contains('stripe'))
         card++;
       else if (paymentMethod.contains('wallet')) wallet++;
@@ -617,7 +626,9 @@ final isLoggingOut = false.obs;
 
   void _generateMonthlyEarningsChartData(List<OrderModel> completedOrders) {
     Map<int, double> earnings = {};
-    for (int i = 0; i < 12; i++) earnings[i] = 0;
+    for (int i = 0; i < 12; i++) {
+      earnings[i] = 0;
+    }
 
     final yearlyOrders = completedOrders
         .where((o) => o.createdDate!.toDate().year == DateTime.now().year);
@@ -638,7 +649,9 @@ final isLoggingOut = false.obs;
     Map<int, double> earnings = {};
     final now = DateTime.now();
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    for (int i = 0; i < daysInMonth; i++) earnings[i] = 0;
+    for (int i = 0; i < daysInMonth; i++) {
+      earnings[i] = 0;
+    }
 
     final monthlyOrders = completedOrders.where((o) {
       final date = o.createdDate!.toDate();
@@ -787,9 +800,9 @@ final isLoggingOut = false.obs;
 
     for (var order in completedOrders) {
       int hour = order.createdDate!.toDate().hour;
-      if (hour >= 6 && hour < 9)
+      if (hour >= 6 && hour < 9) {
         peakHours[0] = (peakHours[0] ?? 0) + 1;
-      else if (hour >= 9 && hour < 12)
+      } else if (hour >= 9 && hour < 12)
         peakHours[1] = (peakHours[1] ?? 0) + 1;
       else if (hour >= 12 && hour < 15)
         peakHours[2] = (peakHours[2] ?? 0) + 1;
@@ -805,7 +818,7 @@ final isLoggingOut = false.obs;
         BarChartRodData(
             toY: entry.value.toDouble(),
             width: 15,
-            color: AppColors.primary.withOpacity(0.8),
+            color: AppColors.primary.withValues(alpha: 0.8),
             borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(4), topRight: Radius.circular(4)))
       ]);
@@ -939,9 +952,9 @@ final isLoggingOut = false.obs;
         verificationFailed: (FirebaseAuthException e) {
           ShowToastDialog.closeLoader();
           String message = e.message ?? "Verification failed";
-          if (e.code == 'invalid-phone-number')
+          if (e.code == 'invalid-phone-number') {
             message = "Invalid phone number format".tr;
-          else if (e.code == 'too-many-requests')
+          } else if (e.code == 'too-many-requests')
             message = "Too many attempts. Try again later.".tr;
           else if (e.code.contains('recaptcha'))
             message = "reCAPTCHA verification failed. Please try again.".tr;

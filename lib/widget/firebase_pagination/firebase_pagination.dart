@@ -3,7 +3,7 @@
 /// It can be used for `Firestore` and `Firebase Realtime Database`.
 ///
 /// Data can be shown in `list`, `grid` and `scrollable wrap` view.
-library firebase_pagination;
+library;
 
 // Widgets
 export 'src/realtime_db_pagination.dart';

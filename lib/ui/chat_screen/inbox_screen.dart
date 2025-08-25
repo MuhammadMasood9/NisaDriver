@@ -266,7 +266,7 @@ class _InboxScreenState extends State<InboxScreen> {
             border: Border.all(color: Colors.grey.shade200, width: 1.0),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 20,
                   offset: const Offset(0, 4))
             ],

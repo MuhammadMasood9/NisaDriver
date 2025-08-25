@@ -28,7 +28,7 @@ import 'package:get_thumbnail_video/video_thumbnail.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
@@ -387,7 +387,7 @@ class Constant {
       await uploadTask;
       final String videoUrl = await videoRef.getDownloadURL();
       ShowToastDialog.showLoader("Generating thumbnail...");
-      final Uint8List? thumbnailBytes = await VideoThumbnail.thumbnailData(
+      final Uint8List thumbnailBytes = await VideoThumbnail.thumbnailData(
         video: video.path,
         imageFormat: ImageFormat.JPEG,
         maxHeight: 200,

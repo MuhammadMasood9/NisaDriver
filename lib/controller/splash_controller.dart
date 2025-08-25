@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:driver/ui/auth_screen/login_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 
 class SplashController extends GetxController {
@@ -20,7 +19,7 @@ class SplashController extends GetxController {
   }
 
   redirectScreen() async {
-    // Use FireStoreUtils.isLogin() for robust login check
+    // Use FireStoreUtils.isLogin() for robust login check (waits for auth to settle)
     bool isLogin = await FireStoreUtils.isLogin();
     if (isLogin) {
       Get.offAll(const DashBoardScreen());

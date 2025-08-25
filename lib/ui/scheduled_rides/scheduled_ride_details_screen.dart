@@ -25,7 +25,7 @@ import 'package:intl/intl.dart';
 class ScheduledRideDetailsScreen extends StatefulWidget {
   final String scheduleId;
 
-  const ScheduledRideDetailsScreen({Key? key, required this.scheduleId}) : super(key: key);
+  const ScheduledRideDetailsScreen({super.key, required this.scheduleId});
 
   @override
   State<ScheduledRideDetailsScreen> createState() => _ScheduledRideDetailsScreenState();
@@ -205,7 +205,7 @@ class _ScheduledRideDetailsScreenState extends State<ScheduledRideDetailsScreen>
         borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -440,7 +440,7 @@ class _ScheduledRideDetailsScreenState extends State<ScheduledRideDetailsScreen>
   Widget _buildOtpSection(BuildContext context, String otp) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12)),
       child: Column(children: [
         Text("FIRST RIDE OTP".tr, style: AppTypography.caption(context).copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
@@ -490,7 +490,7 @@ class _ScheduledRideDetailsScreenState extends State<ScheduledRideDetailsScreen>
     }
 
     return Row(children: [
-      CircleAvatar(radius: 20, backgroundColor: iconColor.withOpacity(0.1), child: Icon(statusIcon, color: iconColor, size: 20)),
+      CircleAvatar(radius: 20, backgroundColor: iconColor.withValues(alpha: 0.1), child: Icon(statusIcon, color: iconColor, size: 20)),
       const SizedBox(width: 12),
       Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

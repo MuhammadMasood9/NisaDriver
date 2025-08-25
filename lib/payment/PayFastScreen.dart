@@ -12,7 +12,7 @@ class PayFastScreen extends StatefulWidget {
   final String htmlData;
   final Payfast payFastSettingData;
 
-  const PayFastScreen({Key? key, required this.htmlData, required this.payFastSettingData}) : super(key: key);
+  const PayFastScreen({super.key, required this.htmlData, required this.payFastSettingData});
 
   @override
   State<PayFastScreen> createState() => _PayFastScreenState();

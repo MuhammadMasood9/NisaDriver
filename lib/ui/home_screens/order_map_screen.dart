@@ -17,9 +17,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:driver/controller/live_tracking_controller.dart';
 
 class OrderMapScreen extends StatelessWidget {
-  const OrderMapScreen({Key? key}) : super(key: key);
+  const OrderMapScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +43,7 @@ class OrderMapScreen extends StatelessWidget {
                 onMapCreated: (GoogleMapController mapController) async {
                   String style =
                       await rootBundle.loadString('assets/map_style.json');
-                  mapController?.setMapStyle(style);
+                  mapController.setMapStyle(style);
                   controller.mapController.complete(mapController);
                 },
                 initialCameraPosition: CameraPosition(
@@ -58,11 +59,47 @@ class OrderMapScreen extends StatelessWidget {
                         -122.677433,
                   ),
                 ),
+                onCameraMoveStarted: () {
+                  // Pause following when user starts interacting
+                  try { Get.find<LiveTrackingController>().onMapDrag(); } catch (_) {}
+                },
+                onCameraMove: (position) {
+                  try { Get.find<LiveTrackingController>().onCameraMoveUpdate(position); } catch (_) {}
+                },
+                onCameraIdle: () {
+                  try { Get.find<LiveTrackingController>().onMapIdle(); } catch (_) {}
+                },
               ),
+              // Recenter FAB when following is paused
+              Obx(() {
+                final follow = Get.find<LiveTrackingController>().isFollowingDriver.value;
+                return Positioned(
+                  bottom: 350,
+                  right: 20,
+                  child: AnimatedOpacity(
+                    opacity: follow ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: IgnorePointer(
+                      ignoring: follow,
+                      child: SizedBox(
+                        height: 40,
+                        width: 40,
+                        child: FloatingActionButton(
+                          backgroundColor: AppColors.primary,
+                          onPressed: () {
+                            try { Get.find<LiveTrackingController>().toggleMapView(); } catch (_) {}
+                          },
+                          child: const Icon(Icons.my_location, color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
               Positioned(
                   bottom: 350,
                   right: 20,
-                  child: Container(
+                  child: SizedBox(
                     height: 40,
                     width: 40,
                     child: FloatingActionButton(
@@ -102,7 +139,7 @@ class OrderMapScreen extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),

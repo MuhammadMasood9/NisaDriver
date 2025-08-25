@@ -11,7 +11,7 @@ class UserDriverView extends StatelessWidget {
   final String? userId;
   final String? amount;
 
-  const UserDriverView({Key? key, this.userId, this.amount}) : super(key: key);
+  const UserDriverView({super.key, this.userId, this.amount});
 
   @override
   Widget build(BuildContext context) {

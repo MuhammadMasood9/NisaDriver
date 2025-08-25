@@ -11,7 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:badges/badges.dart' as badges;
 
 class HomeIntercityScreen extends StatelessWidget {
-  const HomeIntercityScreen({Key? key}) : super(key: key);
+  const HomeIntercityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +61,7 @@ class HomeIntercityScreen extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   const Color(0xFFE74C3C),
-                  const Color(0xFFE74C3C).withOpacity(0.8),
+                  const Color(0xFFE74C3C).withValues(alpha: 0.8),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -69,7 +69,7 @@ class HomeIntercityScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFE74C3C).withOpacity(0.3),
+                  color: const Color(0xFFE74C3C).withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),
@@ -80,7 +80,7 @@ class HomeIntercityScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -130,22 +130,22 @@ class HomeIntercityScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    AppColors.primary.withOpacity(0.1),
-                                    AppColors.primary.withOpacity(0.05),
+                                    AppColors.primary.withValues(alpha: 0.1),
+                                    AppColors.primary.withValues(alpha: 0.05),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(30),
                                 border: Border.all(
-                                  color: AppColors.primary.withOpacity(0.2),
+                                  color: AppColors.primary.withValues(alpha: 0.2),
                                   width: 2,
                                 ),
                               ),
                               child: Icon(
                                 Icons.location_off_rounded,
                                 size: 60,
-                                color: AppColors.primary.withOpacity(0.7),
+                                color: AppColors.primary.withValues(alpha: 0.7),
                               ),
                             ),
                           );
@@ -190,7 +190,7 @@ class HomeIntercityScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF0984E3).withOpacity(0.3),
+                              color: const Color(0xFF0984E3).withValues(alpha: 0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
@@ -281,16 +281,16 @@ class HomeIntercityScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(isCompact ? 28 : 32),
-        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 25,
             offset: const Offset(0, -8),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, -2),
             spreadRadius: 0,
@@ -359,15 +359,15 @@ class HomeIntercityScreen extends StatelessWidget {
                 ? LinearGradient(
                     colors: [
                       AppColors.primary,
-                      AppColors.primary.withOpacity(0.85),
+                      AppColors.primary.withValues(alpha: 0.85),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
                 : LinearGradient(
                     colors: [
-                      Colors.grey.withOpacity(0.03),
-                      Colors.grey.withOpacity(0.01),
+                      Colors.grey.withValues(alpha: 0.03),
+                      Colors.grey.withValues(alpha: 0.01),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -382,13 +382,13 @@ class HomeIntercityScreen extends StatelessWidget {
             boxShadow: isSelected && isEnabled
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.25),
+                      color: AppColors.primary.withValues(alpha: 0.25),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                       spreadRadius: 0,
                     ),
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                       spreadRadius: 0,

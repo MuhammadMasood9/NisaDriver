@@ -18,7 +18,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 class CompleteIntercityOrderScreen extends StatefulWidget {
-  const CompleteIntercityOrderScreen({Key? key}) : super(key: key);
+  const CompleteIntercityOrderScreen({super.key});
 
   @override
   State<CompleteIntercityOrderScreen> createState() =>
@@ -269,7 +269,7 @@ class _CompleteIntercityOrderScreenState
             borderRadius: BorderRadius.circular(6),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 15,
                 offset: const Offset(0, 4),
               )
@@ -412,7 +412,7 @@ class _CompleteIntercityOrderScreenState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
           ),
         ],
@@ -563,7 +563,7 @@ class _CompleteIntercityOrderScreenState
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.05),
+                color: AppColors.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(10)),
             child: Text(
                 "Note: Admin commission will be debited from your wallet balance."

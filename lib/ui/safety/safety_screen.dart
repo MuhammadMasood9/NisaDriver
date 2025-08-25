@@ -31,7 +31,7 @@ class SafetyFeature {
 }
 
 class SafetyScreen extends StatelessWidget {
-  const SafetyScreen({Key? key}) : super(key: key);
+  const SafetyScreen({super.key});
 
   // List of safety features with their corresponding popup data
   static final List<SafetyFeature> safetyFeatures = [
@@ -284,10 +284,10 @@ class SafetyStoryViewer extends StatefulWidget {
   final int initialIndex;
 
   const SafetyStoryViewer({
-    Key? key,
+    super.key,
     required this.features,
     required this.initialIndex,
-  }) : super(key: key);
+  });
 
   @override
   _SafetyStoryViewerState createState() => _SafetyStoryViewerState();
@@ -346,10 +346,10 @@ class _StoryPageLayout extends StatelessWidget {
   final StoryController storyController;
 
   const _StoryPageLayout({
-    Key? key,
+    super.key,
     required this.feature,
     required this.storyController,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

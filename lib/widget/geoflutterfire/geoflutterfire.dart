@@ -1,4 +1,4 @@
-library geoflutterfire;
+library;
 
 export 'src/collection/default.dart';
 export 'src/geoflutterfire.dart';

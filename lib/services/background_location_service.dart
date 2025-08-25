@@ -413,7 +413,7 @@ class BackgroundLocationService {
               'lat': _lastKnownPosition!.latitude,
               'lng': _lastKnownPosition!.longitude,
               'timestamp':
-                  _lastKnownPosition!.timestamp?.millisecondsSinceEpoch,
+                  _lastKnownPosition!.timestamp.millisecondsSinceEpoch,
             }
           : null,
       'updateIntervals': {

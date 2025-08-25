@@ -34,7 +34,7 @@ class ChatScreens extends StatefulWidget {
   final String? token;
 
   const ChatScreens({
-    Key? key,
+    super.key,
     this.orderId,
     this.customerId,
     this.customerName,
@@ -43,7 +43,7 @@ class ChatScreens extends StatefulWidget {
     this.customerProfileImage,
     this.driverProfileImage,
     this.token,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatScreens> createState() => _ChatScreensState();
@@ -55,7 +55,7 @@ class _ChatScreensState extends State<ChatScreens> {
 
   // State variables
   ConversationModel? _replyingToMessage;
-  bool _isBannerVisible = true;
+  final bool _isBannerVisible = true;
   final GlobalKey _attachmentButtonKey = GlobalKey();
   OverlayEntry? _overlayEntry;
 
@@ -84,7 +84,7 @@ class _ChatScreensState extends State<ChatScreens> {
   }
 
   void _showAttachmentMenu() {
-    final overlay = Overlay.of(context)!;
+    final overlay = Overlay.of(context);
     final renderBox = _attachmentButtonKey.currentContext!.findRenderObject() as RenderBox;
     final offset = renderBox.localToGlobal(Offset.zero);
 
@@ -148,7 +148,7 @@ class _ChatScreensState extends State<ChatScreens> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 5,
             spreadRadius: 2,
           ),
@@ -182,8 +182,8 @@ class _ChatScreensState extends State<ChatScreens> {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-        splashColor: Colors.white.withOpacity(0.1),
-        highlightColor: Colors.white.withOpacity(0.05),
+        splashColor: Colors.white.withValues(alpha: 0.1),
+        highlightColor: Colors.white.withValues(alpha: 0.05),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
@@ -350,7 +350,7 @@ class _ChatScreensState extends State<ChatScreens> {
   }
 
   Widget _buildMessageBubble(ConversationModel message, bool isMe) {
-    final bubbleColor = isMe ? AppColors.primary.withOpacity(0.09) : AppColors.darkBackground.withOpacity(0.09);
+    final bubbleColor = isMe ? AppColors.primary.withValues(alpha: 0.09) : AppColors.darkBackground.withValues(alpha: 0.09);
     final textColor = Colors.black87;
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(18),
@@ -382,7 +382,7 @@ class _ChatScreensState extends State<ChatScreens> {
                   padding: const EdgeInsets.all(8),
                   margin: const EdgeInsets.only(bottom: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
                     border: Border(
                       left: BorderSide(
@@ -394,7 +394,7 @@ class _ChatScreensState extends State<ChatScreens> {
                   child: Text(
                     message.repliedToMessageContent ?? 'Replying to a message'.tr,
                     style: TextStyle(
-                      color: textColor.withOpacity(0.8),
+                      color: textColor.withValues(alpha: 0.8),
                       fontSize: 13,
                       fontStyle: FontStyle.italic,
                     ),
@@ -546,7 +546,7 @@ class _ChatScreensState extends State<ChatScreens> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             spreadRadius: 1,
             blurRadius: 5,
           )

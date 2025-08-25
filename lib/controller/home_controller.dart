@@ -7,7 +7,6 @@ import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/order/location_lat_lng.dart';
 import 'package:driver/model/order/positions.dart';
-import 'package:driver/ui/home_screens/accepted_orders.dart';
 import 'package:driver/ui/home_screens/active_order_screen.dart';
 import 'package:driver/ui/order_screen/order_screen.dart';
 import 'package:driver/ui/home_screens/new_orders_screen.dart' as home;

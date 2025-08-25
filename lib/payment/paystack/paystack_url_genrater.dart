@@ -72,7 +72,7 @@ class PayStackURLGen {
       );
       debugPrint(response.body);
       return response.body;
-    } on Exception catch (e) {
+    } on Exception {
       ShowToastDialog.showToast("Something went wrong, please contact admin.");
       return "";
       // TODO

@@ -17,7 +17,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class AcceptedOrders extends StatelessWidget {
-  const AcceptedOrders({Key? key}) : super(key: key);
+  const AcceptedOrders({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -76,10 +76,10 @@ class OrderItemWithTimer extends StatefulWidget {
   final AcceptedOrdersController controller;
 
   const OrderItemWithTimer({
-    Key? key,
+    super.key,
     required this.orderModel,
     required this.controller,
-  }) : super(key: key);
+  });
 
   @override
   State<OrderItemWithTimer> createState() => _OrderItemWithTimerState();
@@ -299,7 +299,7 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                     borderRadius: const BorderRadius.all(Radius.circular(15)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
+                        color: Colors.grey.withValues(alpha: 0.3),
                         blurRadius: 10,
                         spreadRadius: 1,
                         offset: const Offset(0, 4),
@@ -417,8 +417,7 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
 class TimerIndicator extends StatelessWidget {
   final RxInt remainingSeconds;
 
-  const TimerIndicator({Key? key, required this.remainingSeconds})
-      : super(key: key);
+  const TimerIndicator({super.key, required this.remainingSeconds});
 
   Color _getTimerColor() {
     if (remainingSeconds.value > 20) {

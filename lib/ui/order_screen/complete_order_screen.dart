@@ -18,7 +18,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 class CompleteOrderScreen extends StatefulWidget {
-  const CompleteOrderScreen({Key? key}) : super(key: key);
+  const CompleteOrderScreen({super.key});
 
   @override
   State<CompleteOrderScreen> createState() => _CompleteOrderScreenState();
@@ -271,7 +271,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
             borderRadius: BorderRadius.circular(6),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 15,
                 offset: const Offset(0, 4),
               )
@@ -415,7 +415,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
           ),
         ],
@@ -566,7 +566,7 @@ class _CompleteOrderScreenState extends State<CompleteOrderScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.05),
+                color: AppColors.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(10)),
             child: Text(
                 "Note: Admin commission will be debited from your wallet balance."

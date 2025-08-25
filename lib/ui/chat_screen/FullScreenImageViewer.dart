@@ -7,7 +7,7 @@ class FullScreenImageViewer extends StatelessWidget {
   final String imageUrl;
   final File? imageFile;
 
-  const FullScreenImageViewer({Key? key, required this.imageUrl, this.imageFile}) : super(key: key);
+  const FullScreenImageViewer({super.key, required this.imageUrl, this.imageFile});
 
   @override
   Widget build(BuildContext context) {

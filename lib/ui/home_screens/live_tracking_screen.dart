@@ -112,7 +112,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                       bottom: bottomPanelMinHeight,
                       top: 140,
                     ),
-                    onCameraMoveStarted: () => controller.onMapPinch(),
+                    onCameraMoveStarted: () {
+                      controller.onMapPinch();
+                      controller.onMapDrag();
+                    },
                     onMapCreated: (GoogleMapController mapController) async {
                       controller.mapController = mapController;
                       if (_mapStyle != null) {
@@ -196,7 +199,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4)),
           ],
@@ -264,7 +267,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.3),
+                    color: Colors.green.withValues(alpha: 0.3),
                     blurRadius: 8,
                     spreadRadius: 2,
                   ),
@@ -302,7 +305,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -314,7 +317,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -352,7 +355,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                     boxShadow: [
                       BoxShadow(
                         color: _getSpeedColor(controller.currentSpeed.value)
-                            .withOpacity(0.3),
+                            .withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -371,7 +374,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            "${controller.currentSpeed.value.toStringAsFixed(0)}",
+                            controller.currentSpeed.value.toStringAsFixed(0),
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -385,7 +388,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -420,9 +423,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
           child: Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -772,10 +775,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     return Obx(() => Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.darkBackground.withOpacity(0.025),
+            color: AppColors.darkBackground.withValues(alpha: 0.025),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppColors.darkBackground.withOpacity(0.01),
+              color: AppColors.darkBackground.withValues(alpha: 0.01),
               width: 1,
             ),
           ),
@@ -814,7 +817,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                       gradient: LinearGradient(
                         colors: [
                           AppColors.primary,
-                          AppColors.primary.withOpacity(0.7),
+                          AppColors.primary.withValues(alpha: 0.7),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(4),
@@ -851,10 +854,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     return Obx(() => Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.darkBackground.withOpacity(0.025),
+            color: AppColors.darkBackground.withValues(alpha: 0.025),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: AppColors.darkBackground.withOpacity(0.025),
+              color: AppColors.darkBackground.withValues(alpha: 0.025),
               width: 1,
             ),
           ),
@@ -905,10 +908,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     return Obx(() => Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: controller.getTrafficLevelColor().withOpacity(0.05),
+            color: controller.getTrafficLevelColor().withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: controller.getTrafficLevelColor().withOpacity(0.05),
+              color: controller.getTrafficLevelColor().withValues(alpha: 0.05),
               width: 1,
             ),
           ),
@@ -1068,7 +1071,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.darkBackground.withOpacity(0.15),
+            color: AppColors.darkBackground.withValues(alpha: 0.15),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1100,7 +1103,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -1269,9 +1272,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                       activeColor: AppColors.primary,
                       selectedColor: AppColors.primary,
                       inactiveColor: Colors.grey.shade300,
-                      activeFillColor: AppColors.primary.withOpacity(0.1),
+                      activeFillColor: AppColors.primary.withValues(alpha: 0.1),
                       inactiveFillColor: Colors.grey.shade50,
-                      selectedFillColor: AppColors.primary.withOpacity(0.1),
+                      selectedFillColor: AppColors.primary.withValues(alpha: 0.1),
                       shape: PinCodeFieldShape.box,
                       borderRadius: BorderRadius.circular(12),
                     ),

@@ -105,7 +105,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 spreadRadius: 1,
                 blurRadius: 20,
                 offset: const Offset(0, 5),
@@ -139,7 +139,7 @@ class NewOrderInterCityScreen extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -318,9 +318,9 @@ class RideDetailBottomSheet extends StatefulWidget {
   final InterCityOrderModel orderModel;
 
   const RideDetailBottomSheet({
-    Key? key,
+    super.key,
     required this.orderModel,
-  }) : super(key: key);
+  });
 
   @override
   State<RideDetailBottomSheet> createState() => _RideDetailBottomSheetState();
@@ -628,7 +628,7 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               ),
               if (_isLoadingRoute)
                 Container(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   child: const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),

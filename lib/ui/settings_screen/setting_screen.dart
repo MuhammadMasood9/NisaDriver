@@ -127,11 +127,11 @@ class SettingScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: isDanger
             ? Border.all(
-                color: const Color(0xFFEF4444).withOpacity(0.2), width: 1)
+                color: const Color(0xFFEF4444).withValues(alpha: 0.2), width: 1)
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -150,7 +150,7 @@ class SettingScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.darkBackground.withOpacity(0.1),
+              color: AppColors.darkBackground.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: SvgPicture.asset(
@@ -206,7 +206,7 @@ class SettingScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: SvgPicture.asset(
@@ -265,7 +265,7 @@ class SettingScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withOpacity(0.1),
+                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: SvgPicture.asset(
@@ -290,7 +290,7 @@ class SettingScreen extends StatelessWidget {
                   Text(
                     "Permanently delete your account".tr,
                     style: AppTypography.smBoldLabel(context).copyWith(
-                        color: const Color(0xFFEF4444).withOpacity(0.8)),
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.8)),
                   ),
                 ],
               ),
@@ -299,7 +299,7 @@ class SettingScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withOpacity(0.1),
+                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -424,7 +424,7 @@ class SettingScreen extends StatelessWidget {
                     ),
                   ),
                 )
-                .toList(),
+                ,
             SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
           ],
         ),
@@ -449,7 +449,7 @@ class SettingScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withOpacity(0.1),
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

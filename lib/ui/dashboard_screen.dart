@@ -337,7 +337,7 @@ class DashBoardScreen extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withOpacity(0.09)
+                      ? AppColors.primary.withValues(alpha: 0.09)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),

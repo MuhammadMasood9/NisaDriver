@@ -16,7 +16,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:driver/themes/typography.dart'; // Added for AppTypography
 
 class ReviewScreen extends StatelessWidget {
-  const ReviewScreen({Key? key}) : super(key: key);
+  const ReviewScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +90,7 @@ class ReviewScreen extends StatelessWidget {
                                 color: const Color.fromARGB(255, 255, 255, 255),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha: 0.1),
                                     blurRadius: 5,
                                     offset: Offset(6, 0),
                                   ),
@@ -116,7 +116,7 @@ class ReviewScreen extends StatelessWidget {
                                                 boxShadow: [
                                                   BoxShadow(
                                                     color: Colors.black
-                                                        .withOpacity(0.10),
+                                                        .withValues(alpha: 0.10),
                                                     blurRadius: 5,
                                                     offset: const Offset(0, 4),
                                                   ),

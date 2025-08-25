@@ -199,7 +199,7 @@ class ScheduledRidesScreen extends StatelessWidget {
   Widget _buildWarningBanner(BuildContext context, {required String title, required String subtitle, required IconData icon}) {
     return Container(
       width: double.infinity,
-      color: AppColors.darkModePrimary.withOpacity(0.1),
+      color: AppColors.darkModePrimary.withValues(alpha: 0.1),
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
@@ -224,7 +224,7 @@ class ScheduledRidesScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: AppColors.primary.withOpacity(0.8)),
+        Icon(icon, size: 18, color: AppColors.primary.withValues(alpha: 0.8)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -252,7 +252,7 @@ class ScheduledRidesScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 5),
           ),
@@ -265,7 +265,7 @@ class ScheduledRidesScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.04),
+              color: AppColors.primary.withValues(alpha: 0.04),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
@@ -473,7 +473,7 @@ class ScheduledRidesScreen extends StatelessWidget {
         color: AppColors.background,
         borderRadius: BorderRadius.circular(isCompact ? 28 : 32),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 5)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 5)),
         ],
       ),
       child: Row(

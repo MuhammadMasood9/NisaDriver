@@ -9,9 +9,9 @@ class MercadoPagoScreen extends StatefulWidget {
   final String initialURl;
 
   const MercadoPagoScreen({
-    Key? key,
+    super.key,
     required this.initialURl,
-  }) : super(key: key);
+  });
 
   @override
   State<MercadoPagoScreen> createState() => _MercadoPagoScreenState();

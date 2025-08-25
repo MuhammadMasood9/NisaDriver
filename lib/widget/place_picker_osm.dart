@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
 import 'package:get/get.dart';
 import 'package:osm_nominatim/osm_nominatim.dart';
-import 'package:provider/provider.dart';
 
 class LocationPicker extends StatefulWidget {
   const LocationPicker({super.key});

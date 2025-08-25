@@ -71,7 +71,7 @@ class ProfileScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -128,7 +128,7 @@ class ProfileScreen extends StatelessWidget {
                 border: Border.all(color: Colors.white, width: 4),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 20,
                     offset: const Offset(0, 4),
                   ),
@@ -228,7 +228,7 @@ class ProfileScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -356,7 +356,7 @@ class ProfileScreen extends StatelessWidget {
                 onChanged: (value) {
                   controller.countryCode.value = value.dialCode.toString();
                 },
-                dialogBackgroundColor: Theme.of(context).colorScheme.background,
+                dialogBackgroundColor: Theme.of(context).colorScheme.surface,
                 initialSelection: controller.countryCode.value.isEmpty
                     ? "+1"
                     : controller.countryCode.value,
@@ -442,7 +442,7 @@ class ProfileScreen extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -467,7 +467,7 @@ class ProfileScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.darkBackground,
-            AppColors.darkBackground.withOpacity(0.8),
+            AppColors.darkBackground.withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -530,7 +530,7 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildShaderIcon(IconData icon) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background.withOpacity(0.1),
+        color: AppColors.background.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: ShaderMask(

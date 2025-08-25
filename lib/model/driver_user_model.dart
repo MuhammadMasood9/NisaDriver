@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:driver/model/admin_commission.dart';
 import 'package:driver/model/driver_rules_model.dart';
 import 'package:driver/model/language_name.dart';
 import 'package:driver/model/order/location_lat_lng.dart';

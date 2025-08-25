@@ -31,7 +31,7 @@ class EnhancedDateSelector extends StatelessWidget {
   final Function()? onClear;
 
   const EnhancedDateSelector({
-    Key? key,
+    super.key,
     required this.label,
     required this.hintText,
     required this.onDateSelected,
@@ -44,7 +44,7 @@ class EnhancedDateSelector extends StatelessWidget {
     this.showClearButton = true,
     this.dateFormat = "MMMM dd, yyyy",
     this.onClear,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +59,7 @@ class EnhancedDateSelector extends StatelessWidget {
             Text(
               label,
               style: AppTypography.boldLabel(Get.context!)
-                  .copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
+                  .copyWith(color: AppColors.darkBackground.withValues(alpha: 0.8)),
             ),
             if (isRequired)
               Text(
@@ -88,8 +88,7 @@ class EnhancedDateSelector extends StatelessWidget {
                       onPrimary: Colors.white,
                       surface: Colors.white,
                       onSurface: Colors.black,
-                    ),
-                    dialogBackgroundColor: Colors.white,
+                    ), dialogTheme: DialogThemeData(backgroundColor: Colors.white),
                   ),
                   child: child!,
                 );
@@ -182,7 +181,7 @@ class EnhancedDateSelector extends StatelessWidget {
 }
 
 class InformationScreen extends StatelessWidget {
-  const InformationScreen({Key? key}) : super(key: key);
+  const InformationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +264,7 @@ class InformationScreen extends StatelessWidget {
                                   color: Colors.white,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.08),
+                                      color: Colors.black.withValues(alpha: 0.08),
                                       blurRadius: 20,
                                       offset: const Offset(0, -5),
                                     ),
@@ -334,7 +333,7 @@ class InformationScreen extends StatelessWidget {
           ),
           elevation: isPrimary ? 2 : 0,
           shadowColor: isPrimary
-              ? AppColors.primary.withOpacity(0.4)
+              ? AppColors.primary.withValues(alpha: 0.4)
               : Colors.transparent,
         ),
         child: Text(
@@ -409,9 +408,9 @@ class InformationScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isCurrent
-                    ? AppColors.primary.withOpacity(0.15)
+                    ? AppColors.primary.withValues(alpha: 0.15)
                     : isActive
-                        ? AppColors.primary.withOpacity(0.05)
+                        ? AppColors.primary.withValues(alpha: 0.05)
                         : Colors.grey.shade100,
                 border: Border.all(
                   color: isCurrent ? AppColors.primary : Colors.transparent,
@@ -494,7 +493,7 @@ class InformationScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withOpacity(0.05)
+                      ? AppColors.primary.withValues(alpha: 0.05)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
@@ -505,7 +504,7 @@ class InformationScreen extends StatelessWidget {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -744,7 +743,7 @@ class InformationScreen extends StatelessWidget {
           Text(
             label,
             style: AppTypography.boldLabel(context)
-                .copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
+                .copyWith(color: AppColors.darkBackground.withValues(alpha: 0.8)),
           ),
           const SizedBox(height: 8),
           Container(
@@ -821,10 +820,10 @@ class InformationScreen extends StatelessWidget {
                       height: 50,
                       decoration: BoxDecoration(
                         color: isVerified
-                            ? Colors.green.withOpacity(0.1)
+                            ? Colors.green.withValues(alpha: 0.1)
                             : isUploaded
-                                ? AppColors.primary.withOpacity(0.1)
-                                : Colors.grey.withOpacity(0.1),
+                                ? AppColors.primary.withValues(alpha: 0.1)
+                                : Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -863,8 +862,8 @@ class InformationScreen extends StatelessWidget {
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: isVerified
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.orange.withOpacity(0.1),
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -943,7 +942,7 @@ class InformationScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle),
             child: Icon(icon, color: AppColors.primary, size: 32),
           ),
@@ -968,7 +967,7 @@ class InformationScreen extends StatelessWidget {
           Text(
             label,
             style: AppTypography.boldLabel(Get.context!)
-                .copyWith(color: AppColors.darkBackground.withOpacity(0.8)),
+                .copyWith(color: AppColors.darkBackground.withValues(alpha: 0.8)),
           ),
           const SizedBox(height: 8),
           TextFormField(
@@ -1011,7 +1010,7 @@ class InformationScreen extends StatelessWidget {
         children: [
           Text('Phone Number'.tr,
               style: AppTypography.boldLabel(context)
-                  .copyWith(color: AppColors.darkBackground.withOpacity(0.8))),
+                  .copyWith(color: AppColors.darkBackground.withValues(alpha: 0.8))),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(

@@ -12,7 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:badges/badges.dart' as badges;
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
       },
       builder: (controller) {
         return Scaffold(
-          backgroundColor: AppColors.grey300.withOpacity(0),
+          backgroundColor: AppColors.background,
           body: controller.isLoading.value
               ? Constant.loader(context)
               : SafeArea(
@@ -57,7 +57,7 @@ class HomeScreen extends StatelessWidget {
                                         colors: [
                                           const Color(0xFFE74C3C),
                                           const Color(0xFFE74C3C)
-                                              .withOpacity(0.8),
+                                              .withValues(alpha: 0.8),
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
@@ -66,7 +66,7 @@ class HomeScreen extends StatelessWidget {
                                       boxShadow: [
                                         BoxShadow(
                                           color: const Color(0xFFE74C3C)
-                                              .withOpacity(0.2),
+                                              .withValues(alpha: 0.2),
                                           blurRadius: 12,
                                           offset: const Offset(0, 4),
                                         ),
@@ -78,7 +78,7 @@ class HomeScreen extends StatelessWidget {
                                           padding: const EdgeInsets.all(10),
                                           decoration: BoxDecoration(
                                             color:
-                                                Colors.white.withOpacity(0.2),
+                                                Colors.white.withValues(alpha: 0.2),
                                             borderRadius:
                                                 BorderRadius.circular(12),
                                           ),
@@ -222,18 +222,18 @@ class HomeScreen extends StatelessWidget {
         color: AppColors.background, // Semi-transparent white
         borderRadius: BorderRadius.circular(isCompact ? 28 : 32),
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: Colors.white.withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, -5),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
             spreadRadius: 0,
@@ -318,15 +318,15 @@ class HomeScreen extends StatelessWidget {
                 ? LinearGradient(
                     colors: [
                       AppColors.primary,
-                      AppColors.primary.withOpacity(0.85),
+                      AppColors.primary.withValues(alpha: 0.85),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
                 : LinearGradient(
                     colors: [
-                      Colors.grey.withOpacity(0.03),
-                      Colors.grey.withOpacity(0.01),
+                      Colors.grey.withValues(alpha: 0.03),
+                      Colors.grey.withValues(alpha: 0.01),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -341,13 +341,13 @@ class HomeScreen extends StatelessWidget {
             boxShadow: isSelected && isEnabled
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.25),
+                      color: AppColors.primary.withValues(alpha: 0.25),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                       spreadRadius: 0,
                     ),
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                       spreadRadius: 0,

@@ -6,8 +6,6 @@ import 'package:driver/model/intercity_order_model.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/model/wallet_transaction_model.dart';
 import 'package:driver/model/withdraw_model.dart';
-import 'package:driver/payment/createRazorPayOrderModel.dart';
-import 'package:driver/payment/rozorpayConroller.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
 import 'package:driver/themes/responsive.dart';
@@ -23,7 +21,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:scroll_date_picker/scroll_date_picker.dart';
 
 class WalletScreen extends StatelessWidget {
@@ -126,8 +123,8 @@ class WalletScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: controller.startDate.value != null
-                                ? AppColors.primary.withOpacity(0.4)
-                                : AppColors.textFieldBorder.withOpacity(0.2),
+                                ? AppColors.primary.withValues(alpha: 0.4)
+                                : AppColors.textFieldBorder.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -186,7 +183,7 @@ class WalletScreen extends StatelessWidget {
                                           height: 40,
                                           decoration: BoxDecoration(
                                             color: AppColors.primary
-                                                .withOpacity(0.1),
+                                                .withValues(alpha: 0.1),
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
@@ -206,7 +203,7 @@ class WalletScreen extends StatelessWidget {
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
                                   color: controller.startDate.value != null
-                                      ? AppColors.primary.withOpacity(0.2)
+                                      ? AppColors.primary.withValues(alpha: 0.2)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -215,7 +212,7 @@ class WalletScreen extends StatelessWidget {
                                   color: controller.startDate.value != null
                                       ? AppColors.primary
                                       : AppColors.darkBackground
-                                          .withOpacity(0.5),
+                                          .withValues(alpha: 0.5),
                                   size: 16,
                                 ),
                               ),
@@ -232,7 +229,7 @@ class WalletScreen extends StatelessWidget {
                                             controller.startDate.value != null
                                                 ? AppColors.primary
                                                 : AppColors.darkBackground
-                                                    .withOpacity(0.5),
+                                                    .withValues(alpha: 0.5),
                                         letterSpacing: -0.2,
                                       ),
                                     ),
@@ -266,8 +263,8 @@ class WalletScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: controller.endDate.value != null
-                                ? AppColors.primary.withOpacity(0.4)
-                                : AppColors.textFieldBorder.withOpacity(0.2),
+                                ? AppColors.primary.withValues(alpha: 0.4)
+                                : AppColors.textFieldBorder.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -328,7 +325,7 @@ class WalletScreen extends StatelessWidget {
                                           height: 40,
                                           decoration: BoxDecoration(
                                             color: AppColors.primary
-                                                .withOpacity(0.1),
+                                                .withValues(alpha: 0.1),
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
@@ -348,7 +345,7 @@ class WalletScreen extends StatelessWidget {
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
                                   color: controller.endDate.value != null
-                                      ? AppColors.primary.withOpacity(0.2)
+                                      ? AppColors.primary.withValues(alpha: 0.2)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -357,7 +354,7 @@ class WalletScreen extends StatelessWidget {
                                   color: controller.endDate.value != null
                                       ? AppColors.primary
                                       : AppColors.darkBackground
-                                          .withOpacity(0.5),
+                                          .withValues(alpha: 0.5),
                                   size: 16,
                                 ),
                               ),
@@ -373,7 +370,7 @@ class WalletScreen extends StatelessWidget {
                                         color: controller.endDate.value != null
                                             ? AppColors.primary
                                             : AppColors.darkBackground
-                                                .withOpacity(0.5),
+                                                .withValues(alpha: 0.5),
                                         letterSpacing: -0.2,
                                       ),
                                     ),
@@ -441,8 +438,8 @@ class WalletScreen extends StatelessWidget {
                 //               border: Border.all(
                 //                 color: (controller.startDate.value != null ||
                 //                         controller.endDate.value != null)
-                //                     ? AppColors.primary.withOpacity(0.3)
-                //                     : Colors.grey.withOpacity(0.5),
+                //                     ? AppColors.primary.withValues(alpha: 0.3)
+                //                     : Colors.grey.withValues(alpha: 0.5),
                 //                 width: (controller.startDate.value != null ||
                 //                         controller.endDate.value != null)
                 //                     ? 1.5
@@ -453,7 +450,7 @@ class WalletScreen extends StatelessWidget {
                 //               Icons.close_rounded,
                 //               color: (controller.startDate.value != null ||
                 //                       controller.endDate.value != null)
-                //                   ? AppColors.primary.withOpacity(0.9)
+                //                   ? AppColors.primary.withValues(alpha: 0.9)
                 //                   : Colors.grey.shade500,
                 //               size: 22,
                 //             ),
@@ -507,7 +504,7 @@ class WalletScreen extends StatelessWidget {
       width: Responsive.width(65, context),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -517,7 +514,7 @@ class WalletScreen extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -600,7 +597,7 @@ class WalletScreen extends StatelessWidget {
                     Icon(
                       Icons.receipt_long_outlined,
                       size: 64,
-                      color: AppColors.darkBackground.withOpacity(0.3),
+                      color: AppColors.darkBackground.withValues(alpha: 0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -608,7 +605,7 @@ class WalletScreen extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.darkBackground.withOpacity(0.6),
+                        color: AppColors.darkBackground.withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -618,7 +615,7 @@ class WalletScreen extends StatelessWidget {
                           : "Your transactions will appear here".tr,
                       style: GoogleFonts.poppins(
                         fontSize: 14,
-                        color: AppColors.darkBackground.withOpacity(0.4),
+                        color: AppColors.darkBackground.withValues(alpha: 0.4),
                       ),
                     ),
                   ],
@@ -690,7 +687,7 @@ class WalletScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.07),
+              color: Colors.black.withValues(alpha: 0.07),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -712,9 +709,9 @@ class WalletScreen extends StatelessWidget {
                       colors: walletTransactionModel.orderType == "city"
                           ? [
                               AppColors.primary,
-                              AppColors.primary.withOpacity(0.8)
+                              AppColors.primary.withValues(alpha: 0.8)
                             ]
-                          : [Colors.orange, Colors.orange.withOpacity(0.8)],
+                          : [Colors.orange, Colors.orange.withValues(alpha: 0.8)],
                     ),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(16),
@@ -725,7 +722,7 @@ class WalletScreen extends StatelessWidget {
                         color: (walletTransactionModel.orderType == "city"
                                 ? AppColors.primary
                                 : Colors.orange)
-                            .withOpacity(0.3),
+                            .withValues(alpha: 0.3),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -759,8 +756,8 @@ class WalletScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.darkBackground.withOpacity(0.1),
-                          AppColors.darkBackground.withOpacity(0.05),
+                          AppColors.darkBackground.withValues(alpha: 0.1),
+                          AppColors.darkBackground.withValues(alpha: 0.05),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(12),
@@ -821,7 +818,7 @@ class WalletScreen extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
+                                color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -1002,7 +999,7 @@ class WalletScreen extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 5,
               offset: const Offset(0, 2),
             ),
@@ -1087,7 +1084,7 @@ class WalletScreen extends StatelessWidget {
                           "Pay Via".tr,
                           style: GoogleFonts.poppins(
                             fontSize: 14,
-                            color: AppColors.darkBackground.withOpacity(0.7),
+                            color: AppColors.darkBackground.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -1117,7 +1114,7 @@ class WalletScreen extends StatelessWidget {
                           .toUpperCase(),
                       style: GoogleFonts.poppins(
                         fontSize: 14,
-                        color: AppColors.darkBackground.withOpacity(0.7),
+                        color: AppColors.darkBackground.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -1143,7 +1140,7 @@ class WalletScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -1167,7 +1164,7 @@ class WalletScreen extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w400,
                 fontSize: 14,
-                color: AppColors.darkBackground.withOpacity(0.7),
+                color: AppColors.darkBackground.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -1208,7 +1205,7 @@ class WalletScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withValues(alpha: 0.08),
                             blurRadius: 5,
                             offset: const Offset(0, 2),
                           ),
@@ -1246,7 +1243,7 @@ class WalletScreen extends StatelessWidget {
                                 fontWeight: FontWeight.w500,
                                 fontSize: 16,
                                 color:
-                                    AppColors.darkBackground.withOpacity(0.7),
+                                    AppColors.darkBackground.withValues(alpha: 0.7),
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -1267,7 +1264,7 @@ class WalletScreen extends StatelessWidget {
                                 fontWeight: FontWeight.w400,
                                 fontSize: 14,
                                 color:
-                                    AppColors.darkBackground.withOpacity(0.7),
+                                    AppColors.darkBackground.withValues(alpha: 0.7),
                               ),
                             ),
                             Text(
@@ -1277,7 +1274,7 @@ class WalletScreen extends StatelessWidget {
                                 fontWeight: FontWeight.w400,
                                 fontSize: 14,
                                 color:
-                                    AppColors.darkBackground.withOpacity(0.7),
+                                    AppColors.darkBackground.withValues(alpha: 0.7),
                               ),
                             ),
                           ],

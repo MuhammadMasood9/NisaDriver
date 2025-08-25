@@ -2,8 +2,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class ButtonThem {
   const ButtonThem({Key? key});
@@ -65,13 +63,13 @@ class ButtonThem {
             border: Border.all(color: AppColors.grey200, width: 1)
             // boxShadow: [
             //   BoxShadow(
-            //     color: Colors.black.withOpacity(0.05),
+            //     color: Colors.black.withValues(alpha: 0.05),
             //     offset: Offset(0, -2), // Top shadow
             //     blurRadius: 2,
             //     spreadRadius: 0.6,
             //   ),
             //   BoxShadow(
-            //     color: Colors.black.withOpacity(0.05),
+            //     color: Colors.black.withValues(alpha: 0.05),
             //     offset: Offset(0, 2), // Bottom shadow
             //     blurRadius: 2,
             //     spreadRadius: 0.6,
@@ -80,14 +78,14 @@ class ButtonThem {
             ),
         child: ElevatedButton(
           style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.all<Color>(Colors.white),
-            foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
-            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+            backgroundColor: WidgetStateProperty.all<Color>(Colors.white),
+            foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
+            shape: WidgetStateProperty.all<RoundedRectangleBorder>(
               RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
               ),
             ),
-            elevation: MaterialStateProperty.all<double>(
+            elevation: WidgetStateProperty.all<double>(
                 0), // Disable default elevation
           ),
           onPressed: onPress,

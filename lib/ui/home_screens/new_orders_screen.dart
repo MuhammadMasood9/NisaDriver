@@ -364,6 +364,14 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
+  String _formatDistanceText(String? dist, String? unit) {
+    final double? parsed = double.tryParse((dist ?? '').toString());
+    final int decimals = Constant.currencyModel?.decimalDigits ?? 2;
+    final String value = parsed != null ? parsed.toStringAsFixed(decimals) : '--';
+    final String suffix = unit ?? '';
+    return suffix.isNotEmpty ? '$value $suffix' : value;
+  }
+
   Widget _buildLiveRidesNavigationCard(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -380,7 +388,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -407,14 +415,14 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                         "Set your destination and we'll find passengers who need a ride along your route."
                             .tr,
                         style: AppTypography.smBoldLabel(context).copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                       ),
                     ],
                   ),
                 ),
                 Icon(Icons.arrow_forward_ios,
-                    color: Colors.white.withOpacity(0.7)),
+                    color: Colors.white.withValues(alpha: 0.7)),
               ],
             ),
           ),
@@ -524,8 +532,8 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     final formattedTime =
         rideDate != null ? DateFormat('h:mm a').format(rideDate) : 'Time n/a';
     final String amount = rideType == RideType.newRequest
-        ? order.offerRate.toString()
-        : order.finalRate.toString();
+        ? (order.offerRate ?? '0')
+        : (order.finalRate ?? '0');
 
     return InkWell(
         key: key,
@@ -539,7 +547,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
             borderRadius: BorderRadius.circular(6),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 spreadRadius: 1,
                 blurRadius: 20,
                 offset: const Offset(0, 5),
@@ -588,7 +596,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -636,7 +644,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                       Text("Distance".tr,
                           style: AppTypography.caption(context)),
                       Text(
-                        "${(double.parse(order.distance.toString())).toStringAsFixed(Constant.currencyModel!.decimalDigits!)} ${order.distanceType}",
+                        _formatDistanceText(order.distance, order.distanceType),
                         style: AppTypography.boldLabel(context),
                       ),
                     ],
@@ -690,10 +698,10 @@ class RideDetailBottomSheet extends StatefulWidget {
   final RideType rideType;
 
   const RideDetailBottomSheet({
-    Key? key,
+    super.key,
     required this.orderModel,
     required this.rideType,
-  }) : super(key: key);
+  });
 
   @override
   State<RideDetailBottomSheet> createState() => _RideDetailBottomSheetState();
@@ -733,8 +741,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
         widget.orderModel.sourceLocationLAtLng?.longitude == null ||
         widget.orderModel.destinationLocationLAtLng?.latitude == null ||
         widget.orderModel.destinationLocationLAtLng?.longitude == null) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print('Error: Missing coordinates for source or destination');
+      }
       if (mounted) {
         setState(() {
           _routeDistance = 'Error';
@@ -842,8 +851,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           _fitMapToShowRoute();
         } else {
           String errorMessage = data['error_message'] ?? 'No route found';
-          if (kDebugMode)
+          if (kDebugMode) {
             print("Directions API Error: ${data['status']} - $errorMessage");
+          }
           if (mounted) {
             setState(() {
               _routeDistance = 'Route Error';
@@ -853,8 +863,9 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
           }
         }
       } else {
-        if (kDebugMode)
+        if (kDebugMode) {
           print("HTTP request failed with status: ${response.statusCode}");
+        }
         if (mounted) {
           setState(() {
             _routeDistance = 'HTTP Error';
@@ -913,8 +924,8 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final String amount = widget.rideType == RideType.newRequest
-        ? widget.orderModel.offerRate.toString()
-        : widget.orderModel.finalRate.toString();
+        ? (widget.orderModel.offerRate ?? '0')
+        : (widget.orderModel.finalRate ?? '0');
 
     return Container(
       decoration: const BoxDecoration(
@@ -1003,10 +1014,35 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
               ),
               if (_isLoadingRoute)
                 Container(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   child: const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ),
+              if (widget.rideType == RideType.active)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Get.to(() => const OrderMapScreen(),
+                            arguments: {"orderModel": widget.orderModel.id.toString()});
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Text("Accept Ride".tr,
+                          style: AppTypography.button(context)
+                              .copyWith(color: AppColors.background)),
                     ),
                   ),
                 ),
@@ -1087,21 +1123,44 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
 
   Widget _buildActionButtons() {
     if (widget.rideType == RideType.active) {
-      return SizedBox(
-        width: double.infinity,
-        height: 35,
-        child: ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-            padding: const EdgeInsets.symmetric(vertical: 8),
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey.shade800,
+                side: BorderSide(color: Colors.grey.shade400),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5)),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              child: Text("Close".tr,
+                  style: AppTypography.button(context)
+                      .copyWith(color: AppColors.grey500)),
+            ),
           ),
-          child: Text("Close".tr,
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Get.to(() => const OrderMapScreen(),
+                    arguments: {"orderModel": widget.orderModel.id.toString()});
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5)),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              child: Text("Open Map".tr,
+                  style: AppTypography.button(context)
+                      .copyWith(color: AppColors.background)),
+            ),
+          ),
+        ],
       );
     }
 
@@ -1159,8 +1218,7 @@ class OrderItemWithTimer extends StatefulWidget {
   final OrderModel orderModel;
   final VoidCallback onExpired;
   const OrderItemWithTimer(
-      {Key? key, required this.orderModel, required this.onExpired})
-      : super(key: key);
+      {super.key, required this.orderModel, required this.onExpired});
   @override
   State<OrderItemWithTimer> createState() => _OrderItemWithTimerState();
 }
@@ -1169,10 +1227,31 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
   final RxInt _remainingSeconds = 30.obs;
   final RxBool _isExpired = false.obs;
   Timer? _timer;
+  DateTime? _expiryAt;
 
   @override
   void initState() {
     super.initState();
+    _initTimer();
+  }
+
+  Future<void> _initTimer() async {
+    try {
+      final String? driverId = FireStoreUtils.getCurrentUid();
+      if (driverId != null && widget.orderModel.id != null) {
+        final info = await FireStoreUtils.getAcceptedOrders(
+            widget.orderModel.id!, driverId);
+        if (info?.acceptedRejectTime != null) {
+          final start = info!.acceptedRejectTime!.toDate();
+          _expiryAt = start.add(const Duration(seconds: 30));
+          final now = DateTime.now();
+          final int left = _expiryAt!.isAfter(now)
+              ? _expiryAt!.difference(now).inSeconds
+              : 0;
+          _remainingSeconds.value = left;
+        }
+      }
+    } catch (_) {}
     _startTimer();
   }
 
@@ -1185,8 +1264,18 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_remainingSeconds.value > 0) {
-        _remainingSeconds.value--;
+      int next;
+      if (_expiryAt != null) {
+        final now = DateTime.now();
+        next = _expiryAt!.isAfter(now)
+            ? _expiryAt!.difference(now).inSeconds
+            : 0;
+      } else {
+        next = _remainingSeconds.value - 1;
+      }
+
+      if (next > 0) {
+        _remainingSeconds.value = next;
       } else {
         _timer?.cancel();
         if (mounted) {
@@ -1209,7 +1298,7 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       spreadRadius: 1,
                       blurRadius: 20,
                       offset: const Offset(0, 5),
@@ -1295,8 +1384,7 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
 
 class TimerIndicator extends StatelessWidget {
   final RxInt remainingSeconds;
-  const TimerIndicator({Key? key, required this.remainingSeconds})
-      : super(key: key);
+  const TimerIndicator({super.key, required this.remainingSeconds});
   Color _getTimerColor(int seconds) {
     if (seconds > 20) return Colors.green;
     if (seconds > 10) return Colors.orange;
@@ -1317,7 +1405,7 @@ class TimerIndicator extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
             decoration: BoxDecoration(
-              color: timerColor.withOpacity(0.1),
+              color: timerColor.withValues(alpha: 0.1),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
             ),

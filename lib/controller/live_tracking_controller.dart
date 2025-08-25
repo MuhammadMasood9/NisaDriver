@@ -25,9 +25,13 @@ import 'dart:io';
 import 'package:retry/retry.dart';
 import 'package:driver/services/realtime_location_service.dart';
 import 'package:driver/services/background_location_service.dart';
+import 'package:driver/services/enhanced_realtime_location_service.dart';
+import 'package:driver/model/enhanced_location_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driver/controller/dash_board_controller.dart';
 import 'package:flutter/services.dart';
+import 'package:driver/services/polyline_manager.dart';
+import 'package:driver/model/polyline_models.dart';
 
 class NavigationStep {
   final String instruction;
@@ -145,6 +149,8 @@ class LiveTrackingController extends GetxController {
   final RealtimeLocationService _realtime = RealtimeLocationService();
   final BackgroundLocationService _backgroundLocation =
       BackgroundLocationService();
+  final EnhancedRealtimeLocationService _enhancedRealtime =
+      EnhancedRealtimeLocationService();
   // Removed real-time database subscription - only using phone GPS
   // StreamSubscription<Map<String, dynamic>?>? _rtdbSubscription;
   // bool _isApplyingRemoteUpdate = false;
@@ -193,6 +199,10 @@ class LiveTrackingController extends GetxController {
   RxMap<PolylineId, Polyline> polyLines = <PolylineId, Polyline>{}.obs;
   PolylinePoints polylinePoints = PolylinePoints();
 
+  // Smart polyline management
+  PolylineManager? _polylineManager;
+  StreamSubscription<Set<Polyline>>? _polylineSubscription;
+
   RxList<LatLng> routePoints = <LatLng>[].obs;
   RxBool showDriverToPickupRoute = false.obs;
   RxBool showPickupToDestinationRoute = false.obs;
@@ -230,6 +240,8 @@ class LiveTrackingController extends GetxController {
 
   // User interaction tracking
   DateTime? _lastUserInteraction;
+  Timer? _recenterTimer;
+  static const Duration _recenterDelay = Duration(seconds: 5);
 
   // Enhanced off-route tracking
   int _consecutiveOffRouteChecks = 0;
@@ -248,7 +260,7 @@ class LiveTrackingController extends GetxController {
   // Enhanced traffic-based rerouting
   RxBool hasAlternativeRoute = false.obs;
   Map<String, dynamic>? _alternativeRouteData;
-  List<Map<String, dynamic>> _routeAlternatives = [];
+  final List<Map<String, dynamic>> _routeAlternatives = [];
   int _currentRouteIndex = 0;
   double _routeQualityScore = 0.0;
 
@@ -271,6 +283,9 @@ class LiveTrackingController extends GetxController {
     addMarkerSetup();
     initializeTTS();
 
+    // Initialize smart polyline management
+    _initializePolylineManager();
+
     // Check if driver is online before initializing location services
     if (_isDriverOnline()) {
       initializeLocationServices(); // This now also starts location tracking
@@ -284,8 +299,14 @@ class LiveTrackingController extends GetxController {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
 
+    // Set camera offset to keep driver lower on screen for better road-ahead visibility
+    setCameraOffset(xPx: 0, yPx: -140);
+
     // Initialize enhanced rerouting system
     _initializeEnhancedRerouting();
+
+    // Initialize enhanced services
+    _initializeEnhancedServices();
 
     // Fetch initial location and center immediately
     getCurrentLocation().then((_) {
@@ -300,6 +321,49 @@ class LiveTrackingController extends GetxController {
     // Start background tracking if driver is already online
     if (_isDriverOnline()) {
       _startBackgroundLocationTracking();
+    }
+  }
+
+  // Initialize smart polyline management
+  void _initializePolylineManager() {
+    try {
+      _polylineManager = PolylineManager();
+
+      // Subscribe to polyline updates and sync with the reactive map
+      _polylineSubscription =
+          _polylineManager?.polylinesStream.listen((polylines) {
+        // Convert Set<Polyline> to RxMap format for backward compatibility
+        final Map<PolylineId, Polyline> polylineMap = {};
+        for (final polyline in polylines) {
+          polylineMap[polyline.polylineId] = polyline;
+        }
+        polyLines.value = polylineMap;
+      });
+    } catch (e) {
+      dev.log('Failed to initialize PolylineManager: $e');
+      // Continue without polyline manager
+    }
+
+    dev.log('PolylineManager initialized and connected to reactive streams');
+  }
+
+  // Initialize enhanced services
+  void _initializeEnhancedServices() async {
+    try {
+      await _enhancedRealtime.initialize();
+      dev.log('Enhanced realtime service initialized successfully');
+
+      // Listen to connection state changes
+      _enhancedRealtime.connectionState.listen((state) {
+        dev.log('Enhanced realtime connection state: ${state.value}');
+      });
+
+      // Listen to service errors
+      _enhancedRealtime.errors.listen((error) {
+        dev.log('Enhanced realtime service error: $error');
+      });
+    } catch (e) {
+      dev.log('Failed to initialize enhanced services: $e');
     }
   }
 
@@ -354,12 +418,18 @@ class LiveTrackingController extends GetxController {
     // Cancel all timers
     _rerouteTimer?.cancel();
     _trafficCheckTimer?.cancel();
+    _recenterTimer?.cancel();
     _positionStream?.cancel();
     _compassSubscription?.cancel();
     // Removed real-time database subscription cleanup
     // _rtdbSubscription?.cancel();
     mapController?.dispose();
     _flutterTts?.stop();
+    _enhancedRealtime.dispose();
+
+    // Clean up polyline manager
+    _polylineSubscription?.cancel();
+    _polylineManager?.dispose();
 
     // Stop background location tracking
     _stopBackgroundLocationTracking();
@@ -479,6 +549,7 @@ class LiveTrackingController extends GetxController {
         ? 'to_pickup'
         : (showPickupToDestinationRoute.value ? 'to_destination' : 'idle');
 
+    // Legacy realtime service
     _realtime.publishDriverLocation(
       orderId: orderId,
       driverId: driverId,
@@ -490,6 +561,59 @@ class LiveTrackingController extends GetxController {
       rideStatus: rideStatus,
       phase: phase,
     );
+
+    // Enhanced realtime service with better data structure
+    _publishEnhancedLocation(orderId, driverId, cur, rideStatus, phase);
+  }
+
+  void _publishEnhancedLocation(String orderId, String driverId,
+      LatLng position, String rideStatus, String phase) {
+    try {
+      // Determine ride phase
+      RidePhase ridePhase;
+      switch (phase) {
+        case 'to_pickup':
+          ridePhase = RidePhase.enRouteToPickup;
+          break;
+        case 'to_destination':
+          ridePhase = RidePhase.rideInProgress;
+          break;
+        default:
+          ridePhase = RidePhase.enRouteToPickup;
+      }
+
+      // Get battery level (placeholder - would need actual battery API)
+      double batteryLevel = 100.0;
+
+      // Determine network quality based on connection
+      NetworkQuality networkQuality = NetworkQuality.good;
+
+      // Create enhanced location data
+      final enhancedData = EnhancedLocationData(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        speedKmh: currentSpeed.value,
+        bearing: mapBearing.value,
+        accuracy: currentPosition.value!.accuracy,
+        status: rideStatus,
+        phase: ridePhase,
+        timestamp: DateTime.now(),
+        sequenceNumber: DateTime.now().millisecondsSinceEpoch,
+        batteryLevel: batteryLevel,
+        networkQuality: networkQuality,
+        metadata: {
+          'orderId': orderId,
+          'driverId': driverId,
+          'appVersion': '1.0.0',
+          'deviceType': 'driver',
+        },
+      );
+
+      // Publish enhanced location data
+      _enhancedRealtime.publishLocation(enhancedData);
+    } catch (e) {
+      dev.log('Error publishing enhanced location: $e');
+    }
   }
 
   /// Check if the driver is currently online
@@ -1397,7 +1521,9 @@ class LiveTrackingController extends GetxController {
   void updateAutoNavigation() {
     if (!isAutoNavigationEnabled.value ||
         routePoints.isEmpty ||
-        currentPosition.value == null) return;
+        currentPosition.value == null) {
+      return;
+    }
 
     LatLng devicePos = LatLng(
         currentPosition.value!.latitude, currentPosition.value!.longitude);
@@ -1409,14 +1535,17 @@ class LiveTrackingController extends GetxController {
   void resetToDefaultView() {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
-    polyLines.clear(); // Clear polylines when resetting view
+    // Smart polyline management - only clear if needed, not brute force
+    _polylineManager?.clearAllRoutes();
     updateNavigationView();
     updateMarkersAndPolyline();
   }
 
   void checkUpcomingTurns(LatLng devicePos) async {
     if (navigationSteps.isEmpty ||
-        currentStepIndex.value >= navigationSteps.length) return;
+        currentStepIndex.value >= navigationSteps.length) {
+      return;
+    }
 
     NavigationStep currentStep = navigationSteps[currentStepIndex.value];
     double distanceToStep = await calculateDistance(
@@ -1484,6 +1613,7 @@ class LiveTrackingController extends GetxController {
   void onMapPinch() {
     // Do not disable following; just lock current zoom so user controls zoom
     _lockZoomToCurrent();
+    _onUserInteraction();
   }
 
   // Capture user zoom during camera movement (e.g., pinch) and lock it
@@ -1515,27 +1645,36 @@ class LiveTrackingController extends GetxController {
 
   // Re-center on driver after user interaction ends
   void onMapIdle() {
-    // Re-enable following and clear manual control window
-    isFollowingDriver.value = true;
-    _lastUserInteraction = null;
-
+    // Do not auto-recenter immediately after interaction; wait for explicit recenter
     if (mapController == null) return;
 
-    // Determine best target and re-center smoothly
-    LatLng target = _lastAnimatedPosition ??
-        _displayLatLng ??
-        (currentPosition.value != null
-            ? LatLng(currentPosition.value!.latitude,
-                currentPosition.value!.longitude)
-            : LatLng(0, 0));
-
-    _updateCameraSmooth(target: target);
+    // If following is enabled, keep camera aligned smoothly
+    if (isFollowingDriver.value) {
+      LatLng target = _lastAnimatedPosition ??
+          _displayLatLng ??
+          (currentPosition.value != null
+              ? LatLng(currentPosition.value!.latitude,
+                  currentPosition.value!.longitude)
+              : LatLng(0, 0));
+      _updateCameraSmooth(target: target);
+    }
   }
 
   void _onUserInteraction() {
     // User is manually controlling the map
     isFollowingDriver.value = false;
     _lastUserInteraction = DateTime.now();
+    // Schedule auto-recenter after a delay of no interaction
+    _recenterTimer?.cancel();
+    _recenterTimer = Timer(_recenterDelay, () {
+      // If there has been no new interaction since scheduling, recenter
+      if (_lastUserInteraction != null &&
+          DateTime.now().difference(_lastUserInteraction!) >= _recenterDelay) {
+        isFollowingDriver.value = true;
+        clearFixedZoom();
+        updateNavigationView();
+      }
+    });
   }
 
   // Removed auto re-center timer; user can trigger centering via UI actions
@@ -1544,7 +1683,7 @@ class LiveTrackingController extends GetxController {
     if (_lastUserInteraction == null) return false;
     final timeSinceInteraction =
         DateTime.now().difference(_lastUserInteraction!);
-    return timeSinceInteraction.inSeconds < 5;
+    return timeSinceInteraction < _recenterDelay;
   }
 
   void updateLaneGuidance() {
@@ -1574,8 +1713,9 @@ class LiveTrackingController extends GetxController {
   }
 
   void checkOffRoute() async {
-    if (routePoints.isEmpty || currentPosition.value == null || _isRerouting)
+    if (routePoints.isEmpty || currentPosition.value == null || _isRerouting) {
       return;
+    }
 
     LatLng devicePos = LatLng(
         currentPosition.value!.latitude, currentPosition.value!.longitude);
@@ -1590,9 +1730,7 @@ class LiveTrackingController extends GetxController {
       _consecutiveOffRouteChecks++;
       _offRouteHistory.add(devicePos);
 
-      if (_firstOffRouteTime == null) {
-        _firstOffRouteTime = DateTime.now();
-      }
+      _firstOffRouteTime ??= DateTime.now();
 
       // Enhanced rerouting logic
       if (_shouldTriggerReroute(result)) {
@@ -1667,8 +1805,9 @@ class LiveTrackingController extends GetxController {
     if (deviation > 0.7 && distance > _offRouteThreshold * 0.8) return true;
 
     // Speed-based detection
-    if (currentSpeed.value > 20 && distance > _offRouteThreshold * 0.6)
+    if (currentSpeed.value > 20 && distance > _offRouteThreshold * 0.6) {
       return true;
+    }
 
     // Time-based detection
     if (_consecutiveOffRouteChecks >= 3) return true;
@@ -1679,8 +1818,9 @@ class LiveTrackingController extends GetxController {
   // Calculate off-route severity
   OffRouteSeverity _calculateOffRouteSeverity(
       double distance, double deviation) {
-    if (distance >= _criticalOffRouteThreshold)
+    if (distance >= _criticalOffRouteThreshold) {
       return OffRouteSeverity.critical;
+    }
     if (distance >= _offRouteThreshold * 1.5) return OffRouteSeverity.high;
     if (deviation > 0.5) return OffRouteSeverity.medium;
     return OffRouteSeverity.low;
@@ -1717,12 +1857,15 @@ class LiveTrackingController extends GetxController {
     if (result.severity == OffRouteSeverity.critical) return true;
 
     // Consistent off-route pattern
-    if (_consecutiveOffRouteChecks >= 3 && result.distance > _offRouteThreshold)
+    if (_consecutiveOffRouteChecks >= 3 &&
+        result.distance > _offRouteThreshold) {
       return true;
+    }
 
     // Significant deviation pattern
-    if (result.deviation > 0.6 && result.distance > _offRouteThreshold * 0.8)
+    if (result.deviation > 0.6 && result.distance > _offRouteThreshold * 0.8) {
       return true;
+    }
 
     // Time-based trigger
     if (_firstOffRouteTime != null) {
@@ -1807,26 +1950,23 @@ class LiveTrackingController extends GetxController {
     updateTripProgress();
   }
 
+  // Clear route polylines
   void _clearRoutePolylines() {
-    // Clear all route-related polylines
+    try {
+      _polylineManager?.clearAllRoutes();
+    } catch (e) {
+      dev.log('Error clearing route polylines: $e');
+    }
+    
+    // Fallback: clear polylines manually
     polyLines.removeWhere((key, value) =>
-        key.value.contains('route') ||
-        key.value.contains('Route') ||
-        key.value == 'polyline_id_0');
-  }
-
-  // Clear old breadcrumb trails and optimize polyline display
-  void _cleanupOldPolylines() {
-    // Always remove breadcrumb trail immediately to avoid lingering traces
-    polyLines.removeWhere((key, value) => key.value == "BreadcrumbTrail");
+        key.value.contains("route") || 
+        key.value == "DeviceToPickup" || 
+        key.value == "DeviceToDestination");
   }
 
   void updateDynamicPolyline({bool force = false}) {
     if (routePoints.isEmpty) return;
-
-    // Clean up old polylines first (remove any previous route, previews, trails)
-    _clearRoutePolylines();
-    _cleanupOldPolylines();
 
     // Use animated position if available, otherwise fallback to current position
     LatLng devicePos = _lastAnimatedPosition ??
@@ -1867,22 +2007,27 @@ class LiveTrackingController extends GetxController {
       remainingPoints.insert(0, devicePos);
     }
 
-    String polylineId = showDriverToPickupRoute.value
-        ? "DeviceToPickup"
-        : "DeviceToDestination";
-    Color color =
-        showDriverToPickupRoute.value ? AppColors.primary : Colors.black;
-
-    // Clear existing route polylines immediately (also remove any breadcrumb)
-    polyLines.removeWhere((key, value) =>
-        key.value == "DeviceToPickup" ||
-        key.value == "DeviceToDestination" ||
-        key.value == "polyline_id_0" ||
-        key.value == "BreadcrumbTrail");
-
     if (remainingPoints.length > 1) {
-      // Draw a single clean polyline from the current position to destination
-      _smoothPolylineTransition(polylineId, remainingPoints, color);
+      // Smart polyline update using PolylineManager - no more clearing!
+      String routeId = showDriverToPickupRoute.value
+          ? RoutePhase.toPickup.routeId
+          : RoutePhase.toDestination.routeId;
+
+      PolylineStyle style = showDriverToPickupRoute.value
+          ? PolylineStyle.pickup()
+          : PolylineStyle.destination();
+
+      // Let PolylineManager handle intelligent diffing and updates
+      _polylineManager?.updateRoute(
+        routeId: routeId,
+        points: remainingPoints,
+        style: style,
+        metadata: {
+          'closestIndex': closestIndex,
+          'devicePosition': '${devicePos.latitude},${devicePos.longitude}',
+          'lastUpdate': DateTime.now().toIso8601String(),
+        },
+      );
     }
 
     // Update next route point index for navigation
@@ -1890,9 +2035,6 @@ class LiveTrackingController extends GetxController {
 
     // Update progress when route polyline is updated
     updateTripProgress();
-
-    // Breadcrumbs disabled: ensure any existing trail is removed immediately
-    polyLines.remove(const PolylineId("BreadcrumbTrail"));
   }
 
   void updateNextRoutePoint() {
@@ -2199,8 +2341,7 @@ class LiveTrackingController extends GetxController {
   Future<double> calculateDistance(
       double startLat, double startLng, double endLat, double endLng) async {
     try {
-      return await Geolocator.distanceBetween(
-          startLat, startLng, endLat, endLng);
+      return Geolocator.distanceBetween(startLat, startLng, endLat, endLng);
     } catch (e) {
       return calculateDistanceBetweenPoints(
               startLat, startLng, endLat, endLng) *
@@ -2270,7 +2411,13 @@ class LiveTrackingController extends GetxController {
 
     if (wasShowingPickup != showDriverToPickupRoute.value ||
         wasShowingDestination != showPickupToDestinationRoute.value) {
-      polyLines.clear(); // Clear polylines when route visibility changes
+      // Smart route phase transition - switch phases instead of clearing everything
+      final newPhase = showDriverToPickupRoute.value
+          ? RoutePhase.toPickup
+          : showPickupToDestinationRoute.value
+              ? RoutePhase.toDestination
+              : RoutePhase.completed;
+      _polylineManager?.switchRoutePhase(newPhase);
       updateMarkersAndPolyline();
       // Update progress when route phase changes
       updateTripProgress();
@@ -2345,7 +2492,8 @@ class LiveTrackingController extends GetxController {
 
   void updateMarkersAndPolyline() {
     markers.clear();
-    polyLines.clear();
+    // Smart polyline management - don't clear everything, let PolylineManager handle updates
+    // polyLines.clear(); // REMOVED - replaced with smart management
 
     if (currentPosition.value == null) {
       ShowToastDialog.showToast("Waiting for location...");
@@ -2537,7 +2685,9 @@ class LiveTrackingController extends GetxController {
     if (sourceLatitude == null ||
         sourceLongitude == null ||
         destinationLatitude == null ||
-        destinationLongitude == null) return;
+        destinationLongitude == null) {
+      return;
+    }
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String cacheKey =
@@ -2554,9 +2704,8 @@ class LiveTrackingController extends GetxController {
               showPickupToDestinationRoute.value)) {
         routePoints.value = polylineCoordinates;
       }
-      // Immediately render a clean polyline based on current position
-      _clearRoutePolylines();
-      updateDynamicPolyline(force: true);
+      // Smart polyline update from cache using PolylineManager
+      _updateRouteWithPolylineManager(polylineId, polylineCoordinates, color);
       return;
     }
 
@@ -2595,8 +2744,42 @@ class LiveTrackingController extends GetxController {
       updateTripProgress();
     }
 
-    // Immediately render a clean polyline based on current position
-    _clearRoutePolylines();
+    // Smart polyline update using PolylineManager
+    _updateRouteWithPolylineManager(polylineId, polylineCoordinates, color);
+  }
+
+  // Helper method to update routes using PolylineManager
+  void _updateRouteWithPolylineManager(
+      String polylineId, List<LatLng> points, Color color) {
+    // Map legacy polylineId to RoutePhase
+    String routeId;
+    PolylineStyle style;
+
+    if (polylineId == "DeviceToPickup") {
+      routeId = RoutePhase.toPickup.routeId;
+      style = PolylineStyle.pickup();
+    } else if (polylineId == "DeviceToDestination") {
+      routeId = RoutePhase.toDestination.routeId;
+      style = PolylineStyle.destination();
+    } else {
+      // Generic route
+      routeId = polylineId;
+      style = PolylineStyle(color: color, width: 4.0);
+    }
+
+    // Use PolylineManager for smart updates
+    _polylineManager?.updateRoute(
+      routeId: routeId,
+      points: points,
+      style: style,
+      metadata: {
+        'source': 'getPolyline',
+        'originalId': polylineId,
+        'fetchTime': DateTime.now().toIso8601String(),
+      },
+    );
+
+    // Trigger dynamic polyline update for current position
     updateDynamicPolyline(force: true);
   }
 
@@ -2745,7 +2928,8 @@ class LiveTrackingController extends GetxController {
     clearFixedZoom();
     isFollowingDriver.value = true;
     isNavigationView.value = true;
-    polyLines.clear(); // Clear polylines when toggling view
+    // Smart polyline management - refresh routes instead of clearing
+    _refreshCurrentRoutes();
     updateNavigationView();
     updateMarkersAndPolyline();
 
@@ -2757,6 +2941,15 @@ class LiveTrackingController extends GetxController {
                 currentPosition.value!.longitude)
             : LatLng(0, 0));
     _updateCameraSmooth(target: target);
+  }
+
+  // Helper method to refresh current routes without clearing everything
+  void _refreshCurrentRoutes() {
+    // Only refresh if we have active routes
+    if (showDriverToPickupRoute.value || showPickupToDestinationRoute.value) {
+      // Let the existing route fetching logic handle the refresh
+      updateMarkersAndPolyline();
+    }
   }
 
   void toggleVoiceGuidance() {
@@ -2820,8 +3013,11 @@ class LiveTrackingController extends GetxController {
     _lastRerouteTime = DateTime.now();
     _isRerouting = true;
 
-    // Clear current route display
-    polyLines.clear();
+    // Smart route recalculation - clear only current route, not everything
+    final currentPhase = showDriverToPickupRoute.value
+        ? RoutePhase.toPickup
+        : RoutePhase.toDestination;
+    _polylineManager?.removeRoute(currentPhase.routeId);
 
     // Show rerouting indicator
     _showReroutingIndicator();
@@ -2840,8 +3036,8 @@ class LiveTrackingController extends GetxController {
       getTargetLocation(),
     ];
 
-    _addPolyLine(
-        indicatorPoints, "rerouting_indicator", Colors.orange.withOpacity(0.5));
+    _addPolyLine(indicatorPoints, "rerouting_indicator",
+        Colors.orange.withValues(alpha: 0.5));
 
     if (isVoiceEnabled.value) {
       queueAnnouncement("Calculating new route...", priority: 2);
@@ -2964,8 +3160,12 @@ class LiveTrackingController extends GetxController {
     List<LatLng> directRoute = [source, destination];
     routePoints.value = directRoute;
 
-    polyLines.clear();
-    _addPolyLine(directRoute, "DirectRoute", Colors.red);
+    // Smart direct route creation using PolylineManager
+    _polylineManager?.updateRoute(
+      routeId: "DirectRoute",
+      points: directRoute,
+      style: PolylineStyle(color: Colors.red, width: 4.0),
+    );
 
     if (isVoiceEnabled.value) {
       queueAnnouncement("Using direct route due to navigation issues.",
@@ -2979,7 +3179,8 @@ class LiveTrackingController extends GetxController {
   void centerMapOnDriver() {
     isFollowingDriver.value = true;
     isNavigationView.value = true;
-    polyLines.clear(); // Clear polylines when centering on driver
+    // Smart centering - refresh routes instead of clearing
+    _refreshCurrentRoutes();
     updateNavigationView();
     updateMarkersAndPolyline();
   }
@@ -3173,9 +3374,12 @@ class LiveTrackingController extends GetxController {
       // Parse new navigation steps
       parseNavigationSteps(routeData);
 
-      // Update polylines with smooth transition
-      polyLines.clear();
-      _addPolyLine(newRoutePoints, "OptimizedRoute", AppColors.primary);
+      // Update polylines with smart transition using PolylineManager
+      _polylineManager?.updateRoute(
+        routeId: "OptimizedRoute",
+        points: newRoutePoints,
+        style: PolylineStyle(color: AppColors.primary, width: 4.0),
+      );
 
       // Update route quality score
       _routeQualityScore = _calculateRouteQualityScore(

@@ -1,7 +1,6 @@
 import 'package:driver/constant/constant.dart';
 import 'package:driver/model/withdraw_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +8,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 class WithDrawHistoryScreen extends StatelessWidget {
   const WithDrawHistoryScreen({super.key});
@@ -63,7 +61,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.darkBackground.withOpacity(0.2),
+          color: AppColors.darkBackground.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -72,7 +70,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.darkBackground.withOpacity(0.1),
+              color: AppColors.darkBackground.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -220,7 +218,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: SvgPicture.asset(
@@ -248,8 +246,8 @@ class WithDrawHistoryScreen extends StatelessWidget {
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: isApproved
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -309,7 +307,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             spreadRadius: 2,
             blurRadius: 12,
             offset: const Offset(0, 4),

@@ -38,7 +38,7 @@ class AnalyticsScreen extends StatelessWidget {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        shadowColor: Colors.black.withOpacity(0.1),
+        shadowColor: Colors.black.withValues(alpha: 0.1),
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -85,7 +85,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.9),
+            AppColors.primary.withValues(alpha: 0.9),
             AppColors.darkBackground
           ],
           begin: Alignment.topLeft,
@@ -93,7 +93,7 @@ class AnalyticsScreen extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -131,7 +131,7 @@ class AnalyticsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -203,9 +203,9 @@ class AnalyticsScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +213,7 @@ class AnalyticsScreen extends StatelessWidget {
           Text(
             title,
             style: AppTypography.caption(context).copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -298,7 +298,7 @@ class AnalyticsScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -484,7 +484,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -496,7 +496,7 @@ class AnalyticsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 28),
@@ -545,7 +545,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -568,7 +568,7 @@ class AnalyticsScreen extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -703,8 +703,9 @@ class AnalyticsScreen extends StatelessWidget {
                         showTitles: true,
                         interval: maxY == 0 ? 1 : maxY / 4,
                         getTitlesWidget: (double value, TitleMeta meta) {
-                          if (value == 0 || value == maxY)
+                          if (value == 0 || value == maxY) {
                             return const Text('');
+                          }
                           return Text(
                             '\$${value.toInt()}',
                             style: const TextStyle(
@@ -733,7 +734,7 @@ class AnalyticsScreen extends StatelessWidget {
                       isCurved: true,
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.primary.withOpacity(0.9),
+                          AppColors.primary.withValues(alpha: 0.9),
                           AppColors.primary,
                         ],
                       ),
@@ -744,8 +745,8 @@ class AnalyticsScreen extends StatelessWidget {
                         show: true,
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.primary.withOpacity(0.3),
-                            AppColors.primary.withOpacity(0.05),
+                            AppColors.primary.withValues(alpha: 0.3),
+                            AppColors.primary.withValues(alpha: 0.05),
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -771,7 +772,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -871,7 +872,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -923,7 +924,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -975,7 +976,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1027,7 +1028,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1075,8 +1076,9 @@ class AnalyticsScreen extends StatelessWidget {
                               showTitles: true,
                               interval: maxY == 0 ? 1 : maxY / 4,
                               getTitlesWidget: (double value, TitleMeta meta) {
-                                if (value == 0 || value == maxY)
+                                if (value == 0 || value == maxY) {
                                   return const Text('');
+                                }
                                 return Text(
                                   value.toInt().toString(),
                                   style: const TextStyle(
@@ -1140,7 +1142,7 @@ class AnalyticsScreen extends StatelessWidget {
                                       toY: entry.value.barRods.first.toY,
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppColors.primary.withOpacity(0.8),
+                                          AppColors.primary.withValues(alpha: 0.8),
                                           AppColors.primary,
                                         ],
                                       ),
@@ -1168,7 +1170,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1234,8 +1236,9 @@ class AnalyticsScreen extends StatelessWidget {
                                 // Don't show a label for the max value to avoid overlap
                                 if (value == meta.max) return const Text('');
                                 // Only show integer values for ride counts
-                                if (value.toInt().toDouble() != value)
+                                if (value.toInt().toDouble() != value) {
                                   return const Text('');
+                                }
 
                                 return Text(
                                   value.toInt().toString(),
@@ -1315,7 +1318,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1363,8 +1366,9 @@ class AnalyticsScreen extends StatelessWidget {
                               showTitles: true,
                               interval: maxY == 0 ? 1 : maxY / 4,
                               getTitlesWidget: (double value, TitleMeta meta) {
-                                if (value == 0 || value == maxY)
+                                if (value == 0 || value == maxY) {
                                   return const Text('');
+                                }
                                 return Text(
                                   '\$${value.toInt()}',
                                   style: const TextStyle(
@@ -1421,7 +1425,7 @@ class AnalyticsScreen extends StatelessWidget {
                                       toY: entry.value.barRods.first.toY,
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppColors.primary.withOpacity(0.8),
+                                          AppColors.primary.withValues(alpha: 0.8),
                                           AppColors.primary,
                                         ],
                                       ),

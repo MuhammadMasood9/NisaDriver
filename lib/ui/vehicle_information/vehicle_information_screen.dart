@@ -1,23 +1,18 @@
-import 'dart:developer';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/vehicle_information_controller.dart';
 import 'package:driver/model/VehicleUpdateRequestModel.dart';
-import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/vehicle_type_model.dart';
 import 'package:driver/model/zone_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 class VehicleInformationScreen extends StatelessWidget {
   const VehicleInformationScreen({super.key});
@@ -75,7 +70,7 @@ class VehicleInformationScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -136,7 +131,7 @@ class VehicleInformationScreen extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.2),
+          color: AppColors.primary.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -144,7 +139,7 @@ class VehicleInformationScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
+              color: AppColors.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.grey300),
             ),
@@ -186,7 +181,7 @@ class VehicleInformationScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -311,7 +306,7 @@ class VehicleInformationScreen extends StatelessWidget {
                   // margin: const EdgeInsets.all(12),
                   // padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppColors.background.withOpacity(0.1),
+                    color: AppColors.background.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ShaderMask(
@@ -402,7 +397,7 @@ class VehicleInformationScreen extends StatelessWidget {
                   // margin: const EdgeInsets.all(12),
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: AppColors.background.withOpacity(0.1),
+                    color: AppColors.background.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ShaderMask(
@@ -528,7 +523,7 @@ class VehicleInformationScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.darkBackground,
-            AppColors.darkBackground.withOpacity(0.8),
+            AppColors.darkBackground.withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -772,7 +767,7 @@ class VehicleInformationScreen extends StatelessWidget {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -988,7 +983,7 @@ class VehicleInformationScreen extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.08)
+              ? AppColors.primary.withValues(alpha: 0.08)
               : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
@@ -1032,7 +1027,7 @@ class VehicleInformationScreen extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.08)
+              ? AppColors.primary.withValues(alpha: 0.08)
               : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(

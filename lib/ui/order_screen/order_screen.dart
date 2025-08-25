@@ -18,7 +18,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class OrderScreen extends StatelessWidget {
-  const OrderScreen({Key? key}) : super(key: key);
+  const OrderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +147,7 @@ class OrderScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
       ),
       child: Row(
@@ -195,7 +195,7 @@ class OrderScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -259,7 +259,7 @@ class OrderScreen extends StatelessWidget {
       children: [
         Expanded(
           flex: 2,
-          child: Container(
+          child: SizedBox(
             height: 35,
             child: OutlinedButton.icon(
               icon: const Icon(Icons.rate_review_outlined, size: 16),

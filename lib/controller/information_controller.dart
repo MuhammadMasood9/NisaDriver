@@ -8,7 +8,6 @@ import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/document_model.dart';
 import 'package:driver/model/driver_document_model.dart';
 import 'package:driver/model/driver_user_model.dart';
-import 'package:driver/model/language_name.dart';
 import 'package:driver/model/service_model.dart';
 import 'package:driver/model/vehicle_type_model.dart';
 import 'package:driver/model/zone_model.dart';
@@ -298,7 +297,7 @@ class InformationController extends GetxController {
             borderType: BorderType.RRect,
             radius: const Radius.circular(16),
             dashPattern: const [8, 4],
-            color: AppColors.primary.withOpacity(0.5),
+            color: AppColors.primary.withValues(alpha: 0.5),
             strokeWidth: 1.5,
             child: Container(
               width: double.infinity,
@@ -306,7 +305,7 @@ class InformationController extends GetxController {
               decoration: BoxDecoration(
                   color: hasImage
                       ? Colors.transparent
-                      : AppColors.primary.withOpacity(0.02),
+                      : AppColors.primary.withValues(alpha: 0.02),
                   borderRadius: BorderRadius.circular(16)),
               child: hasImage
                   ? _buildDocImagePreview(context, imagePath)
@@ -338,7 +337,7 @@ class InformationController extends GetxController {
           child: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               shape: BoxShape.circle,
             ),
             child:
@@ -373,7 +372,7 @@ class InformationController extends GetxController {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(color: Colors.white, boxShadow: [
         BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2))
       ]),
@@ -456,7 +455,7 @@ class InformationController extends GetxController {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-                color: color.withOpacity(0.1), shape: BoxShape.circle),
+                color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 32),
           ),
           const SizedBox(height: 12),

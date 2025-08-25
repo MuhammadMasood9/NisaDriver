@@ -1,4 +1,3 @@
-import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/bank_details_controller.dart';
 import 'package:driver/model/bank_details_model.dart';
@@ -64,7 +63,7 @@ class BankDetailsScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -123,7 +122,7 @@ class BankDetailsScreen extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.2),
+          color: AppColors.primary.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -131,7 +130,7 @@ class BankDetailsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
+              color: AppColors.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.grey300),
             ),
@@ -173,7 +172,7 @@ class BankDetailsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -287,7 +286,7 @@ class BankDetailsScreen extends StatelessWidget {
             decoration: InputDecoration(
               prefixIcon: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.background.withOpacity(0.1),
+                  color: AppColors.background.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ShaderMask(
@@ -332,7 +331,7 @@ class BankDetailsScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.darkBackground,
-            AppColors.darkBackground.withOpacity(0.8),
+            AppColors.darkBackground.withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

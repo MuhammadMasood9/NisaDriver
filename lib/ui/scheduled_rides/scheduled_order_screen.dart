@@ -22,7 +22,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 class ScheduledOrderScreen extends StatelessWidget {
-  const ScheduledOrderScreen({Key? key}) : super(key: key);
+  const ScheduledOrderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +80,7 @@ class ScheduledOrderScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 20,
             offset: const Offset(0, 5),
@@ -121,7 +121,7 @@ class ScheduledOrderScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       spacing: 5,
                       children: [
-                        Container(
+                        SizedBox(
                           width: 50,
                           child: _buildCircleIconButton(
                             context: context,
@@ -129,7 +129,7 @@ class ScheduledOrderScreen extends StatelessWidget {
                             onTap: () => _openChat(orderModel),
                           ),
                         ),
-                        Container(
+                        SizedBox(
                           width: 50,
                           child: _buildCircleIconButton(
                             context: context,
@@ -159,7 +159,7 @@ class ScheduledOrderScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: tagColor.withOpacity(0.1),
+        color: tagColor.withValues(alpha: 0.1),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
       ),
       child: Row(
@@ -206,7 +206,7 @@ class ScheduledOrderScreen extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -275,7 +275,7 @@ class ScheduledOrderScreen extends StatelessWidget {
       children: [
         Expanded(
           flex: 1,
-          child: Container(
+          child: SizedBox(
             height: 35,
             child: ElevatedButton(
               onPressed: () => isRideInProgress
@@ -300,7 +300,7 @@ class ScheduledOrderScreen extends StatelessWidget {
         ),
         const SizedBox(width: 5),
         Expanded(
-            child: Container(
+            child: SizedBox(
           height: 35,
           child: OutlinedButton(
             onPressed: () => _trackRide(orderModel),
@@ -325,13 +325,13 @@ class ScheduledOrderScreen extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-            child: Container(
+            child: SizedBox(
           height: 35,
           child: OutlinedButton(
             onPressed: () => _cancelRide(context, orderModel),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primary,
-              side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
               padding: const EdgeInsets.symmetric(vertical: 8),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(3)),

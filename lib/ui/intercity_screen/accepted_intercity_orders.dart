@@ -16,7 +16,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class AcceptedIntercityOrders extends StatelessWidget {
-  const AcceptedIntercityOrders({Key? key}) : super(key: key);
+  const AcceptedIntercityOrders({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +100,7 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                           Radius.circular(10)),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.grey.withOpacity(0.3),
+                                          color: Colors.grey.withValues(alpha: 0.3),
                                           blurRadius: 5,
                                           offset: const Offset(0, 2),
                                         ),
@@ -204,7 +204,7 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                                     Container(
                                                       decoration: BoxDecoration(
                                                         color: Colors.grey
-                                                            .withOpacity(0.3),
+                                                            .withValues(alpha: 0.3),
                                                         borderRadius:
                                                             const BorderRadius
                                                                 .all(
@@ -230,7 +230,7 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                                     Container(
                                                       decoration: BoxDecoration(
                                                         color: AppColors.primary
-                                                            .withOpacity(0.3),
+                                                            .withValues(alpha: 0.3),
                                                         borderRadius:
                                                             const BorderRadius
                                                                 .all(

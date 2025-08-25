@@ -10,7 +10,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class OnBoardingScreen extends StatelessWidget {
-  const OnBoardingScreen({Key? key}) : super(key: key);
+  const OnBoardingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +36,7 @@ class OnBoardingScreen extends StatelessWidget {
                           flex: 3,
                           child: PageView.builder(
                               controller: controller.pageController,
-                              onPageChanged: controller.selectedPageIndex,
+                              onPageChanged: controller.selectedPageIndex.call,
                               itemCount: controller.onBoardingList.length,
                               itemBuilder: (context, index) {
                                 return Column(

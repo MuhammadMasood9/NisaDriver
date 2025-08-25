@@ -19,7 +19,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 class ParcelDetailsScreen extends StatefulWidget {
-  const ParcelDetailsScreen({Key? key}) : super(key: key);
+  const ParcelDetailsScreen({super.key});
 
   @override
   State<ParcelDetailsScreen> createState() => _ParcelDetailsScreenState();
@@ -334,7 +334,7 @@ class _ParcelDetailsScreenState extends State<ParcelDetailsScreen>
         borderRadius: BorderRadius.circular(_cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
           ),
         ],

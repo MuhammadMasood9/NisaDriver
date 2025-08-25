@@ -30,7 +30,7 @@ class EnhancedDateSelector extends StatefulWidget {
   final String dateFormat;
 
   const EnhancedDateSelector({
-    Key? key,
+    super.key,
     required this.label,
     required this.hintText,
     required this.onDateSelected,
@@ -42,7 +42,7 @@ class EnhancedDateSelector extends StatefulWidget {
     this.primaryColor = Colors.blue,
     this.showClearButton = true,
     this.dateFormat = "dd-MM-yyyy",
-  }) : super(key: key);
+  });
 
   @override
   State<EnhancedDateSelector> createState() => _EnhancedDateSelectorState();
@@ -90,8 +90,7 @@ class _EnhancedDateSelectorState extends State<EnhancedDateSelector>
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black,
-            ),
-            dialogBackgroundColor: Colors.white,
+            ), dialogTheme: DialogThemeData(backgroundColor: Colors.white),
           ),
           child: child!,
         );
@@ -172,8 +171,8 @@ class _EnhancedDateSelectorState extends State<EnhancedDateSelector>
                     boxShadow: [
                       BoxShadow(
                         color: _isPressed
-                            ? widget.primaryColor.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.1),
+                            ? widget.primaryColor.withValues(alpha: 0.2)
+                            : Colors.grey.withValues(alpha: 0.1),
                         spreadRadius: _isPressed ? 2 : 1,
                         blurRadius: _isPressed ? 12 : 8,
                         offset: const Offset(0, 2),
@@ -359,9 +358,9 @@ class DetailsUploadScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withOpacity(0.5)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
             ),
             child: Icon(
               isVerified
@@ -405,7 +404,7 @@ class DetailsUploadScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -700,13 +699,13 @@ class DetailsUploadScreen extends StatelessWidget {
       borderType: BorderType.RRect,
       radius: const Radius.circular(8),
       dashPattern: const [6, 4],
-      color: AppColors.primary.withOpacity(0.5),
+      color: AppColors.primary.withValues(alpha: 0.5),
       strokeWidth: 1.5,
       child: Container(
         height: Responsive.height(22, context),
         width: double.infinity,
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.05),
+          color: AppColors.primary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -743,7 +742,7 @@ class DetailsUploadScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.darkBackground,
-            AppColors.darkBackground.withOpacity(0.8),
+            AppColors.darkBackground.withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

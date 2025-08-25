@@ -199,10 +199,10 @@ class MyProfileScreen extends StatelessWidget {
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: AppColors.darkBackground.withOpacity(0.1),
+              color: AppColors.darkBackground.withValues(alpha: 0.1),
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppColors.darkBackground.withOpacity(0.2), width: 1),
+                  color: AppColors.darkBackground.withValues(alpha: 0.2), width: 1),
             ),
             child: ClipOval(
               child: CachedNetworkImage(
@@ -248,7 +248,7 @@ class MyProfileScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -266,7 +266,7 @@ class MyProfileScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.darkBackground.withOpacity(0.03),
+                    color: AppColors.darkBackground.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   // Use ShaderMask to apply a gradient to the icon
@@ -314,7 +314,7 @@ class MyProfileScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                      color: AppColors.darkBackground.withOpacity(0.07),
+                      color: AppColors.darkBackground.withValues(alpha: 0.07),
                       borderRadius: BorderRadius.circular(6)),
                   child: const Icon(Icons.arrow_forward_ios,
                       size: 16, color: AppColors.darkBackground),
@@ -336,7 +336,7 @@ class MyProfileScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -403,7 +403,7 @@ class MyProfileScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.danger200.withOpacity(0.1),
+                    color: AppColors.danger200.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   // Use ShaderMask to apply a gradient to the icon

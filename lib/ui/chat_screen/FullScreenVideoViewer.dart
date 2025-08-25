@@ -11,7 +11,7 @@ class FullScreenVideoViewer extends StatefulWidget {
   final String heroTag;
   final File? videoFile;
 
-  const FullScreenVideoViewer({Key? key, required this.videoUrl, required this.heroTag, this.videoFile}) : super(key: key);
+  const FullScreenVideoViewer({super.key, required this.videoUrl, required this.heroTag, this.videoFile});
 
   @override
   _FullScreenVideoViewerState createState() => _FullScreenVideoViewerState();

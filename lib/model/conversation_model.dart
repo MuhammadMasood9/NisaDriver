@@ -56,7 +56,7 @@ class ConversationModel {
       'message': message,
       'messageType': messageType,
       'videoThumbnail': videoThumbnail,
-      'url': url == null ? null : url!.toJson(),
+      'url': url?.toJson(),
       'createdAt': createdAt,
       'repliedToMessageId': repliedToMessageId,
       'repliedToMessageContent': repliedToMessageContent,

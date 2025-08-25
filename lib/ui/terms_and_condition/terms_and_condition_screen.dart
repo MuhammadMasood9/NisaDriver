@@ -1,6 +1,5 @@
 import 'package:driver/constant/constant.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:get/get.dart';
@@ -65,7 +64,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
               boxShadow: [
                 if (!isDarkMode)
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -115,10 +114,10 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: primaryColor.withOpacity(0.2),
+                  color: primaryColor.withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -160,7 +159,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                             fontSize: 14,
                             color: isDarkMode
                                 ? Colors.white70
-                                : AppColors.darkBackground.withOpacity(0.7),
+                                : AppColors.darkBackground.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -181,7 +180,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.08),
+                    color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -223,8 +222,8 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                     fontSize: FontSize(16),
                     lineHeight: const LineHeight(1.6),
                     color: isDarkMode
-                        ? Colors.white.withOpacity(0.9)
-                        : AppColors.darkBackground.withOpacity(0.8),
+                        ? Colors.white.withValues(alpha: 0.9)
+                        : AppColors.darkBackground.withValues(alpha: 0.8),
                     margin: Margins.only(bottom: 16),
                   ),
                   "ul": Style(
@@ -234,8 +233,8 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                     fontSize: FontSize(16),
                     lineHeight: const LineHeight(1.6),
                     color: isDarkMode
-                        ? Colors.white.withOpacity(0.9)
-                        : AppColors.darkBackground.withOpacity(0.8),
+                        ? Colors.white.withValues(alpha: 0.9)
+                        : AppColors.darkBackground.withValues(alpha: 0.8),
                     margin: Margins.only(bottom: 8),
                   ),
                   "strong": Style(
@@ -263,7 +262,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                     size: 20,
                     color: isDarkMode
                         ? Colors.white70
-                        : AppColors.darkBackground.withOpacity(0.7),
+                        : AppColors.darkBackground.withValues(alpha: 0.7),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -273,7 +272,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                         fontSize: 14,
                         color: isDarkMode
                             ? Colors.white70
-                            : AppColors.darkBackground.withOpacity(0.7),
+                            : AppColors.darkBackground.withValues(alpha: 0.7),
                         height: 1.4,
                       ),
                     ),

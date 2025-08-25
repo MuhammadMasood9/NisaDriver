@@ -22,7 +22,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 class ActiveIntercityOrderScreen extends StatelessWidget {
-  const ActiveIntercityOrderScreen({Key? key}) : super(key: key);
+  const ActiveIntercityOrderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +75,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 20,
             offset: const Offset(0, 5),
@@ -142,7 +142,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.blue.shade700.withOpacity(0.1),
+        color: Colors.blue.shade700.withValues(alpha: 0.1),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
       ),
       child: Row(
@@ -190,7 +190,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -315,7 +315,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
               onPressed: () => _cancelRide(context, orderModel),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
-                side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(3)),
@@ -337,7 +337,7 @@ class ActiveIntercityOrderScreen extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.blue.shade700,
                   side:
-                      BorderSide(color: Colors.blue.shade700.withOpacity(0.5)),
+                      BorderSide(color: Colors.blue.shade700.withValues(alpha: 0.5)),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(3)),
