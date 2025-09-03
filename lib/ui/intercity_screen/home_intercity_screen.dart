@@ -1,8 +1,6 @@
 import 'package:driver/constant/constant.dart';
-import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/controller/home_intercity_controller.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
@@ -138,7 +136,8 @@ class HomeIntercityScreen extends StatelessWidget {
                                 ),
                                 borderRadius: BorderRadius.circular(30),
                                 border: Border.all(
-                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.2),
                                   width: 2,
                                 ),
                               ),
@@ -190,7 +189,8 @@ class HomeIntercityScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF0984E3).withValues(alpha: 0.3),
+                              color: const Color(0xFF0984E3)
+                                  .withValues(alpha: 0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),

@@ -20,7 +20,7 @@ class DashBoardScreen extends StatelessWidget {
       init: DashBoardController(),
       builder: (controller) {
         return Scaffold(
-            // key: Get.key,
+          // key: Get.key,
           backgroundColor: AppColors.background,
           // The AppBar is now a primary part of the Scaffold
           appBar: AppBar(
@@ -70,7 +70,7 @@ class DashBoardScreen extends StatelessWidget {
                           onChanged: (value) {
                             controller.toggleOnlineStatus(value);
                           },
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                           inactiveThumbColor: AppColors.grey500,
                         )),
                   ),

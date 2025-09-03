@@ -250,7 +250,7 @@ class OfflineQueueManager {
     _queue.add(queuedItem);
     _totalQueued++;
 
-    dev.log('OfflineQueueManager: Queued location ${itemId} (${_queue.length}/${_config.maxQueueSize})');
+    dev.log('OfflineQueueManager: Queued location $itemId (${_queue.length}/${_config.maxQueueSize})');
 
     // Persist if enabled
     if (_config.enablePersistence) {

@@ -395,7 +395,7 @@ class Constant {
         quality: 75,
       );
 
-      if (thumbnailBytes == null || thumbnailBytes.isEmpty) {
+      if (thumbnailBytes.isEmpty) {
         throw Exception("Failed to generate thumbnail.");
       }
 

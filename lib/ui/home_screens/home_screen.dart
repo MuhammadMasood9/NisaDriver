@@ -2,9 +2,7 @@ import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/controller/home_controller.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
-import 'package:driver/ui/profile_screen/profile_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -77,8 +75,8 @@ class HomeScreen extends StatelessWidget {
                                         Container(
                                           padding: const EdgeInsets.all(10),
                                           decoration: BoxDecoration(
-                                            color:
-                                                Colors.white.withValues(alpha: 0.2),
+                                            color: Colors.white
+                                                .withValues(alpha: 0.2),
                                             borderRadius:
                                                 BorderRadius.circular(12),
                                           ),

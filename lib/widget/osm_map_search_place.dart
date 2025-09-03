@@ -3,7 +3,6 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class OsmSearchPlacesApi extends StatelessWidget {
   const OsmSearchPlacesApi({super.key});
@@ -24,7 +23,7 @@ class OsmSearchPlacesApi extends StatelessWidget {
                 },
                 child: Icon(
                   Icons.arrow_back,
-                  color:  AppColors.lightGray,
+                  color: AppColors.lightGray,
                 ),
               ),
               title: Text(
@@ -40,37 +39,49 @@ class OsmSearchPlacesApi extends StatelessWidget {
               child: Column(
                 children: [
                   TextFormField(
-                      validator: (value) => value != null && value.isNotEmpty ? null : 'Required',
+                      validator: (value) =>
+                          value != null && value.isNotEmpty ? null : 'Required',
                       keyboardType: TextInputType.text,
                       textCapitalization: TextCapitalization.sentences,
                       controller: controller.searchTxtController.value,
                       textAlign: TextAlign.start,
-                      style: GoogleFonts.poppins( ),
+                      style: GoogleFonts.poppins(),
                       decoration: InputDecoration(
                           isDense: true,
                           filled: true,
-                          fillColor:  AppColors.textField,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          fillColor: AppColors.textField,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 12),
                           prefixIcon: const Icon(Icons.map),
                           disabledBorder: OutlineInputBorder(
-                            borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(4)),
+                            borderSide: BorderSide(
+                                color: AppColors.textFieldBorder, width: 1),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(4)),
+                            borderSide: BorderSide(
+                                color: AppColors.textFieldBorder, width: 1),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(4)),
+                            borderSide: BorderSide(
+                                color: AppColors.textFieldBorder, width: 1),
                           ),
                           errorBorder: OutlineInputBorder(
-                            borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(4)),
+                            borderSide: BorderSide(
+                                color: AppColors.textFieldBorder, width: 1),
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: const BorderRadius.all(Radius.circular(4)),
-                            borderSide: BorderSide(color:  AppColors.textFieldBorder, width: 1),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(4)),
+                            borderSide: BorderSide(
+                                color: AppColors.textFieldBorder, width: 1),
                           ),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.cancel),
@@ -86,7 +97,11 @@ class OsmSearchPlacesApi extends StatelessWidget {
                       itemCount: controller.suggestionsList.length,
                       itemBuilder: (context, index) {
                         return ListTile(
-                          title: Text(controller.suggestionsList[index].address.toString(),style: TextStyle(),),
+                          title: Text(
+                            controller.suggestionsList[index].address
+                                .toString(),
+                            style: TextStyle(),
+                          ),
                           onTap: () {
                             Get.back(result: controller.suggestionsList[index]);
                           },

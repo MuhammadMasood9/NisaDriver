@@ -10,11 +10,9 @@ import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/home_screens/order_map_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
-import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class AcceptedOrders extends StatelessWidget {
   const AcceptedOrders({super.key});
@@ -66,7 +64,6 @@ class AcceptedOrders extends StatelessWidget {
 // ~~~ Keep your existing imports and the 'AcceptedOrders' widget as they are ~~~
 // ... (imports from your original code)
 // ... (AcceptedOrders class from your original code)
-
 
 // REPLACE the existing OrderItemWithTimer and _OrderItemWithTimerState
 // with the following updated code.
@@ -260,20 +257,24 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
       () => _isExpired.value
           ? const SizedBox.shrink()
           : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
               child: InkWell(
                 onTap: () {
                   // Pause timer to prevent expiration while on the map screen
                   _timer?.cancel();
-                  Get.to(const OrderMapScreen(),
-                          arguments: {"orderModel": widget.orderModel.id.toString()})!
+                  Get.to(const OrderMapScreen(), arguments: {
+                    "orderModel": widget.orderModel.id.toString()
+                  })!
                       .then((value) {
                     // This code runs when returning from OrderMapScreen
 
                     // Resume timer if the widget is still active
                     if (mounted && !_isExpired.value) {
                       if (_timerStartTime != null) {
-                        final elapsed = DateTime.now().difference(_timerStartTime!).inSeconds;
+                        final elapsed = DateTime.now()
+                            .difference(_timerStartTime!)
+                            .inSeconds;
                         final remaining = TIMER_DURATION - elapsed;
                         if (remaining > 0) {
                           _remainingSeconds.value = remaining;
@@ -319,8 +320,12 @@ class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
                             // ),
                             const SizedBox(height: 12),
                             LocationView(
-                              sourceLocation: widget.orderModel.sourceLocationName.toString(),
-                              destinationLocation: widget.orderModel.destinationLocationName.toString(),
+                              sourceLocation: widget
+                                  .orderModel.sourceLocationName
+                                  .toString(),
+                              destinationLocation: widget
+                                  .orderModel.destinationLocationName
+                                  .toString(),
                             ),
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 12.0),
@@ -445,7 +450,8 @@ class TimerIndicator extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Center(
             child: Text(
-              'Tap card to view on map • Expires in ${remainingSeconds.value}s'.tr,
+              'Tap card to view on map • Expires in ${remainingSeconds.value}s'
+                  .tr,
               style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,

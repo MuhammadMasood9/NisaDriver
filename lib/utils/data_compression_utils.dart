@@ -45,13 +45,15 @@ class CompressionResult {
   });
 
   /// Compression ratio (compressed size / original size)
-  double get compressionRatio => originalSize > 0 ? compressedSize / originalSize : 1.0;
+  double get compressionRatio =>
+      originalSize > 0 ? compressedSize / originalSize : 1.0;
 
   /// Bytes saved through compression
   int get bytesSaved => originalSize - compressedSize;
 
   /// Compression efficiency as percentage
-  double get compressionEfficiency => originalSize > 0 ? (bytesSaved / originalSize) * 100 : 0.0;
+  double get compressionEfficiency =>
+      originalSize > 0 ? (bytesSaved / originalSize) * 100 : 0.0;
 
   @override
   String toString() {
@@ -81,7 +83,7 @@ class DecompressionResult {
 
   @override
   String toString() {
-    return 'DecompressionResult(algorithm: ${algorithm.value}, size: ${decompressedSize} bytes, time: ${decompressionTime.inMilliseconds}ms)';
+    return 'DecompressionResult(algorithm: ${algorithm.value}, size: $decompressedSize bytes, time: ${decompressionTime.inMilliseconds}ms)';
   }
 }
 
@@ -256,11 +258,16 @@ class DataCompressionUtils {
   /// Test compression efficiency for given data
   static Map<CompressionAlgorithm, CompressionResult> testCompressionEfficiency(
     Uint8List data, {
-    List<int> levels = const [6], // Levels parameter kept for API compatibility but not used
+    List<int> levels = const [
+      6
+    ], // Levels parameter kept for API compatibility but not used
   }) {
     final results = <CompressionAlgorithm, CompressionResult>{};
 
-    for (final algorithm in [CompressionAlgorithm.gzip, CompressionAlgorithm.deflate]) {
+    for (final algorithm in [
+      CompressionAlgorithm.gzip,
+      CompressionAlgorithm.deflate
+    ]) {
       final result = compress(data, algorithm: algorithm);
       if (result.success) {
         results[algorithm] = result;
@@ -277,13 +284,13 @@ class DataCompressionUtils {
     Duration maxCompressionTime = const Duration(milliseconds: 100),
   }) {
     final results = testCompressionEfficiency(data);
-    
+
     CompressionAlgorithm bestAlgorithm = CompressionAlgorithm.none;
     double bestRatio = 1.0;
-    
+
     for (final entry in results.entries) {
       final result = entry.value;
-      
+
       // Check if compression meets criteria
       if (result.success &&
           result.compressionRatio < minCompressionRatio &&
@@ -293,7 +300,7 @@ class DataCompressionUtils {
         bestRatio = result.compressionRatio;
       }
     }
-    
+
     return bestAlgorithm;
   }
 
@@ -302,11 +309,11 @@ class DataCompressionUtils {
     // Simple heuristic based on data characteristics
     final length = data.length;
     if (length < 100) return 1.0; // Too small to benefit from compression
-    
+
     // Count unique bytes
     final uniqueBytes = data.toSet().length;
     final entropy = uniqueBytes / 256.0;
-    
+
     // Estimate compression ratio based on entropy
     // Lower entropy (more repetitive data) compresses better
     if (entropy < 0.3) {
@@ -327,15 +334,17 @@ class DataCompressionUtils {
     double maxEstimatedRatio = 0.8, // Maximum estimated ratio to compress
   }) {
     if (data.length < minSize) return false;
-    
+
     final estimatedRatio = estimateCompressionRatio(data);
     return estimatedRatio <= maxEstimatedRatio;
   }
 
   /// Create compression metadata for Firebase storage
-  static Map<String, dynamic> createCompressionMetadata(CompressionResult result) {
+  static Map<String, dynamic> createCompressionMetadata(
+      CompressionResult result) {
     return {
-      'compressed': result.success && result.algorithm != CompressionAlgorithm.none,
+      'compressed':
+          result.success && result.algorithm != CompressionAlgorithm.none,
       'algorithm': result.algorithm.value,
       'originalSize': result.originalSize,
       'compressedSize': result.compressedSize,
@@ -346,9 +355,10 @@ class DataCompressionUtils {
   }
 
   /// Parse compression metadata from Firebase
-  static Map<String, dynamic>? parseCompressionMetadata(Map<String, dynamic>? metadata) {
+  static Map<String, dynamic>? parseCompressionMetadata(
+      Map<String, dynamic>? metadata) {
     if (metadata == null) return null;
-    
+
     try {
       return {
         'compressed': metadata['compressed'] as bool? ?? false,
@@ -358,7 +368,8 @@ class DataCompressionUtils {
         ),
         'originalSize': metadata['originalSize'] as int? ?? 0,
         'compressedSize': metadata['compressedSize'] as int? ?? 0,
-        'compressionRatio': (metadata['compressionRatio'] as num?)?.toDouble() ?? 1.0,
+        'compressionRatio':
+            (metadata['compressionRatio'] as num?)?.toDouble() ?? 1.0,
         'compressionTime': metadata['compressionTime'] as int? ?? 0,
         'timestamp': metadata['timestamp'] as int? ?? 0,
       };

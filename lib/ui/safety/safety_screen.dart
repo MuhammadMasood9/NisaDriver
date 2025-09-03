@@ -346,7 +346,6 @@ class _StoryPageLayout extends StatelessWidget {
   final StoryController storyController;
 
   const _StoryPageLayout({
-    super.key,
     required this.feature,
     required this.storyController,
   });

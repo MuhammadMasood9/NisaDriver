@@ -3,14 +3,12 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui; // Needed for map camera bounds and image codec
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/intercity_controller.dart';
 import 'package:driver/model/intercity_order_model.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/intercity_screen/pacel_details_screen.dart';
-import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/user_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

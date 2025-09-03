@@ -4,7 +4,6 @@ import 'package:driver/constant/constant.dart';
 import 'package:driver/model/intercity_order_model.dart';
 import 'package:driver/model/order/driverId_accept_reject.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/intercity_screen/pacel_details_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
@@ -13,7 +12,6 @@ import 'package:driver/widget/user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class AcceptedIntercityOrders extends StatelessWidget {
   const AcceptedIntercityOrders({super.key});
@@ -30,7 +28,7 @@ class AcceptedIntercityOrders extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.only(      
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(28),
                   topRight: Radius.circular(28),
                 ),
@@ -100,7 +98,8 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                           Radius.circular(10)),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.grey.withValues(alpha: 0.3),
+                                          color: Colors.grey
+                                              .withValues(alpha: 0.3),
                                           blurRadius: 5,
                                           offset: const Offset(0, 2),
                                         ),
@@ -204,7 +203,8 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                                     Container(
                                                       decoration: BoxDecoration(
                                                         color: Colors.grey
-                                                            .withValues(alpha: 0.3),
+                                                            .withValues(
+                                                                alpha: 0.3),
                                                         borderRadius:
                                                             const BorderRadius
                                                                 .all(
@@ -230,7 +230,8 @@ class AcceptedIntercityOrders extends StatelessWidget {
                                                     Container(
                                                       decoration: BoxDecoration(
                                                         color: AppColors.primary
-                                                            .withValues(alpha: 0.3),
+                                                            .withValues(
+                                                                alpha: 0.3),
                                                         borderRadius:
                                                             const BorderRadius
                                                                 .all(

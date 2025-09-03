@@ -83,7 +83,7 @@ class MyProfileScreen extends StatelessWidget {
                       onChanged: (value) {
                         dashboardController.toggleOnlineStatus(value);
                       },
-                      activeColor: AppColors.primary,
+                      activeThumbColor: AppColors.primary,
                       inactiveThumbColor: AppColors.grey500,
                     )),
               ),
@@ -202,7 +202,8 @@ class MyProfileScreen extends StatelessWidget {
               color: AppColors.darkBackground.withValues(alpha: 0.1),
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppColors.darkBackground.withValues(alpha: 0.2), width: 1),
+                  color: AppColors.darkBackground.withValues(alpha: 0.2),
+                  width: 1),
             ),
             child: ClipOval(
               child: CachedNetworkImage(

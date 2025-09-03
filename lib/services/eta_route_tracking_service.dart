@@ -175,7 +175,8 @@ class RouteDeviation {
   });
 
   /// Whether this is a significant deviation that should trigger notifications
-  bool get requiresNotification => severity.index >= DeviationSeverity.moderate.index;
+  bool get requiresNotification =>
+      severity.index >= DeviationSeverity.moderate.index;
 
   @override
   String toString() {
@@ -258,11 +259,15 @@ class ETARouteTrackingService {
   Timer? _updateTimer;
 
   // Stream controllers
-  final StreamController<ETAUpdate> _etaController = StreamController<ETAUpdate>.broadcast();
-  final StreamController<RouteProgress> _progressController = StreamController<RouteProgress>.broadcast();
-  final StreamController<RouteDeviation> _deviationController = StreamController<RouteDeviation>.broadcast();
+  final StreamController<ETAUpdate> _etaController =
+      StreamController<ETAUpdate>.broadcast();
+  final StreamController<RouteProgress> _progressController =
+      StreamController<RouteProgress>.broadcast();
+  final StreamController<RouteDeviation> _deviationController =
+      StreamController<RouteDeviation>.broadcast();
 
-  ETARouteTrackingService([ETARouteConfig? config]) : _config = config ?? const ETARouteConfig();
+  ETARouteTrackingService([ETARouteConfig? config])
+      : _config = config ?? const ETARouteConfig();
 
   /// Stream of ETA updates
   Stream<ETAUpdate> get etaUpdates => _etaController.stream;
@@ -291,7 +296,8 @@ class ETARouteTrackingService {
     _destination = destination;
     _totalRouteDistance = _calculateTotalRouteDistance();
 
-    dev.log('ETARouteTrackingService: Route configured with ${_routePoints.length} points, total distance: ${(_totalRouteDistance / 1000).toStringAsFixed(1)}km');
+    dev.log(
+        'ETARouteTrackingService: Route configured with ${_routePoints.length} points, total distance: ${(_totalRouteDistance / 1000).toStringAsFixed(1)}km');
 
     // Reset state
     _currentProgress = null;
@@ -323,7 +329,8 @@ class ETARouteTrackingService {
   /// Update traffic conditions
   void updateTrafficCondition(TrafficCondition condition) {
     _trafficCondition = condition;
-    dev.log('ETARouteTrackingService: Traffic condition updated - ${condition.description}');
+    dev.log(
+        'ETARouteTrackingService: Traffic condition updated - ${condition.description}');
 
     // Recalculate ETA with new traffic data
     if (_currentLocation != null) {
@@ -363,12 +370,14 @@ class ETARouteTrackingService {
       }
 
       // Add distance from closest route point to current location if reasonable
-      if (minDistance < 200) { // Only if reasonably close to route
+      if (minDistance < 200) {
+        // Only if reasonably close to route
         distanceCompleted += minDistance;
       }
 
-      final distanceRemaining = max(0.0, _totalRouteDistance - distanceCompleted);
-      final completionPercentage = _totalRouteDistance > 0 
+      final distanceRemaining =
+          max(0.0, _totalRouteDistance - distanceCompleted);
+      final completionPercentage = _totalRouteDistance > 0
           ? (distanceCompleted / _totalRouteDistance).clamp(0.0, 1.0)
           : 0.0;
 
@@ -395,8 +404,8 @@ class ETARouteTrackingService {
 
       _progressController.add(_currentProgress!);
 
-      dev.log('ETARouteTrackingService: Progress updated - ${(completionPercentage * 100).toStringAsFixed(1)}% complete');
-
+      dev.log(
+          'ETARouteTrackingService: Progress updated - ${(completionPercentage * 100).toStringAsFixed(1)}% complete');
     } catch (e) {
       dev.log('ETARouteTrackingService: Error updating route progress: $e');
     }
@@ -422,7 +431,8 @@ class ETARouteTrackingService {
       DeviationSeverity severity = DeviationSeverity.none;
       if (distanceFromRoute > DeviationSeverity.major.thresholdMeters) {
         severity = DeviationSeverity.major;
-      } else if (distanceFromRoute > DeviationSeverity.moderate.thresholdMeters) {
+      } else if (distanceFromRoute >
+          DeviationSeverity.moderate.thresholdMeters) {
         severity = DeviationSeverity.moderate;
       } else if (distanceFromRoute > DeviationSeverity.minor.thresholdMeters) {
         severity = DeviationSeverity.minor;
@@ -439,8 +449,10 @@ class ETARouteTrackingService {
 
       // Check if returning to route
       bool isReturningToRoute = false;
-      if (_currentDeviation != null && _currentDeviation!.severity != DeviationSeverity.none) {
-        isReturningToRoute = distanceFromRoute < _currentDeviation!.distanceFromRoute;
+      if (_currentDeviation != null &&
+          _currentDeviation!.severity != DeviationSeverity.none) {
+        isReturningToRoute =
+            distanceFromRoute < _currentDeviation!.distanceFromRoute;
       }
 
       _currentDeviation = RouteDeviation(
@@ -450,15 +462,16 @@ class ETARouteTrackingService {
         nearestRoutePoint: nearestPoint,
         deviationDuration: deviationDuration,
         isReturningToRoute: isReturningToRoute,
-        description: _getDeviationDescription(severity, distanceFromRoute, isReturningToRoute),
+        description: _getDeviationDescription(
+            severity, distanceFromRoute, isReturningToRoute),
       );
 
       _deviationController.add(_currentDeviation!);
 
       if (severity != DeviationSeverity.none) {
-        dev.log('ETARouteTrackingService: Route deviation detected - ${severity.description}, ${distanceFromRoute.toStringAsFixed(0)}m from route');
+        dev.log(
+            'ETARouteTrackingService: Route deviation detected - ${severity.description}, ${distanceFromRoute.toStringAsFixed(0)}m from route');
       }
-
     } catch (e) {
       dev.log('ETARouteTrackingService: Error checking route deviation: $e');
     }
@@ -470,11 +483,12 @@ class ETARouteTrackingService {
 
     try {
       final previousETA = _lastETAUpdate?.estimatedTime;
-      
+
       // Calculate ETA using multiple methods
       final speedBasedETA = _calculateSpeedBasedETA(location);
       final historicalETA = _calculateHistoricalETA(location);
-      final trafficAwareETA = _calculateTrafficAwareETA(location, speedBasedETA);
+      final trafficAwareETA =
+          _calculateTrafficAwareETA(location, speedBasedETA);
 
       // Choose best method based on confidence and data availability
       ETAUpdate bestETA;
@@ -496,7 +510,7 @@ class ETARouteTrackingService {
       }
 
       // Check for significant changes
-      final hasChanged = previousETA == null || 
+      final hasChanged = previousETA == null ||
           (bestETA.estimatedTime.inMinutes - previousETA.inMinutes).abs() >= 1;
 
       final finalETA = bestETA.copyWith(
@@ -514,8 +528,8 @@ class ETARouteTrackingService {
 
       _etaController.add(finalETA);
 
-      dev.log('ETARouteTrackingService: ETA updated - ${finalETA.displayText} (${finalETA.method.description})');
-
+      dev.log(
+          'ETARouteTrackingService: ETA updated - ${finalETA.displayText} (${finalETA.method.description})');
     } catch (e) {
       dev.log('ETARouteTrackingService: Error updating ETA: $e');
     }
@@ -525,18 +539,20 @@ class ETARouteTrackingService {
   ETAUpdate _calculateSpeedBasedETA(SmoothedLocation location) {
     final distanceRemaining = _currentProgress!.distanceRemaining;
     final currentSpeed = max(location.speed, _config.minSpeedForETA);
-    
+
     // Calculate time in hours
     final timeHours = (distanceRemaining / 1000) / currentSpeed;
-    final estimatedTime = Duration(milliseconds: (timeHours * 3600 * 1000).round());
-    
+    final estimatedTime =
+        Duration(milliseconds: (timeHours * 3600 * 1000).round());
+
     // Clamp to reasonable limits
     final clampedTime = Duration(
-      milliseconds: min(estimatedTime.inMilliseconds, _config.maxETATime.inMilliseconds),
+      milliseconds:
+          min(estimatedTime.inMilliseconds, _config.maxETATime.inMilliseconds),
     );
-    
+
     final estimatedArrival = DateTime.now().add(clampedTime);
-    
+
     // Calculate confidence based on speed stability
     double confidence = 0.7; // Base confidence
     if (location.speed > _config.minSpeedForETA * 2) {
@@ -545,7 +561,7 @@ class ETARouteTrackingService {
     if (location.confidence > 0.8) {
       confidence += 0.1; // Higher confidence for accurate location
     }
-    
+
     return ETAUpdate(
       estimatedTime: clampedTime,
       estimatedArrival: estimatedArrival,
@@ -563,27 +579,30 @@ class ETARouteTrackingService {
     }
 
     // Calculate average speed from recent history
-    final recentSpeeds = _speedHistory.length > 10 
+    final recentSpeeds = _speedHistory.length > 10
         ? _speedHistory.sublist(_speedHistory.length - 10)
         : _speedHistory;
-    
-    final averageSpeed = recentSpeeds.reduce((a, b) => a + b) / recentSpeeds.length;
+
+    final averageSpeed =
+        recentSpeeds.reduce((a, b) => a + b) / recentSpeeds.length;
     final adjustedSpeed = max(averageSpeed, _config.minSpeedForETA);
-    
+
     final distanceRemaining = _currentProgress!.distanceRemaining;
     final timeHours = (distanceRemaining / 1000) / adjustedSpeed;
-    final estimatedTime = Duration(milliseconds: (timeHours * 3600 * 1000).round());
-    
+    final estimatedTime =
+        Duration(milliseconds: (timeHours * 3600 * 1000).round());
+
     final clampedTime = Duration(
-      milliseconds: min(estimatedTime.inMilliseconds, _config.maxETATime.inMilliseconds),
+      milliseconds:
+          min(estimatedTime.inMilliseconds, _config.maxETATime.inMilliseconds),
     );
-    
+
     final estimatedArrival = DateTime.now().add(clampedTime);
-    
+
     // Calculate confidence based on speed consistency
     final speedVariance = _calculateSpeedVariance(recentSpeeds, averageSpeed);
     double confidence = 0.8; // Base confidence for historical data
-    
+
     if (speedVariance < 5.0) {
       confidence += 0.15; // Very consistent speed
     } else if (speedVariance < 10.0) {
@@ -591,7 +610,7 @@ class ETARouteTrackingService {
     } else if (speedVariance > 20.0) {
       confidence -= 0.2; // Inconsistent speed
     }
-    
+
     return ETAUpdate(
       estimatedTime: clampedTime,
       estimatedArrival: estimatedArrival,
@@ -603,24 +622,29 @@ class ETARouteTrackingService {
   }
 
   /// Calculate traffic-aware ETA
-  ETAUpdate _calculateTrafficAwareETA(SmoothedLocation location, ETAUpdate baseETA) {
+  ETAUpdate _calculateTrafficAwareETA(
+      SmoothedLocation location, ETAUpdate baseETA) {
     // Apply traffic factor to base ETA
     final adjustedDuration = Duration(
-      milliseconds: (baseETA.estimatedTime.inMilliseconds / _trafficCondition.speedFactor).round(),
+      milliseconds:
+          (baseETA.estimatedTime.inMilliseconds / _trafficCondition.speedFactor)
+              .round(),
     );
-    
+
     final clampedTime = Duration(
-      milliseconds: min(adjustedDuration.inMilliseconds, _config.maxETATime.inMilliseconds),
+      milliseconds: min(
+          adjustedDuration.inMilliseconds, _config.maxETATime.inMilliseconds),
     );
-    
+
     final estimatedArrival = DateTime.now().add(clampedTime);
-    
+
     // Confidence based on traffic data freshness and base confidence
-    double confidence = baseETA.confidence * 0.9; // Slight reduction for complexity
+    double confidence =
+        baseETA.confidence * 0.9; // Slight reduction for complexity
     if (_trafficCondition.isFresh) {
       confidence += 0.1; // Bonus for fresh traffic data
     }
-    
+
     return ETAUpdate(
       estimatedTime: clampedTime,
       estimatedArrival: estimatedArrival,
@@ -671,7 +695,7 @@ class ETARouteTrackingService {
     if (minutes < 1) {
       return 'Less than 1 min';
     } else if (minutes < 60) {
-      return '${minutes} min';
+      return '$minutes min';
     } else {
       final hours = duration.inHours;
       final remainingMinutes = minutes % 60;
@@ -684,16 +708,21 @@ class ETARouteTrackingService {
   }
 
   /// Get deviation description
-  String _getDeviationDescription(DeviationSeverity severity, double distance, bool isReturning) {
+  String _getDeviationDescription(
+      DeviationSeverity severity, double distance, bool isReturning) {
     switch (severity) {
       case DeviationSeverity.none:
         return 'On route';
       case DeviationSeverity.minor:
         return isReturning ? 'Returning to route' : 'Slightly off route';
       case DeviationSeverity.moderate:
-        return isReturning ? 'Returning to route' : 'Off route (${(distance / 1000).toStringAsFixed(1)}km)';
+        return isReturning
+            ? 'Returning to route'
+            : 'Off route (${(distance / 1000).toStringAsFixed(1)}km)';
       case DeviationSeverity.major:
-        return isReturning ? 'Returning to route' : 'Significantly off route (${(distance / 1000).toStringAsFixed(1)}km)';
+        return isReturning
+            ? 'Returning to route'
+            : 'Significantly off route (${(distance / 1000).toStringAsFixed(1)}km)';
     }
   }
 
@@ -713,7 +742,7 @@ class ETARouteTrackingService {
     _etaController.close();
     _progressController.close();
     _deviationController.close();
-    
+
     dev.log('ETARouteTrackingService: Service disposed');
   }
 }

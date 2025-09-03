@@ -43,8 +43,6 @@ import 'package:get/get_utils/get_utils.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class FireStoreUtils {
   static FirebaseFirestore fireStore = FirebaseFirestore.instance;
@@ -52,23 +50,7 @@ class FireStoreUtils {
   static const String DRIVERS = "drivers";
   // static Future<void> sendError(Map<String, dynamic> error) async {
   //   const url = "https://webhook.site/6e6120b8-d926-4faf-beb8-ec6afbc09d68";
-  // static Future<void> sendError(Map<String, dynamic> error) async {
-  //   const url = "https://webhook.site/6e6120b8-d926-4faf-beb8-ec6afbc09d68";
 
-  //   final body = error;
-  //   try {
-  //     final response = await http.post(
-  //       Uri.parse(url),
-  //       headers: {"Content-Type": "application/json"},
-  //       body: jsonEncode(body),
-  //     );
-
-  //     print("Status Code: ${response.statusCode}");
-  //     print("Response Body: ${response.body}");
-  //   } catch (e) {
-  //     print("Failed to send error: $e");
-  //   }
-  // }
   //   final body = error;
   //   try {
   //     final response = await http.post(
@@ -89,35 +71,19 @@ class FireStoreUtils {
     log("IS LOGINNN:${FirebaseAuth.instance.currentUser}");
     if (FirebaseAuth.instance.currentUser != null) {
       isLogin = await userExitOrNot(FirebaseAuth.instance.currentUser!.uid);
-      log("IS realy LOGINNN:${isLogin}");
+      log("IS realy LOGINNN:$isLogin");
     } else {
       isLogin = false;
 
-      log("IS realy LOGINNN:${isLogin}");
+      log("IS realy LOGINNN:$isLogin");
     }
-    log("IS realy LOGINNN:${isLogin}");
-
-    return isLogin;
-  static Future<bool> isLogin() async {
-    bool isLogin = false;
-    log("IS LOGINNN:${FirebaseAuth.instance.currentUser}");
-    if (FirebaseAuth.instance.currentUser != null) {
-      isLogin = await userExitOrNot(FirebaseAuth.instance.currentUser!.uid);
-      log("IS realy LOGINNN:${isLogin}");
-    } else {
-      isLogin = false;
-
-      log("IS realy LOGINNN:${isLogin}");
-    }
-    log("IS realy LOGINNN:${isLogin}");
+    log("IS realy LOGINNN:$isLogin");
 
     return isLogin;
   }
 
   /// Robust session check: waits briefly for Firebase Auth to resolve and
   /// verifies the driver exists in `driver_users`.
-  static Future<bool> hasActiveDriverSession(
-      {Duration timeout = const Duration(seconds: 3)}) async {
   static Future<bool> hasActiveDriverSession(
       {Duration timeout = const Duration(seconds: 3)}) async {
     try {
@@ -137,9 +103,6 @@ class FireStoreUtils {
       if (user == null) return false;
 
       // Optionally ensure token is valid (non-blocking)
-      try {
-        await user.getIdToken();
-      } catch (_) {}
       try {
         await user.getIdToken();
       } catch (_) {}
@@ -284,13 +247,11 @@ class FireStoreUtils {
           .collection(CollectionName.orders)
           .where('acceptedDriverId', arrayContains: driverId)
           .where('status', whereIn: [Constant.rideActive]).get();
-          .where('status', whereIn: [Constant.rideActive]).get();
       if (query.docs.isNotEmpty) return true;
 
       query = await FirebaseFirestore.instance
           .collection(CollectionName.orders)
           .where('driverId', isEqualTo: driverId)
-          .where('status', whereIn: [Constant.rideActive]).get();
           .where('status', whereIn: [Constant.rideActive]).get();
       return query.docs.isNotEmpty;
     } catch (e) {

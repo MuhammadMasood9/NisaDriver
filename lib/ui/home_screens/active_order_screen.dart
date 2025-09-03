@@ -14,7 +14,6 @@ import 'package:driver/ui/chat_screen/chat_screen.dart';
 import 'package:driver/ui/home_screens/live_tracking_screen.dart';
 import 'package:driver/ui/review/review_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
-import 'package:driver/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';

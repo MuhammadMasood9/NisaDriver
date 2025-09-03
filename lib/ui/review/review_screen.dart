@@ -12,7 +12,6 @@ import 'package:driver/widget/my_separator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:driver/themes/typography.dart'; // Added for AppTypography
 
 class ReviewScreen extends StatelessWidget {
@@ -61,10 +60,13 @@ class ReviewScreen extends StatelessWidget {
                                 right: 0,
                                 child: Center(
                                     child: Text(
-                                        "Rate Your Passenger".tr, // Updated for driver context
-                                        style: AppTypography.boldHeaders(context).copyWith(
-                                            color: Colors.white,
-                                            letterSpacing: 0.8))),
+                                        "Rate Your Passenger"
+                                            .tr, // Updated for driver context
+                                        style:
+                                            AppTypography.boldHeaders(context)
+                                                .copyWith(
+                                                    color: Colors.white,
+                                                    letterSpacing: 0.8))),
                               ),
                               Positioned(
                                 top: 40, // Padding from the top
@@ -97,7 +99,8 @@ class ReviewScreen extends StatelessWidget {
                                 ],
                                 borderRadius: BorderRadius.circular(20)),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
                               child: Column(
                                 children: [
                                   Container(
@@ -116,7 +119,8 @@ class ReviewScreen extends StatelessWidget {
                                                 boxShadow: [
                                                   BoxShadow(
                                                     color: Colors.black
-                                                        .withValues(alpha: 0.10),
+                                                        .withValues(
+                                                            alpha: 0.10),
                                                     blurRadius: 5,
                                                     offset: const Offset(0, 4),
                                                   ),
@@ -136,9 +140,8 @@ class ReviewScreen extends StatelessWidget {
                                                       Constant.loader(context),
                                                   errorWidget:
                                                       (context, url, error) =>
-                                                          Image.network(
-                                                              Constant
-                                                                  .userPlaceHolder),
+                                                          Image.network(Constant
+                                                              .userPlaceHolder),
                                                 ),
                                               ),
                                             ),
@@ -150,7 +153,8 @@ class ReviewScreen extends StatelessWidget {
                                                 Text(
                                                   '${controller.userModel.value.fullName}',
                                                   textAlign: TextAlign.center,
-                                                  style: AppTypography.headers(context)
+                                                  style: AppTypography.headers(
+                                                          context)
                                                       .copyWith(
                                                           letterSpacing: 0.8,
                                                           fontWeight:
@@ -186,7 +190,8 @@ class ReviewScreen extends StatelessWidget {
                                                         .value
                                                         .reviewsSum
                                                         .toString()),
-                                                style: AppTypography.boldLabel(context)),
+                                                style: AppTypography.boldLabel(
+                                                    context)),
                                           ],
                                         ),
                                       ],
@@ -194,14 +199,17 @@ class ReviewScreen extends StatelessWidget {
                                   ),
                                   SizedBox(height: 10),
                                   const MySeparator(
-                                      color: Color.fromARGB(255, 227, 227, 227)),
+                                      color:
+                                          Color.fromARGB(255, 227, 227, 227)),
                                   SizedBox(height: 10),
                                   Padding(
                                     padding: const EdgeInsets.only(top: 20),
                                     child: Text(
-                                      'How Was Your Passenger Experience'.tr, // Updated for driver context
+                                      'How Was Your Passenger Experience'
+                                          .tr, // Updated for driver context
                                       textAlign: TextAlign.center,
-                                      style: AppTypography.boldHeaders(context).copyWith(
+                                      style: AppTypography.boldHeaders(context)
+                                          .copyWith(
                                         letterSpacing: 1.9,
                                       ),
                                     ),
@@ -210,8 +218,8 @@ class ReviewScreen extends StatelessWidget {
                                   Text(
                                     'Your Overall Rating'.tr,
                                     textAlign: TextAlign.center,
-                                    style: AppTypography.headers(context)
-                                        .copyWith(
+                                    style:
+                                        AppTypography.headers(context).copyWith(
                                       letterSpacing: 0.9,
                                       color:
                                           const Color.fromARGB(255, 92, 92, 92),
@@ -241,8 +249,7 @@ class ReviewScreen extends StatelessWidget {
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.only(top: 30),
-                                    child: TextFieldThem.buildTextFiled(
-                                        context,
+                                    child: TextFieldThem.buildTextFiled(context,
                                         hintText: 'Comment..'.tr,
                                         controller:
                                             controller.commentController.value,
@@ -253,7 +260,7 @@ class ReviewScreen extends StatelessWidget {
                                     context,
                                     title: "Submit".tr,
                                     onPress: () async {
-                                      if (controller.rating.value > 0 ) {
+                                      if (controller.rating.value > 0) {
                                         ShowToastDialog.showLoader(
                                             "Please wait".tr);
 
@@ -275,15 +282,17 @@ class ReviewScreen extends StatelessWidget {
                                             if (controller
                                                     .reviewModel.value.id !=
                                                 null) {
-                                              userModel.reviewsSum = (double.parse(
-                                                          userModel.reviewsSum
+                                              userModel.reviewsSum =
+                                                  (double.parse(userModel
+                                                              .reviewsSum
                                                               .toString()) -
-                                                      double.parse(controller
-                                                          .reviewModel
-                                                          .value
-                                                          .rating
-                                                          .toString()))
-                                                  .toString();
+                                                          double.parse(
+                                                              controller
+                                                                  .reviewModel
+                                                                  .value
+                                                                  .rating
+                                                                  .toString()))
+                                                      .toString();
                                               userModel.reviewsCount =
                                                   (double.parse(userModel
                                                               .reviewsCount
@@ -291,13 +300,14 @@ class ReviewScreen extends StatelessWidget {
                                                           1)
                                                       .toString();
                                             }
-                                            userModel.reviewsSum = (double.parse(
-                                                        userModel.reviewsSum
+                                            userModel.reviewsSum =
+                                                (double.parse(userModel
+                                                            .reviewsSum
                                                             .toString()) +
-                                                    double.parse(controller
-                                                        .rating.value
-                                                        .toString()))
-                                                .toString();
+                                                        double.parse(controller
+                                                            .rating.value
+                                                            .toString()))
+                                                    .toString();
                                             userModel.reviewsCount =
                                                 (double.parse(userModel
                                                             .reviewsCount
@@ -310,7 +320,8 @@ class ReviewScreen extends StatelessWidget {
                                         });
 
                                         controller.reviewModel.value.id =
-                                            controller.type.value == "orderModel"
+                                            controller.type.value ==
+                                                    "orderModel"
                                                 ? controller.orderModel.value.id
                                                 : controller.intercityOrderModel
                                                     .value.id;
@@ -319,10 +330,12 @@ class ReviewScreen extends StatelessWidget {
                                                 .commentController.value.text;
                                         controller.reviewModel.value.rating =
                                             controller.rating.value.toString();
-                                        controller.reviewModel.value.customerId =
+                                        controller
+                                                .reviewModel.value.customerId =
                                             FireStoreUtils.getCurrentUid();
                                         controller.reviewModel.value.driverId =
-                                            controller.type.value == "orderModel"
+                                            controller.type.value ==
+                                                    "orderModel"
                                                 ? controller
                                                     .orderModel.value.driverId
                                                 : controller.intercityOrderModel
@@ -330,7 +343,8 @@ class ReviewScreen extends StatelessWidget {
                                         controller.reviewModel.value.date =
                                             Timestamp.now();
                                         controller.reviewModel.value.type =
-                                            controller.type.value == "orderModel"
+                                            controller.type.value ==
+                                                    "orderModel"
                                                 ? "city"
                                                 : "intercity";
 
@@ -340,7 +354,8 @@ class ReviewScreen extends StatelessWidget {
                                           if (value != null && value == true) {
                                             ShowToastDialog.closeLoader();
                                             ShowToastDialog.showToast(
-                                                "Review submit successfully".tr);
+                                                "Review submit successfully"
+                                                    .tr);
                                             Get.back();
                                           }
                                         });

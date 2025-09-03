@@ -5,7 +5,6 @@ import 'package:driver/services/localization_service.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/auth_screen/login_screen.dart';
-import 'package:driver/ui/scheduled_rides/scheduled_rides_screen.dart';
 import 'package:driver/utils/Preferences.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
@@ -385,46 +384,42 @@ class SettingScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            ...controller.languageList
-                .map(
-                  (language) => InkWell(
-                    onTap: () {
-                      controller.selectedLanguage.value = language;
-                      LocalizationService()
-                          .changeLocale(language.code.toString());
-                      Preferences.setString(Preferences.languageCodeKey,
-                          jsonEncode(controller.selectedLanguage.value));
-                      Get.back();
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              language.name.toString(),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF1A1D29),
-                              ),
-                            ),
+            ...controller.languageList.map(
+              (language) => InkWell(
+                onTap: () {
+                  controller.selectedLanguage.value = language;
+                  LocalizationService().changeLocale(language.code.toString());
+                  Preferences.setString(Preferences.languageCodeKey,
+                      jsonEncode(controller.selectedLanguage.value));
+                  Get.back();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          language.name.toString(),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF1A1D29),
                           ),
-                          if (controller.selectedLanguage.value.id ==
-                              language.id)
-                            const Icon(
-                              Icons.check_circle,
-                              color: AppColors.primary,
-                              size: 20,
-                            ),
-                        ],
+                        ),
                       ),
-                    ),
+                      if (controller.selectedLanguage.value.id == language.id)
+                        const Icon(
+                          Icons.check_circle,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                    ],
                   ),
-                )
-                ,
+                ),
+              ),
+            ),
             SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
           ],
         ),

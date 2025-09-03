@@ -42,7 +42,7 @@ class OrderMapController extends GetxController {
   // New method to animate camera to source location (same as FloatingActionButton functionality)
   Future<void> animateToSourceLocation() async {
     final GoogleMapController controller = await mapController.future;
-    controller?.animateCamera(
+    controller.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
           zoom: 12,

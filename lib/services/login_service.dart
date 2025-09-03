@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/driver_user_model.dart';
-import 'package:driver/utils/notification_service.dart';
 import 'package:get/get.dart';
 
 class LoginService {

@@ -27,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
 
     Future.delayed(const Duration(seconds: 2), () async {
-      User? user = await FirebaseAuth.instance.currentUser;
+      User? user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
         Navigator.pushReplacement(context,
@@ -41,6 +41,7 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primary,

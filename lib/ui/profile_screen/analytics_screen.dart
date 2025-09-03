@@ -1,6 +1,4 @@
 import 'dart:math';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:driver/constant/constant.dart';
 import 'package:driver/controller/profile_controller.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
@@ -1142,7 +1140,8 @@ class AnalyticsScreen extends StatelessWidget {
                                       toY: entry.value.barRods.first.toY,
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppColors.primary.withValues(alpha: 0.8),
+                                          AppColors.primary
+                                              .withValues(alpha: 0.8),
                                           AppColors.primary,
                                         ],
                                       ),
@@ -1425,7 +1424,8 @@ class AnalyticsScreen extends StatelessWidget {
                                       toY: entry.value.barRods.first.toY,
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppColors.primary.withValues(alpha: 0.8),
+                                          AppColors.primary
+                                              .withValues(alpha: 0.8),
                                           AppColors.primary,
                                         ],
                                       ),

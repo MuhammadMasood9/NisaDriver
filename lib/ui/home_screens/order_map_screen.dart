@@ -1,13 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/order_map_controller.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/button_them.dart';
-import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/text_field_them.dart';
-import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/widget/location_view.dart';
 import 'package:driver/widget/user_view.dart';
@@ -16,7 +12,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
 import 'package:driver/controller/live_tracking_controller.dart';
 
 class OrderMapScreen extends StatelessWidget {
@@ -27,6 +22,10 @@ class OrderMapScreen extends StatelessWidget {
     return GetBuilder<OrderMapController>(
       init: OrderMapController(),
       builder: (controller) {
+        // Ensure LiveTrackingController is available for Get.find calls below
+        if (!Get.isRegistered<LiveTrackingController>()) {
+          Get.put(LiveTrackingController());
+        }
         return Scaffold(
           backgroundColor: const Color.fromARGB(0, 255, 228, 239),
           // MODIFICATION: The AppBar and the back button have been removed.
@@ -61,18 +60,26 @@ class OrderMapScreen extends StatelessWidget {
                 ),
                 onCameraMoveStarted: () {
                   // Pause following when user starts interacting
-                  try { Get.find<LiveTrackingController>().onMapDrag(); } catch (_) {}
+                  try {
+                    Get.find<LiveTrackingController>().onMapDrag();
+                  } catch (_) {}
                 },
                 onCameraMove: (position) {
-                  try { Get.find<LiveTrackingController>().onCameraMoveUpdate(position); } catch (_) {}
+                  try {
+                    Get.find<LiveTrackingController>()
+                        .onCameraMoveUpdate(position);
+                  } catch (_) {}
                 },
                 onCameraIdle: () {
-                  try { Get.find<LiveTrackingController>().onMapIdle(); } catch (_) {}
+                  try {
+                    Get.find<LiveTrackingController>().onMapIdle();
+                  } catch (_) {}
                 },
               ),
               // Recenter FAB when following is paused
               Obx(() {
-                final follow = Get.find<LiveTrackingController>().isFollowingDriver.value;
+                final follow =
+                    Get.find<LiveTrackingController>().isFollowingDriver.value;
                 return Positioned(
                   bottom: 350,
                   right: 20,
@@ -87,9 +94,13 @@ class OrderMapScreen extends StatelessWidget {
                         child: FloatingActionButton(
                           backgroundColor: AppColors.primary,
                           onPressed: () {
-                            try { Get.find<LiveTrackingController>().toggleMapView(); } catch (_) {}
+                            try {
+                              Get.find<LiveTrackingController>()
+                                  .toggleMapView();
+                            } catch (_) {}
                           },
-                          child: const Icon(Icons.my_location, color: Colors.white, size: 20),
+                          child: const Icon(Icons.my_location,
+                              color: Colors.white, size: 20),
                         ),
                       ),
                     ),
@@ -149,7 +160,19 @@ class OrderMapScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(12.0),
                     child: Obx(
                       () => controller.isLoading.value
-                          ? Constant.loader(context)
+                          ? SizedBox(
+                              height: 80,
+                              child: Center(
+                                child: SizedBox(
+                                  height: 28,
+                                  width: 28,
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.primary,
+                                    strokeWidth: 3,
+                                  ),
+                                ),
+                              ),
+                            )
                           : Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,7 +330,19 @@ class OrderMapScreen extends StatelessWidget {
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState ==
                                         ConnectionState.waiting) {
-                                      return Constant.loader(context);
+                                      return SizedBox(
+                                        height: 50,
+                                        child: Center(
+                                          child: SizedBox(
+                                            height: 22,
+                                            width: 22,
+                                            child: CircularProgressIndicator(
+                                              color: AppColors.primary,
+                                              strokeWidth: 2.5,
+                                            ),
+                                          ),
+                                        ),
+                                      );
                                     }
                                     if (snapshot.hasError ||
                                         !snapshot.hasData) {

@@ -111,7 +111,7 @@ class PolylineManager {
             ...metadata ?? {},
             'originalPointCount': points.length,
             'simplifiedPointCount': simplifiedPoints.length,
-            'compressionRatio': points.length > 0 ? (simplifiedPoints.length / points.length) : 1.0,
+            'compressionRatio': points.isNotEmpty ? (simplifiedPoints.length / points.length) : 1.0,
           },
         );
 
