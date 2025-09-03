@@ -169,7 +169,7 @@ class LoginController extends GetxController {
   Future<UserCredential?> signInWithGoogle() async {
     await GoogleSignIn().signOut(); // Ensure no previous session
     try {
-      print("Starting Google Sign-In...");
+      // print("Starting Google Sign-In...");
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
         print("Google Sign-In canceled by user");
