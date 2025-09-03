@@ -6,6 +6,7 @@ import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
+import 'package:driver/services/login_service.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/model/review_model.dart'; // Make sure you have this model from the first request
 import 'package:driver/themes/app_colors.dart';
@@ -124,7 +125,8 @@ class ProfileController extends GetxController {
     super.onInit();
     fetchInitialData();
   }
-final isLoggingOut = false.obs;
+
+  final isLoggingOut = false.obs;
 
   // ... your existing onInit and other methods ...
 
@@ -136,21 +138,21 @@ final isLoggingOut = false.obs;
     try {
       isLoggingOut.value = true;
 
-      // Log out from Firebase Authentication
-      await FirebaseAuth.instance.signOut();
+      // Log out from Firebase Authentication and clear shared preferences
+      await LoginService.signOut();
 
       // Clear local session data (e.g., from GetStorage)
       // final box = GetStorage();
       // await box.remove(Constant.driverUser);
 
       // Reset the state of relevant controllers
-      final DashBoardController dashboardController = Get.find<DashBoardController>();
+      final DashBoardController dashboardController =
+          Get.find<DashBoardController>();
       dashboardController.isOnline.value = false;
       driverModel.value = DriverUserModel(); // Clear profile data
 
       // Navigate to LoginScreen and remove all previous screens
       Get.offAll(() => const LoginScreen());
-
     } catch (e) {
       // Show an error message if logout fails
       Get.snackbar(
@@ -166,9 +168,10 @@ final isLoggingOut = false.obs;
       isLoggingOut.value = false;
     }
   }
+
   Future<void> fetchInitialData() async {
     isLoading(true);
-    
+
     // First, ensure we have a valid user ID
     final uid = FireStoreUtils.getCurrentUid();
     if (uid == null) {
@@ -177,10 +180,10 @@ final isLoggingOut = false.obs;
       isLoading(false);
       return;
     }
-    
+
     // Load profile data
     await getData();
-    
+
     // Only fetch additional data if profile loaded successfully
     if (driverModel.value.id != null) {
       try {
@@ -194,7 +197,7 @@ final isLoggingOut = false.obs;
         // Don't fail the entire load if analytics data fails
       }
     }
-    
+
     isLoading(false);
   }
 
@@ -874,10 +877,10 @@ final isLoggingOut = false.obs;
         driverModel.value = DriverUserModel();
         return;
       }
-      
+
       // Add a small delay to ensure Firebase Auth is ready
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       final value = await FireStoreUtils.getDriverProfile(driverId);
       if (value != null && value.id != null) {
         driverModel.value = value;

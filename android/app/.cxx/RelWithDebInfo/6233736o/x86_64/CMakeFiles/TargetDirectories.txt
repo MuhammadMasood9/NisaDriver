@@ -1,0 +1,2 @@
+D:/NisaCustomer App/NisaDriver/android/app/.cxx/RelWithDebInfo/6233736o/x86_64/CMakeFiles/edit_cache.dir
+D:/NisaCustomer App/NisaDriver/android/app/.cxx/RelWithDebInfo/6233736o/x86_64/CMakeFiles/rebuild_cache.dir

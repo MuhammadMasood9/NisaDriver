@@ -63,7 +63,8 @@ class _ChatScreensState extends State<ChatScreens> {
   void initState() {
     super.initState();
     if (_controller.hasClients) {
-      Timer(const Duration(milliseconds: 500), () => _controller.jumpTo(_controller.position.maxScrollExtent));
+      Timer(const Duration(milliseconds: 500),
+          () => _controller.jumpTo(_controller.position.maxScrollExtent));
     }
     log("Customer Id: ${widget.customerId} , Driver Id: ${widget.driverId}");
   }
@@ -85,7 +86,8 @@ class _ChatScreensState extends State<ChatScreens> {
 
   void _showAttachmentMenu() {
     final overlay = Overlay.of(context);
-    final renderBox = _attachmentButtonKey.currentContext!.findRenderObject() as RenderBox;
+    final renderBox =
+        _attachmentButtonKey.currentContext!.findRenderObject() as RenderBox;
     final offset = renderBox.localToGlobal(Offset.zero);
 
     final List<Map<String, dynamic>> menuOptions = [
@@ -94,9 +96,11 @@ class _ChatScreensState extends State<ChatScreens> {
         'color': Colors.blue,
         'label': 'Photos & videos'.tr,
         'onTap': () async {
-          XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
+          XFile? image =
+              await _imagePicker.pickImage(source: ImageSource.gallery);
           if (image != null) {
-            Url url = await Constant().uploadChatImageToFireStorage(File(image.path));
+            Url url =
+                await Constant().uploadChatImageToFireStorage(File(image.path));
             _sendMessage('', url, '', 'image');
           }
         },
@@ -106,9 +110,11 @@ class _ChatScreensState extends State<ChatScreens> {
         'color': Colors.pink,
         'label': 'Camera'.tr,
         'onTap': () async {
-          XFile? image = await _imagePicker.pickImage(source: ImageSource.camera);
+          XFile? image =
+              await _imagePicker.pickImage(source: ImageSource.camera);
           if (image != null) {
-            Url url = await Constant().uploadChatImageToFireStorage(File(image.path));
+            Url url =
+                await Constant().uploadChatImageToFireStorage(File(image.path));
             _sendMessage('', url, '', 'image');
           }
         },
@@ -218,7 +224,12 @@ class _ChatScreensState extends State<ChatScreens> {
 
   Future<void> _deleteMessage(String messageId) async {
     try {
-      await FirebaseFirestore.instance.collection('chat').doc(widget.orderId).collection('thread').doc(messageId).delete();
+      await FirebaseFirestore.instance
+          .collection('chat')
+          .doc(widget.orderId)
+          .collection('thread')
+          .doc(messageId)
+          .delete();
       ShowToastDialog.showToast("Message deleted successfully".tr);
     } catch (e) {
       ShowToastDialog.showToast("Failed to delete message: $e".tr);
@@ -227,7 +238,12 @@ class _ChatScreensState extends State<ChatScreens> {
 
   Future<void> _editMessage(String messageId, String newMessage) async {
     try {
-      await FirebaseFirestore.instance.collection('chat').doc(widget.orderId).collection('thread').doc(messageId).update({'message': newMessage});
+      await FirebaseFirestore.instance
+          .collection('chat')
+          .doc(widget.orderId)
+          .collection('thread')
+          .doc(messageId)
+          .update({'message': newMessage});
       ShowToastDialog.showToast("Message updated successfully".tr);
     } catch (e) {
       ShowToastDialog.showToast("Failed to update message: $e".tr);
@@ -254,12 +270,18 @@ class _ChatScreensState extends State<ChatScreens> {
                   physics: const BouncingScrollPhysics(),
                   itemBuilder: (context, documentSnapshots, index) {
                     final documentSnapshot = documentSnapshots[index];
-                    final data = documentSnapshot.data() as Map<String, dynamic>;
+                    final data =
+                        documentSnapshot.data() as Map<String, dynamic>;
                     final message = ConversationModel.fromJson(data);
-                    final isMe = message.senderId == FireStoreUtils.getCurrentUid();
+                    final isMe =
+                        message.senderId == FireStoreUtils.getCurrentUid();
                     return _buildMessageBubble(message, isMe);
                   },
-                  query: FirebaseFirestore.instance.collection('chat').doc(widget.orderId).collection("thread").orderBy('createdAt', descending: false),
+                  query: FirebaseFirestore.instance
+                      .collection('chat')
+                      .doc(widget.orderId)
+                      .collection("thread")
+                      .orderBy('createdAt', descending: false),
                   isLive: true,
                   onEmpty: Center(child: Text("Start the conversation!".tr)),
                   viewType: ViewType.list,
@@ -311,7 +333,8 @@ class _ChatScreensState extends State<ChatScreens> {
               ),
               Text(
                 'Customer'.tr,
-                style: AppTypography.smBoldLabel(Get.context!).copyWith(color: AppColors.grey500),
+                style: AppTypography.smBoldLabel(Get.context!)
+                    .copyWith(color: AppColors.grey500),
               ),
             ],
           ),
@@ -333,7 +356,8 @@ class _ChatScreensState extends State<ChatScreens> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(color: AppColors.grey100, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+          color: AppColors.grey100, borderRadius: BorderRadius.circular(10)),
       child: Row(
         children: [
           const Icon(Icons.error_outline, color: AppColors.primary, size: 20),
@@ -350,7 +374,9 @@ class _ChatScreensState extends State<ChatScreens> {
   }
 
   Widget _buildMessageBubble(ConversationModel message, bool isMe) {
-    final bubbleColor = isMe ? AppColors.primary.withValues(alpha: 0.09) : AppColors.darkBackground.withValues(alpha: 0.09);
+    final bubbleColor = isMe
+        ? AppColors.primary.withValues(alpha: 0.09)
+        : AppColors.darkBackground.withValues(alpha: 0.09);
     final textColor = Colors.black87;
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(18),
@@ -377,7 +403,8 @@ class _ChatScreensState extends State<ChatScreens> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (message.repliedToMessageId != null && message.repliedToMessageId!.isNotEmpty)
+              if (message.repliedToMessageId != null &&
+                  message.repliedToMessageId!.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(8),
                   margin: const EdgeInsets.only(bottom: 6),
@@ -392,7 +419,8 @@ class _ChatScreensState extends State<ChatScreens> {
                     ),
                   ),
                   child: Text(
-                    message.repliedToMessageContent ?? 'Replying to a message'.tr,
+                    message.repliedToMessageContent ??
+                        'Replying to a message'.tr,
                     style: TextStyle(
                       color: textColor.withValues(alpha: 0.8),
                       fontSize: 13,
@@ -422,14 +450,16 @@ class _ChatScreensState extends State<ChatScreens> {
     switch (message.messageType) {
       case 'image':
         return GestureDetector(
-          onTap: () => Get.to(FullScreenImageViewer(imageUrl: message.url!.url)),
+          onTap: () =>
+              Get.to(FullScreenImageViewer(imageUrl: message.url!.url)),
           child: Hero(
             tag: message.url!.url,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: CachedNetworkImage(
                 imageUrl: message.url!.url,
-                placeholder: (context, url) => const CupertinoActivityIndicator(),
+                placeholder: (context, url) =>
+                    const CupertinoActivityIndicator(),
                 errorWidget: (context, url, error) => const Icon(Icons.error),
               ),
             ),
@@ -437,7 +467,8 @@ class _ChatScreensState extends State<ChatScreens> {
         );
       case 'video':
         return GestureDetector(
-          onTap: () => Get.to(FullScreenVideoViewer(heroTag: message.id.toString(), videoUrl: message.url!.url)),
+          onTap: () => Get.to(FullScreenVideoViewer(
+              heroTag: message.id.toString(), videoUrl: message.url!.url)),
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -446,7 +477,8 @@ class _ChatScreensState extends State<ChatScreens> {
                 child: CachedNetworkImage(
                   imageUrl: message.videoThumbnail!,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => const CupertinoActivityIndicator(),
+                  placeholder: (context, url) =>
+                      const CupertinoActivityIndicator(),
                   errorWidget: (context, url, error) => const Icon(Icons.error),
                 ),
               ),
@@ -455,7 +487,8 @@ class _ChatScreensState extends State<ChatScreens> {
                   color: Colors.black38,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.play_arrow, color: Colors.white, size: 40),
+                child:
+                    const Icon(Icons.play_arrow, color: Colors.white, size: 40),
               ),
             ],
           ),
@@ -469,7 +502,13 @@ class _ChatScreensState extends State<ChatScreens> {
   }
 
   Widget _buildSuggestedReplies() {
-    final suggestions = ["Where are you?".tr, "I'm here".tr, "When will you arrive?".tr, "Yes".tr, "On my way".tr];
+    final suggestions = [
+      "Where are you?".tr,
+      "I'm here".tr,
+      "When will you arrive?".tr,
+      "Yes".tr,
+      "On my way".tr
+    ];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -486,7 +525,8 @@ class _ChatScreensState extends State<ChatScreens> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20.0),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 textStyle: const TextStyle(fontWeight: FontWeight.normal),
               ),
               child: Text(text),
@@ -557,7 +597,8 @@ class _ChatScreensState extends State<ChatScreens> {
           IconButton(
             key: _attachmentButtonKey,
             onPressed: _toggleAttachmentMenu,
-            icon: Icon(Icons.add_circle_outline_rounded, color: Colors.grey.shade600, size: 28),
+            icon: Icon(Icons.add_circle_outline_rounded,
+                color: Colors.grey.shade600, size: 28),
           ),
           Expanded(
             child: TextField(
@@ -581,7 +622,8 @@ class _ChatScreensState extends State<ChatScreens> {
                 hintText: "Type a message...".tr,
                 filled: true,
                 fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30.0),
                   borderSide: BorderSide.none,
@@ -724,13 +766,14 @@ class _ChatScreensState extends State<ChatScreens> {
               controller: editController,
               autofocus: true,
               maxLines: null,
+              style: AppTypography.input(context),
               decoration: InputDecoration(
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(6),
                   borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(6),
                   borderSide: const BorderSide(color: AppColors.primary),
                 ),
               ),
@@ -741,7 +784,8 @@ class _ChatScreensState extends State<ChatScreens> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text("Cancel".tr, style: TextStyle(color: Colors.grey.shade700)),
+                  child: Text("Cancel".tr,
+                      style: TextStyle(color: Colors.grey.shade700)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
@@ -753,8 +797,12 @@ class _ChatScreensState extends State<ChatScreens> {
                       ShowToastDialog.showToast("Message cannot be empty".tr);
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                  child: Text("Save".tr),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary),
+                  child: Text(
+                    "Save".tr,
+                    style: AppTypography.buttonlight(context),
+                  ),
                 ),
               ],
             ),

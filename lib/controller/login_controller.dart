@@ -9,6 +9,7 @@ import 'package:driver/ui/auth_screen/otp_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/notification_service.dart';
+import 'package:driver/services/login_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -89,43 +90,63 @@ class LoginController extends GetxController {
               userModel.id = userCredential.user!.uid; // ensure id is present
               userModel.fcmToken = token;
               await FireStoreUtils.updateDriverUser(userModel);
-              await FireStoreUtils.getDriverProfile(
-                      FirebaseAuth.instance.currentUser!.uid)
-                  .then((value) {
-                if (value != null) {
-                  DriverUserModel userModel = value;
-                  bool isPlanExpire = false;
-                  if (userModel.subscriptionPlan?.id != null) {
-                    if (userModel.subscriptionExpiryDate == null) {
-                      if (userModel.subscriptionPlan?.expiryDay == '-1') {
-                        isPlanExpire = false;
-                      } else {
-                        isPlanExpire = true;
-                      }
+              DriverUserModel? profileValue =
+                  await FireStoreUtils.getDriverProfile(
+                      FirebaseAuth.instance.currentUser!.uid);
+              if (profileValue != null) {
+                DriverUserModel userModel = profileValue;
+                bool isPlanExpire = false;
+                if (userModel.subscriptionPlan?.id != null) {
+                  if (userModel.subscriptionExpiryDate == null) {
+                    if (userModel.subscriptionPlan?.expiryDay == '-1') {
+                      isPlanExpire = false;
                     } else {
-                      DateTime expiryDate =
-                          userModel.subscriptionExpiryDate!.toDate();
-                      isPlanExpire = expiryDate.isBefore(DateTime.now());
+                      isPlanExpire = true;
                     }
                   } else {
-                    isPlanExpire = true;
+                    DateTime expiryDate =
+                        userModel.subscriptionExpiryDate!.toDate();
+                    isPlanExpire = expiryDate.isBefore(DateTime.now());
                   }
-                  if (userModel.subscriptionPlanId == null ||
-                      isPlanExpire == true) {
-                    if (Constant.adminCommission?.isEnabled == false &&
-                        Constant.isSubscriptionModelApplied == false) {
-                      ShowToastDialog.closeLoader();
-                      Get.offAll(const DashBoardScreen());
-                    } else {
-                      ShowToastDialog.closeLoader();
-                      Get.offAll(const DashBoardScreen(),
-                          arguments: {"isShow": true});
-                    }
-                  } else {
-                    Get.offAll(const DashBoardScreen());
-                  }
+                } else {
+                  isPlanExpire = true;
                 }
-              });
+                if (userModel.subscriptionPlanId == null ||
+                    isPlanExpire == true) {
+                  if (Constant.adminCommission?.isEnabled == false &&
+                      Constant.isSubscriptionModelApplied == false) {
+                    ShowToastDialog.closeLoader();
+                    // Update shared preferences for login persistence
+                    try {
+                      await LoginService.updateLoginStatus(
+                          FirebaseAuth.instance.currentUser);
+                    } catch (e) {
+                      print('Error updating login status: $e');
+                    }
+                    Get.offAll(const DashBoardScreen());
+                  } else {
+                    ShowToastDialog.closeLoader();
+                    // Update shared preferences for login persistence
+                    try {
+                      await LoginService.updateLoginStatus(
+                          FirebaseAuth.instance.currentUser);
+                    } catch (e) {
+                      print('Error updating login status: $e');
+                    }
+                    Get.offAll(const DashBoardScreen(),
+                        arguments: {"isShow": true});
+                  }
+                } else {
+                  // Update shared preferences for login persistence
+                  try {
+                    await LoginService.updateLoginStatus(
+                        FirebaseAuth.instance.currentUser);
+                  } catch (e) {
+                    print('Error updating login status: $e');
+                  }
+                  Get.offAll(const DashBoardScreen());
+                }
+              }
             } else {
               DriverUserModel userModel = DriverUserModel();
               userModel.id = userCredential.user!.uid;

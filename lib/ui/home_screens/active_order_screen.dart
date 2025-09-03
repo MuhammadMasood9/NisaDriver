@@ -444,15 +444,29 @@ class ActiveOrderScreen extends StatelessWidget {
     bool? confirmCancel = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text("Confirm Cancel".tr),
-        content: Text("Are you sure you want to cancel this ride?".tr),
+        backgroundColor: AppColors.background,
+        // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        title: Text(
+          "Confirm Cancel".tr,
+          style: AppTypography.boldHeaders(context),
+        ),
+        content: Text(
+          "Are you sure you want to cancel this ride?".tr,
+          style: AppTypography.caption(context),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text("No".tr)),
+              child: Text(
+                "No".tr,
+                style: AppTypography.boldLabel(context)
+                    .copyWith(color: AppColors.grey500),
+              )),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text("Yes".tr)),
+              child: Text("Yes".tr,
+                  style: AppTypography.boldLabel(context)
+                      .copyWith(color: AppColors.primary))),
         ],
       ),
     );
@@ -478,10 +492,8 @@ class ActiveOrderScreen extends StatelessWidget {
   }
 
   void _trackRide(OrderModel orderModel) {
-  
-      Get.to(() => const LiveTrackingScreen(),
-          arguments: {"orderModel": orderModel, "type": "orderModel"});
-   
+    Get.to(() => const LiveTrackingScreen(),
+        arguments: {"orderModel": orderModel, "type": "orderModel"});
   }
 
   Future<void> _openChat(OrderModel orderModel) async {
