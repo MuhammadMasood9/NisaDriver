@@ -17,7 +17,10 @@ import 'package:driver/ui/dashboard_screen.dart';
 import 'package:driver/ui/terms_and_condition/terms_and_condition_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:driver/utils/notification_service.dart';
+import 'package:driver/utils/language_utils.dart';
 import 'package:driver/services/login_service.dart';
+import 'package:driver/widgets/localization/rtl_layout_helper.dart';
+import 'package:driver/widgets/localization/urdu_input_field.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -351,35 +354,38 @@ class LoginScreen extends StatelessWidget {
             // Terms and Conditions Text (at the bottom)
             Align(
               alignment: Alignment.bottomCenter,
-              child: Container(
+              child: RTLContainer(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                 color: AppColors.background,
-                child: Text.rich(
-                  textAlign: TextAlign.center,
-                  TextSpan(
-                    text: 'By tapping "Next" you agree to '.tr,
-                    style: AppTypography.caption(context),
-                    children: <TextSpan>[
-                      TextSpan(
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () => Get.to(
-                              const TermsAndConditionScreen(type: "terms")),
-                        text: 'Terms and conditions'.tr,
-                        style: AppTypography.boldLabel(context)
-                            .copyWith(color: AppColors.primary),
-                      ),
-                      TextSpan(
-                          text: ' and ', style: AppTypography.caption(context)),
-                      TextSpan(
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () => Get.to(
-                              const TermsAndConditionScreen(type: "privacy")),
-                        text: 'privacy policy'.tr,
-                        style: AppTypography.boldLabel(context)
-                            .copyWith(color: AppColors.primary),
-                      ),
-                    ],
+                child: Directionality(
+                  textDirection: LanguageUtils.getTextDirection(LanguageUtils.getCurrentLanguage()),
+                  child: Text.rich(
+                    textAlign: TextAlign.center,
+                    TextSpan(
+                      text: 'By tapping "Next" you agree to '.tr,
+                      style: AppTypography.caption(context),
+                      children: <TextSpan>[
+                        TextSpan(
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => Get.to(
+                                const TermsAndConditionScreen(type: "terms")),
+                          text: 'Terms and conditions'.tr,
+                          style: AppTypography.boldLabel(context)
+                              .copyWith(color: AppColors.primary),
+                        ),
+                        TextSpan(
+                            text: ' and '.tr, style: AppTypography.caption(context)),
+                        TextSpan(
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => Get.to(
+                                const TermsAndConditionScreen(type: "privacy")),
+                          text: 'privacy policy'.tr,
+                          style: AppTypography.boldLabel(context)
+                              .copyWith(color: AppColors.primary),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -397,82 +403,77 @@ class LoginScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: SafeArea(
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20)),
-              ),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Enter Phone Number".tr,
-                      style: AppTypography.headers(context)),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    keyboardType: TextInputType.number,
-                    controller: loginController.phoneNumberController.value,
-                    style: AppTypography.input(context),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      filled: true,
-                      fillColor: AppColors.background,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        return RTLLayoutHelper(
+          child: Padding(
+            padding:
+                EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: SafeArea(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20)),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: LanguageUtils.isCurrentLanguageRTL() 
+                      ? CrossAxisAlignment.end 
+                      : CrossAxisAlignment.start,
+                  children: [
+                    Text("Enter Phone Number".tr,
+                        style: AppTypography.headers(context),
+                        textAlign: LanguageUtils.getTextAlign()),
+                    const SizedBox(height: 16),
+                    UrduFormField(
+                      keyboardType: TextInputType.number,
+                      controller: loginController.phoneNumberController.value,
+                      hintText: "Phone number".tr,
                       prefixIcon: CountryCodePicker(
                         onChanged: (value) => loginController
-                            .countryCode.value = value.dialCode ?? "+1",
+                            .countryCode.value = value.dialCode ?? "+92",
                         dialogBackgroundColor: AppColors.background,
-                        initialSelection: loginController.countryCode.value,
+                        initialSelection: loginController.countryCode.value.isEmpty 
+                            ? "PK" 
+                            : loginController.countryCode.value,
                         comparator: (a, b) => b.name!.compareTo(a.name!),
                         flagDecoration: const BoxDecoration(
                             borderRadius: BorderRadius.all(Radius.circular(2))),
                         padding: EdgeInsets.zero,
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(4)),
-                        borderSide: BorderSide(color: AppColors.grey300),
-                      ),
-                      hintText: "Phone number".tr,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text("Cancel".tr,
-                            style: AppTypography.boldLabel(context)
-                                .copyWith(color: AppColors.grey400)),
-                      ),
-                      ButtonThem.buildButton(
-                        context,
-                        btnWidthRatio: 0.3,
-                        btnHeight: 35,
-                        title: "Submit".tr,
-                        onPress: () {
-                          if (loginController
-                              .phoneNumberController.value.text.isNotEmpty) {
-                            Navigator.pop(context);
-                            ShowToastDialog.showLoader("Please wait".tr);
-                            loginController.sendCode();
-                          } else {
-                            ShowToastDialog.showToast(
-                                "Please enter a phone number".tr);
-                          }
-                        },
-                      )
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    RTLRow(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text("Cancel".tr,
+                              style: AppTypography.boldLabel(context)
+                                  .copyWith(color: AppColors.grey400)),
+                        ),
+                        ButtonThem.buildButton(
+                          context,
+                          btnWidthRatio: 0.3,
+                          btnHeight: 35,
+                          title: "Submit".tr,
+                          onPress: () {
+                            if (loginController
+                                .phoneNumberController.value.text.isNotEmpty) {
+                              Navigator.pop(context);
+                              ShowToastDialog.showLoader("Please wait".tr);
+                              loginController.sendCode();
+                            } else {
+                              ShowToastDialog.showToast(
+                                  "Please enter a phone number".tr);
+                            }
+                          },
+                        )
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -497,40 +498,25 @@ class LoginScreen extends StatelessWidget {
       // Fetch the user profile SAFELY
       final userModel = await FireStoreUtils.getDriverProfile(value.user!.uid);
 
-      // FIX 1: Add a null check
-     if (userExists) {
-    final userModel = await FireStoreUtils.getDriverProfile(value.user!.uid);
-
-    String token = await NotificationService.getToken();
-    userModel!.fcmToken = token; // <--- Potential CRASH here! (See Problem 2)
-    userModel.id = value.user!.uid; 
-    await FireStoreUtils.updateDriverUser(userModel);
-    
-    // The subscription check is MISSING!
-    // It just tries to navigate directly.
-    Get.offAll(() => const DashBoardScreen()); // Simplified for example
-} else {
-        // Handle case where user exists in Auth but not Firestore
-        // This is a data integrity issue, but we can recover by sending to Info screen
-        DriverUserModel newUserModel = DriverUserModel()
-          ..id = value.user!.uid
-          ..email = value.user!.email
-          ..fullName = value.user!.displayName
-          ..profilePic = value.user!.photoURL
-          ..loginType = Constant.googleLoginType
-          ..profileVerify = true;
-        Get.to(() => const InformationScreen(), arguments: {"userModel": newUserModel});
-      }
+      String token = await NotificationService.getToken();
+      userModel!.fcmToken = token; // <--- Potential CRASH here! (See Problem 2)
+      userModel.id = value.user!.uid; 
+      await FireStoreUtils.updateDriverUser(userModel);
+      
+      // The subscription check is MISSING!
+      // It just tries to navigate directly.
+      Get.offAll(() => const DashBoardScreen()); // Simplified for example
     } else {
-      // User does not exist in Firestore, send to create profile
-      DriverUserModel userModel = DriverUserModel()
+      // Handle case where user exists in Auth but not Firestore
+      // This is a data integrity issue, but we can recover by sending to Info screen
+      DriverUserModel newUserModel = DriverUserModel()
         ..id = value.user!.uid
         ..email = value.user!.email
         ..fullName = value.user!.displayName
         ..profilePic = value.user!.photoURL
         ..loginType = Constant.googleLoginType
         ..profileVerify = true;
-      Get.to(() => const InformationScreen(), arguments: {"userModel": userModel});
+      Get.to(() => const InformationScreen(), arguments: {"userModel": newUserModel});
     }
   }
 }

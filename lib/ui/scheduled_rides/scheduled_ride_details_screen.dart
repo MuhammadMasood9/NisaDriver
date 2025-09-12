@@ -353,9 +353,9 @@ class _ScheduledRideDetailsScreenState extends State<ScheduledRideDetailsScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildFinanceGridItem(context,
-                        title: "Distance", value: _routeDistance),
+                        title: "Distance".tr, value: _routeDistance),
                     _buildFinanceGridItem(context,
-                        title: "Est. Time", value: _routeDuration),
+                        title: "Est. Time".tr, value: _routeDuration),
                   ],
                 ),
                 const Divider(
@@ -560,7 +560,7 @@ class _ScheduledRideDetailsScreenState extends State<ScheduledRideDetailsScreen>
           iconColor = Colors.green;
           statusText = "Completed".tr;
           actionButton = _buildActionButton(
-              "Details", Colors.green, () => Get.to(() => OrderScreen()));
+              "Details".tr, Colors.green, () => Get.to(() => OrderScreen()));
           break;
         case Constant.rideCanceled:
           statusIcon = Icons.cancel;
@@ -571,7 +571,7 @@ class _ScheduledRideDetailsScreenState extends State<ScheduledRideDetailsScreen>
           statusIcon = Icons.play_circle_fill;
           iconColor = AppColors.primary;
           statusText = "Ready to Start".tr;
-          actionButton = _buildActionButton("Start Ride", AppColors.primary,
+          actionButton = _buildActionButton("Start Ride".tr, AppColors.primary,
               () => Get.to(() => OrderScreen()));
           break;
         default:
@@ -579,7 +579,7 @@ class _ScheduledRideDetailsScreenState extends State<ScheduledRideDetailsScreen>
           iconColor = Colors.orange;
           statusText = "In Progress".tr;
           actionButton = _buildActionButton(
-              "View Ride", Colors.orange, () => Get.to(() => OrderScreen()));
+              "View Ride".tr, Colors.orange, () => Get.to(() => OrderScreen()));
       }
     } else {
       statusIcon = Icons.schedule;

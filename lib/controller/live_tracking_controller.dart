@@ -28,6 +28,7 @@ import 'package:driver/services/background_location_service.dart';
 import 'package:driver/services/enhanced_realtime_location_service.dart';
 import 'package:driver/model/enhanced_location_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:driver/ui/review/review_screen.dart';
 import 'package:driver/controller/dash_board_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:driver/services/polyline_manager.dart';
@@ -256,6 +257,9 @@ class LiveTrackingController extends GetxController {
 
   // Track last accepted GPS update time for degraded fallback
   DateTime? _lastAcceptedUpdateTime;
+  
+  // Debounce timer to prevent rapid updateMarkersAndPolyline calls
+  Timer? _updateDebounceTimer;
 
   // Enhanced traffic-based rerouting
   RxBool hasAlternativeRoute = false.obs;
@@ -280,6 +284,8 @@ class LiveTrackingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    
+    // Initialize markers first
     addMarkerSetup();
     initializeTTS();
 
@@ -293,9 +299,15 @@ class LiveTrackingController extends GetxController {
       dev.log(
           'Driver is offline, location tracking will start when going online');
     }
+    
+    // Ensure driver is centered when screen loads
+    _ensureDriverCentered();
 
     _initializeCompass();
+    
+    // Initialize arguments and data immediately
     getArgument();
+    
     isFollowingDriver.value = true;
     isNavigationView.value = true;
 
@@ -307,13 +319,6 @@ class LiveTrackingController extends GetxController {
 
     // Initialize enhanced services
     _initializeEnhancedServices();
-
-    // Fetch initial location and center immediately
-    getCurrentLocation().then((_) {
-      addDeviceMarker();
-      updateNavigationView();
-      updateMarkersAndPolyline();
-    });
 
     // Listen to app lifecycle changes for background tracking
     _initializeAppLifecycleListener();
@@ -433,6 +438,9 @@ class LiveTrackingController extends GetxController {
 
     // Stop background location tracking
     _stopBackgroundLocationTracking();
+
+    // Clean up debounce timer
+    _updateDebounceTimer?.cancel();
 
     // Clean up realtime location entries when leaving the screen
     _removeRealtimeLocationSafely(type.value == "orderModel"
@@ -1309,6 +1317,14 @@ class LiveTrackingController extends GetxController {
   }
 
   void addDeviceMarker() {
+    // Ensure driver icon is loaded before adding marker
+    if (driverIcon == null) {
+      addMarkerSetup().then((_) {
+        addDeviceMarker();
+      });
+      return;
+    }
+    
     // This method is now handled by _updateMarkerSmoothly()
     // Keeping for backward compatibility
     _updateMarkerSmoothly();
@@ -2428,8 +2444,25 @@ class LiveTrackingController extends GetxController {
     dynamic argumentData = Get.arguments;
     if (argumentData != null) {
       type.value = argumentData['type'];
+      
+      // Set loading to true to prevent flickering
+      isLoading.value = true;
+      
+      // Initialize markers and trip progress immediately
+      await _initializeMarkersAndProgress();
+      
       if (type.value == "orderModel") {
         OrderModel argumentOrderModel = argumentData['orderModel'];
+        
+        // Set initial order model data
+        orderModel.value = argumentOrderModel;
+        status.value = orderModel.value.status ?? "";
+        
+        // Initialize markers and routes immediately
+        updateRouteVisibility();
+        updateTripProgress();
+        
+        // Set up Firestore listener for real-time updates
         FireStoreUtils.fireStore
             .collection(CollectionName.orders)
             .doc(argumentOrderModel.id)
@@ -2441,12 +2474,14 @@ class LiveTrackingController extends GetxController {
             updateRouteVisibility();
             // Update progress when order status changes
             updateTripProgress();
-            // Removed real-time database subscription - only using phone GPS
-            // _ensureRealtimeSubscription(
-            //     orderModel.value.id, FireStoreUtils.getCurrentUid());
+            
             if (orderModel.value.status == Constant.rideComplete) {
               _removeRealtimeLocationSafely(orderModel.value.id);
-              Get.back();
+              // Navigate to review screen
+              Get.to(() => const ReviewScreen(), arguments: {
+                "type": "orderModel",
+                "orderModel": orderModel.value,
+              });
             } else if (orderModel.value.status == Constant.rideActive ||
                 orderModel.value.status == Constant.rideInProgress) {
               // Start background tracking for active rides
@@ -2457,6 +2492,16 @@ class LiveTrackingController extends GetxController {
       } else {
         InterCityOrderModel argumentOrderModel =
             argumentData['interCityOrderModel'];
+            
+        // Set initial intercity order model data
+        intercityOrderModel.value = argumentOrderModel;
+        status.value = intercityOrderModel.value.status ?? "";
+        
+        // Initialize markers and routes immediately
+        updateRouteVisibility();
+        updateTripProgress();
+        
+        // Set up Firestore listener for real-time updates
         FireStoreUtils.fireStore
             .collection(CollectionName.ordersIntercity)
             .doc(argumentOrderModel.id)
@@ -2469,12 +2514,14 @@ class LiveTrackingController extends GetxController {
             updateRouteVisibility();
             // Update progress when order status changes
             updateTripProgress();
-            // Removed real-time database subscription - only using phone GPS
-            // _ensureRealtimeSubscription(
-            //     intercityOrderModel.value.id, FireStoreUtils.getCurrentUid());
+            
             if (intercityOrderModel.value.status == Constant.rideComplete) {
               _removeRealtimeLocationSafely(intercityOrderModel.value.id);
-              Get.back();
+              // Navigate to review screen
+              Get.to(() => const ReviewScreen(), arguments: {
+                "type": "intercityOrderModel",
+                "orderModel": intercityOrderModel.value,
+              });
             } else if (intercityOrderModel.value.status ==
                     Constant.rideActive ||
                 intercityOrderModel.value.status == Constant.rideInProgress) {
@@ -2485,26 +2532,73 @@ class LiveTrackingController extends GetxController {
         });
       }
     }
+    
+    // Add a small delay to ensure everything is properly initialized
+    await Future.delayed(const Duration(milliseconds: 100));
+    
     isLoading.value = false;
     update();
     updateRouteVisibility();
   }
 
   void updateMarkersAndPolyline() {
+    // Cancel any existing debounce timer
+    _updateDebounceTimer?.cancel();
+    
+    // Debounce the update to prevent rapid calls
+    _updateDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _updateMarkersAndPolylineDebounced();
+    });
+  }
+  
+  void _updateMarkersAndPolylineDebounced() {
     markers.clear();
     // Smart polyline management - don't clear everything, let PolylineManager handle updates
     // polyLines.clear(); // REMOVED - replaced with smart management
 
     if (currentPosition.value == null) {
-      ShowToastDialog.showToast("Waiting for location...");
-      getCurrentLocation().then((_) => updateMarkersAndPolyline());
+      // Only show the toast once to prevent flickering
+      if (!isLoading.value) {
+        ShowToastDialog.showToast("Waiting for location...");
+        isLoading.value = true;
+        
+        // Get current location and update markers
+        getCurrentLocation().then((_) {
+          isLoading.value = false;
+          // Only call updateMarkersAndPolyline if we still don't have a position
+          if (currentPosition.value == null) {
+            Future.delayed(const Duration(milliseconds: 1000), () {
+              updateMarkersAndPolyline();
+            });
+          } else {
+            // We have a position now, update markers normally
+            _updateMarkersAndPolylineInternal();
+          }
+        }).catchError((error) {
+          isLoading.value = false;
+          ShowToastDialog.showToast("Failed to get location. Please try again.");
+        });
+      }
+      return;
+    }
+    
+    _updateMarkersAndPolylineInternal();
+  }
+  
+  void _updateMarkersAndPolylineInternal() {
+
+    // Ensure markers are loaded before proceeding
+    if (driverIcon == null || departureIcon == null || destinationIcon == null) {
+      addMarkerSetup().then((_) {
+        _updateMarkersAndPolylineInternal();
+      });
       return;
     }
 
     addDeviceMarker();
 
     if (type.value == "orderModel") {
-      if (showDriverToPickupRoute.value) {
+      if (showDriverToPickupRoute.value && orderModel.value.sourceLocationLAtLng != null) {
         addMarker(
           latitude: orderModel.value.sourceLocationLAtLng!.latitude,
           longitude: orderModel.value.sourceLocationLAtLng!.longitude,
@@ -2524,7 +2618,7 @@ class LiveTrackingController extends GetxController {
           color: AppColors.primary,
         );
       }
-      if (showPickupToDestinationRoute.value) {
+      if (showPickupToDestinationRoute.value && orderModel.value.destinationLocationLAtLng != null) {
         addMarker(
           latitude: orderModel.value.destinationLocationLAtLng!.latitude,
           longitude: orderModel.value.destinationLocationLAtLng!.longitude,
@@ -2546,7 +2640,7 @@ class LiveTrackingController extends GetxController {
         );
       }
     } else {
-      if (showDriverToPickupRoute.value) {
+      if (showDriverToPickupRoute.value && intercityOrderModel.value.sourceLocationLAtLng != null) {
         addMarker(
           latitude: intercityOrderModel.value.sourceLocationLAtLng!.latitude,
           longitude: intercityOrderModel.value.sourceLocationLAtLng!.longitude,
@@ -2566,7 +2660,7 @@ class LiveTrackingController extends GetxController {
           color: AppColors.primary,
         );
       }
-      if (showPickupToDestinationRoute.value) {
+      if (showPickupToDestinationRoute.value && intercityOrderModel.value.destinationLocationLAtLng != null) {
         addMarker(
           latitude:
               intercityOrderModel.value.destinationLocationLAtLng!.latitude,
@@ -2889,7 +2983,7 @@ class LiveTrackingController extends GetxController {
     markers[markerId] = marker;
   }
 
-  void addMarkerSetup() async {
+  Future<void> addMarkerSetup() async {
     final Uint8List departure =
         await Constant().getBytesFromAsset('assets/images/pickup.png', 50);
     final Uint8List destination =
@@ -2900,6 +2994,44 @@ class LiveTrackingController extends GetxController {
     destinationIcon = BitmapDescriptor.fromBytes(destination);
     driverIcon = BitmapDescriptor.fromBytes(driver);
   }
+
+  // Initialize markers and trip progress immediately when screen loads
+  Future<void> _initializeMarkersAndProgress() async {
+    try {
+      dev.log('Starting marker and progress initialization...');
+      
+      // Ensure markers are loaded
+      if (departureIcon == null || destinationIcon == null || driverIcon == null) {
+        dev.log('Loading marker icons...');
+        await addMarkerSetup();
+      }
+
+      // Get current location if not available
+      if (currentPosition.value == null) {
+        dev.log('Getting current location...');
+        await getCurrentLocation();
+      }
+
+      // Initialize trip progress immediately
+      dev.log('Updating trip progress...');
+      updateTripProgress();
+      
+      // Force update markers and polylines
+      dev.log('Updating markers and polylines...');
+      updateMarkersAndPolyline();
+      
+      // Update navigation view
+      dev.log('Updating navigation view...');
+      updateNavigationView();
+      
+      dev.log('Markers and progress initialized successfully');
+    } catch (e) {
+      dev.log('Error initializing markers and progress: $e');
+      // Don't retry automatically to prevent infinite loops and flickering
+      // The UI will handle the error state gracefully
+    }
+  }
+
 
   void _addPolyLine(
       List<LatLng> polylineCoordinates, String polylineId, Color color) {
@@ -3183,6 +3315,27 @@ class LiveTrackingController extends GetxController {
     _refreshCurrentRoutes();
     updateNavigationView();
     updateMarkersAndPolyline();
+  }
+
+  /// Ensure driver is centered when screen first loads
+  Future<void> _ensureDriverCentered() async {
+    // Wait a bit for the map to be ready
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // If we have a current position, center on it
+    if (currentPosition.value != null) {
+      centerMapOnDriver();
+    } else {
+      // Try to get current location and then center
+      try {
+        await getCurrentLocation();
+        if (currentPosition.value != null) {
+          centerMapOnDriver();
+        }
+      } catch (e) {
+        dev.log('Failed to get initial location for centering: $e');
+      }
+    }
   }
 
   void reportTraffic(int level) {

@@ -242,130 +242,220 @@ class ReviewScreen extends StatelessWidget {
                                         Icons.star,
                                         color: Colors.amber,
                                       ),
+                                      ignoreGestures:
+                                          controller.hasAlreadyReviewed.value,
                                       onRatingUpdate: (rating) {
-                                        controller.rating(rating);
+                                        if (!controller
+                                            .hasAlreadyReviewed.value) {
+                                          controller.rating(rating);
+                                        }
                                       },
                                     ),
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.only(top: 30),
                                     child: TextFieldThem.buildTextFiled(context,
-                                        hintText: 'Comment..'.tr,
+                                        hintText:
+                                            controller.hasAlreadyReviewed.value
+                                                ? 'Your previous comment'.tr
+                                                : 'Comment..'.tr,
                                         controller:
                                             controller.commentController.value,
-                                        maxLine: 5),
+                                        maxLine: 5,
+                                        enable: !controller
+                                            .hasAlreadyReviewed.value),
                                   ),
                                   const SizedBox(height: 10),
-                                  ButtonThem.buildButton(
-                                    context,
-                                    title: "Submit".tr,
-                                    onPress: () async {
-                                      if (controller.rating.value > 0) {
-                                        ShowToastDialog.showLoader(
-                                            "Please wait".tr);
+                                  // Show message if already reviewed
+                                  if (controller.hasAlreadyReviewed.value)
+                                    Container(
+                                      padding: EdgeInsets.all(15),
+                                      margin: EdgeInsets.only(bottom: 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: Colors.orange
+                                              .withValues(alpha: 0.3),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.info_outline,
+                                            color: Colors.orange,
+                                            size: 20,
+                                          ),
+                                          SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              "You have already reviewed this ride"
+                                                  .tr,
+                                              style:
+                                                  AppTypography.label(context)
+                                                      .copyWith(
+                                                color: Colors.orange.shade700,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  controller.hasAlreadyReviewed.value
+                                      ? Container(
+                                          width: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.9,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade300,
+                                            borderRadius:
+                                                BorderRadius.circular(5),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              "Already Reviewed"
+                                                  .tr
+                                                  .toUpperCase(),
+                                              style: AppTypography.buttonlight(
+                                                      context)
+                                                  .copyWith(
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : ButtonThem.buildButton(
+                                          context,
+                                          title: "Submit".tr,
+                                          onPress: () async {
+                                            if (controller.rating.value > 0) {
+                                              ShowToastDialog.showLoader(
+                                                  "Please wait".tr);
 
-                                        await FireStoreUtils.getCustomer(
-                                                controller.type.value ==
-                                                        "orderModel"
-                                                    ? controller
-                                                        .orderModel.value.userId
-                                                        .toString()
-                                                    : controller
-                                                        .intercityOrderModel
-                                                        .value
-                                                        .userId
-                                                        .toString())
-                                            .then((value) async {
-                                          if (value != null) {
-                                            UserModel userModel = value;
+                                              await FireStoreUtils.getCustomer(
+                                                      controller
+                                                                  .type.value ==
+                                                              "orderModel"
+                                                          ? controller
+                                                              .orderModel
+                                                              .value
+                                                              .userId
+                                                              .toString()
+                                                          : controller
+                                                              .intercityOrderModel
+                                                              .value
+                                                              .userId
+                                                              .toString())
+                                                  .then((value) async {
+                                                if (value != null) {
+                                                  UserModel userModel = value;
 
-                                            if (controller
-                                                    .reviewModel.value.id !=
-                                                null) {
-                                              userModel.reviewsSum =
-                                                  (double.parse(userModel
-                                                              .reviewsSum
-                                                              .toString()) -
+                                                  if (controller.reviewModel
+                                                          .value.id !=
+                                                      null) {
+                                                    userModel
+                                                        .reviewsSum = (double
+                                                                .parse(userModel
+                                                                    .reviewsSum
+                                                                    .toString()) -
+                                                            double.parse(
+                                                                controller
+                                                                    .reviewModel
+                                                                    .value
+                                                                    .rating
+                                                                    .toString()))
+                                                        .toString();
+                                                    userModel.reviewsCount =
+                                                        (double.parse(userModel
+                                                                    .reviewsCount
+                                                                    .toString()) -
+                                                                1)
+                                                            .toString();
+                                                  }
+                                                  userModel.reviewsSum = (double
+                                                              .parse(userModel
+                                                                  .reviewsSum
+                                                                  .toString()) +
                                                           double.parse(
                                                               controller
-                                                                  .reviewModel
-                                                                  .value
-                                                                  .rating
+                                                                  .rating.value
                                                                   .toString()))
                                                       .toString();
-                                              userModel.reviewsCount =
-                                                  (double.parse(userModel
-                                                              .reviewsCount
-                                                              .toString()) -
-                                                          1)
+                                                  userModel.reviewsCount =
+                                                      (double.parse(userModel
+                                                                  .reviewsCount
+                                                                  .toString()) +
+                                                              1)
+                                                          .toString();
+                                                  await FireStoreUtils
+                                                      .updateUser(userModel);
+                                                }
+                                              });
+
+                                              controller.reviewModel.value.id =
+                                                  controller.type.value ==
+                                                          "orderModel"
+                                                      ? controller
+                                                          .orderModel.value.id
+                                                      : controller
+                                                          .intercityOrderModel
+                                                          .value
+                                                          .id;
+                                              controller.reviewModel.value
+                                                      .comment =
+                                                  controller.commentController
+                                                      .value.text;
+                                              controller.reviewModel.value
+                                                      .rating =
+                                                  controller.rating.value
                                                       .toString();
+                                              controller.reviewModel.value
+                                                      .customerId =
+                                                  FireStoreUtils
+                                                      .getCurrentUid();
+                                              controller.reviewModel.value
+                                                      .driverId =
+                                                  controller.type.value ==
+                                                          "orderModel"
+                                                      ? controller.orderModel
+                                                          .value.driverId
+                                                      : controller
+                                                          .intercityOrderModel
+                                                          .value
+                                                          .driverId;
+                                              controller.reviewModel.value
+                                                  .date = Timestamp.now();
+                                              controller
+                                                      .reviewModel.value.type =
+                                                  controller.type.value ==
+                                                          "orderModel"
+                                                      ? "city"
+                                                      : "intercity";
+
+                                              await FireStoreUtils.setReview(
+                                                      controller
+                                                          .reviewModel.value)
+                                                  .then((value) {
+                                                if (value != null &&
+                                                    value == true) {
+                                                  ShowToastDialog.closeLoader();
+                                                  ShowToastDialog.showToast(
+                                                      "Review submit successfully"
+                                                          .tr);
+                                                  Get.back();
+                                                }
+                                              });
+                                            } else {
+                                              ShowToastDialog.showToast(
+                                                  "Please give rate in star and add feedback comment."
+                                                      .tr);
                                             }
-                                            userModel.reviewsSum =
-                                                (double.parse(userModel
-                                                            .reviewsSum
-                                                            .toString()) +
-                                                        double.parse(controller
-                                                            .rating.value
-                                                            .toString()))
-                                                    .toString();
-                                            userModel.reviewsCount =
-                                                (double.parse(userModel
-                                                            .reviewsCount
-                                                            .toString()) +
-                                                        1)
-                                                    .toString();
-                                            await FireStoreUtils.updateUser(
-                                                userModel);
-                                          }
-                                        });
-
-                                        controller.reviewModel.value.id =
-                                            controller.type.value ==
-                                                    "orderModel"
-                                                ? controller.orderModel.value.id
-                                                : controller.intercityOrderModel
-                                                    .value.id;
-                                        controller.reviewModel.value.comment =
-                                            controller
-                                                .commentController.value.text;
-                                        controller.reviewModel.value.rating =
-                                            controller.rating.value.toString();
-                                        controller
-                                                .reviewModel.value.customerId =
-                                            FireStoreUtils.getCurrentUid();
-                                        controller.reviewModel.value.driverId =
-                                            controller.type.value ==
-                                                    "orderModel"
-                                                ? controller
-                                                    .orderModel.value.driverId
-                                                : controller.intercityOrderModel
-                                                    .value.driverId;
-                                        controller.reviewModel.value.date =
-                                            Timestamp.now();
-                                        controller.reviewModel.value.type =
-                                            controller.type.value ==
-                                                    "orderModel"
-                                                ? "city"
-                                                : "intercity";
-
-                                        await FireStoreUtils.setReview(
-                                                controller.reviewModel.value)
-                                            .then((value) {
-                                          if (value != null && value == true) {
-                                            ShowToastDialog.closeLoader();
-                                            ShowToastDialog.showToast(
-                                                "Review submit successfully"
-                                                    .tr);
-                                            Get.back();
-                                          }
-                                        });
-                                      } else {
-                                        ShowToastDialog.showToast(
-                                            "Please give rate in star and add feedback comment."
-                                                .tr);
-                                      }
-                                    },
-                                  ),
+                                          },
+                                        ),
                                   const SizedBox(height: 10),
                                 ],
                               ),

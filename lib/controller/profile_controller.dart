@@ -107,7 +107,7 @@ class ProfileController extends GetxController {
   Rx<TextEditingController> emailController = TextEditingController().obs;
   Rx<TextEditingController> phoneNumberController = TextEditingController().obs;
   Rx<TextEditingController> otpController = TextEditingController().obs;
-  RxString countryCode = "+1".obs;
+  RxString countryCode = "+92".obs;
   RxString profileImage = "".obs;
 
   // OTP State
@@ -885,7 +885,7 @@ class ProfileController extends GetxController {
       if (value != null && value.id != null) {
         driverModel.value = value;
         phoneNumberController.value.text = value.phoneNumber ?? '';
-        countryCode.value = value.countryCode ?? '+1';
+        countryCode.value = value.countryCode ?? '+92';
         emailController.value.text = value.email ?? '';
         fullNameController.value.text = value.fullName ?? '';
         profileImage.value = value.profilePic ?? '';

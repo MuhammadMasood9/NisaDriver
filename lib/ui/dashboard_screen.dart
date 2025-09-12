@@ -7,6 +7,8 @@ import 'package:driver/themes/responsive.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/profile_screen/account_screen.dart';
 import 'package:driver/utils/fire_store_utils.dart';
+import 'package:driver/utils/language_utils.dart';
+import 'package:driver/widgets/localization/rtl_layout_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -70,7 +72,7 @@ class DashBoardScreen extends StatelessWidget {
                           onChanged: (value) {
                             controller.toggleOnlineStatus(value);
                           },
-                          activeThumbColor: AppColors.primary,
+                          activeTrackColor: AppColors.primary,
                           inactiveThumbColor: AppColors.grey500,
                         )),
                   ),
@@ -96,21 +98,23 @@ class DashBoardScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       elevation: 0,
       width: Responsive.width(90, Get.context!),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _buildUserProfile(context, controller),
-            const SizedBox(height: 5),
-            Divider(
-              color: AppColors.grey200,
-            ),
-            const SizedBox(height: 5),
-            Expanded(
-              child: _buildMenuItems(context, controller),
-            ),
-            const SizedBox(height: 35),
-          ],
+      child: RTLLayoutHelper(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _buildUserProfile(context, controller),
+              const SizedBox(height: 5),
+              Divider(
+                color: AppColors.grey200,
+              ),
+              const SizedBox(height: 5),
+              Expanded(
+                child: _buildMenuItems(context, controller),
+              ),
+              const SizedBox(height: 35),
+            ],
+          ),
         ),
       ),
     );
@@ -158,7 +162,7 @@ class DashBoardScreen extends StatelessWidget {
               }
 
               DriverUserModel driverModel = snapshot.data!;
-              return Row(
+              return RTLRow(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _buildProfileImage(driverModel.profilePic.toString()),
@@ -166,7 +170,9 @@ class DashBoardScreen extends StatelessWidget {
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: LanguageUtils.isCurrentLanguageRTL() 
+                          ? CrossAxisAlignment.end 
+                          : CrossAxisAlignment.start,
                       children: [
                         Text(
                           driverModel.fullName.toString(),
@@ -176,6 +182,7 @@ class DashBoardScreen extends StatelessWidget {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textAlign: LanguageUtils.getTextAlign(),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -185,9 +192,11 @@ class DashBoardScreen extends StatelessWidget {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textAlign: LanguageUtils.getTextAlign(),
                         ),
                         const SizedBox(height: 4),
-                        Row(
+                        RTLRow(
+                          mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                             const Icon(
                               Icons.star,
@@ -209,8 +218,10 @@ class DashBoardScreen extends StatelessWidget {
                     ),
                   ),
                   // This arrow icon indicates that the row is tappable and leads to another screen.
-                  const Icon(
-                    Icons.arrow_forward_ios,
+                  Icon(
+                    LanguageUtils.isCurrentLanguageRTL() 
+                        ? Icons.arrow_back_ios 
+                        : Icons.arrow_forward_ios,
                     size: 16,
                     color: AppColors.primary,
                   ),
@@ -341,7 +352,7 @@ class DashBoardScreen extends StatelessWidget {
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
+                child: RTLRow(
                   children: [
                     SvgPicture.asset(
                       item.icon,
@@ -362,6 +373,7 @@ class DashBoardScreen extends StatelessWidget {
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w400,
                         ),
+                        textAlign: LanguageUtils.getTextAlign(),
                       ),
                     ),
                   ],

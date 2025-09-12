@@ -225,7 +225,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
                 'assets/icons/ic_wallet.svg',
                 width: 24,
                 height: 24,
-                color: AppColors.primary,
+                colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
               ),
             ),
             const SizedBox(width: 12),
@@ -251,7 +251,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          transaction.paymentStatus.toString().toUpperCase(),
+                          transaction.paymentStatus.toString().tr.toUpperCase(),
                           style: AppTypography.label(Get.context!).copyWith(
                             color: isApproved ? Colors.green : Colors.red,
                           ),
@@ -271,7 +271,7 @@ class WithDrawHistoryScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          transaction.note?.toString() ?? 'N/A',
+                          transaction.note?.toString() ?? 'N/A'.tr,
                           style: AppTypography.label(Get.context!),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,

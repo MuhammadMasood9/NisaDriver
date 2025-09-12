@@ -5,6 +5,7 @@ import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class UserView extends StatelessWidget {
   final String? userId;
@@ -67,7 +68,7 @@ class UserView extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("Asynchronous user",
+                            Text("Asynchronous user".tr,
                                 style: AppTypography.headers(context)),
                             Text(Constant.amountShow(amount: amount.toString()),
                                 style: AppTypography.appTitle(context)),

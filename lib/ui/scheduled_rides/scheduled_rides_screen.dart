@@ -75,8 +75,8 @@ class ScheduledRidesScreen extends StatelessWidget {
                 // ====== ⭐️ DOCUMENT VERIFICATION CHECK (FULL SCREEN) ⭐️ ======
                 if (controller.driverModel.value.documentVerification == false) {
                   return _buildEmptyListView(
-                    "Documents Not Verified",
-                    "Please complete document verification to accept scheduled rides.",
+                    "Documents Not Verified".tr,
+                    "Please complete document verification to accept scheduled rides".tr,
                     icon: Icons.description_outlined,
                   );
                 }

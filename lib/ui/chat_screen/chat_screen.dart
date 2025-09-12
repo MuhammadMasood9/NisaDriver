@@ -7,7 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/constant.dart';
 import 'package:driver/constant/send_notification.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
-import 'package:driver/model/ChatVideoContainer.dart';
+
 import 'package:driver/model/conversation_model.dart';
 import 'package:driver/model/inbox_model.dart';
 import 'package:driver/themes/app_colors.dart';
@@ -328,7 +328,7 @@ class _ChatScreensState extends State<ChatScreens> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.customerName ?? 'Customer Name',
+                widget.customerName ?? 'Customer Name'.tr,
                 style: AppTypography.appTitle(context),
               ),
               Text(
@@ -343,7 +343,7 @@ class _ChatScreensState extends State<ChatScreens> {
       actions: [
         IconButton(
           onPressed: () {
-            ShowToastDialog.showToast("In-app call feature coming soon!");
+            ShowToastDialog.showToast("In-app call feature coming soon!".tr);
           },
           icon: const Icon(Icons.call, color: Colors.black, size: 26),
         ),
@@ -856,9 +856,9 @@ class _ChatScreensState extends State<ChatScreens> {
 
     if (url != null) {
       if (url.mime.contains('image')) {
-        conversationModel.message = "Sent an image";
+        conversationModel.message = "Sent an image".tr;
       } else if (url.mime.contains('video')) {
-        conversationModel.message = "Sent a video";
+        conversationModel.message = "Sent a video".tr;
       }
     }
 

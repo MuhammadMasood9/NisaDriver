@@ -1,12 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:driver/ui/auth_screen/login_screen.dart';
 import 'package:driver/ui/dashboard_screen.dart';
-// import 'package:driver/services/login_service.dart';
-import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class SplashController extends GetxController {
   @override
@@ -22,24 +21,23 @@ class SplashController extends GetxController {
   }
 
   redirectScreen() async {
-    // bool iUser?sLogin = await FireStoreUtils.isLogin();
+    // Check if user is logged in
     User? user = FirebaseAuth.instance.currentUser;
-    sendError({
-      "error": user?.uid,
+    
+    // Send debug info to webhook
+    await sendError({
+      "message": "Splash screen redirect check",
+      "userId": user?.uid ?? "null",
+      "userEmail": user?.email ?? "null",
+      "timestamp": DateTime.now().toIso8601String(),
     });
+    
     if (user != null) {
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const DashBoardScreen()));
-      // bool iUser?sLogin = await FireStoreUtils.isLogin();
-      User? user = FirebaseAuth.instance.currentUser;
-      sendError({
-        "error": user?.uid,
-      });
-      if (user != null) {
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const DashBoardScreen()));
-        Get.offAll(const DashBoardScreen());
-      } else {
-        Get.offAll(const LoginScreen());
-      }
+      // User is logged in, go to dashboard
+      Get.offAll(const DashBoardScreen());
+    } else {
+      // User is not logged in, go to login screen
+      Get.offAll(const LoginScreen());
     }
   }
 

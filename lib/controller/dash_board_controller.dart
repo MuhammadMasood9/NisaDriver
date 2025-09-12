@@ -121,7 +121,7 @@ class DashBoardController extends GetxController {
       DrawerItem('My Wallet'.tr, "assets/icons/ic_wallet.svg"), // 3
       DrawerItem('Inbox'.tr, "assets/icons/ic_inbox.svg"), // 4
       DrawerItem('Online Registration'.tr, "assets/icons/ic_document.svg"), // 5
-      DrawerItem("Safety", "assets/icons/ic_document.svg"), // 6
+      DrawerItem("Safety".tr, "assets/icons/ic_document.svg"), // 6
       DrawerItem('Settings'.tr, "assets/icons/ic_settings.svg"), // 7
       // Note: My Profile (case 8) is handled in getDrawerItemWidget() but not shown in drawer
       // Uncomment the line below if you want to add logout back to the drawer
@@ -142,20 +142,20 @@ class DashBoardController extends GetxController {
     }
 
     // Add checks before allowing the driver to go online
-    if (value == true) {
-      // Only check when turning online
-      if (driverModel.value!.documentVerification != true) {
-        Get.dialog(AlertDialog(
-          title: Text('Information'.tr),
-          content: Text(
-              'Please complete your document verification to go online.'.tr),
-          actions: [
-            TextButton(child: Text('OK'.tr), onPressed: () => Get.back()),
-          ],
-        ));
-        return; // Stop execution
-      }
-    }
+    // if (value == true) {
+    //   // Only check when turning online
+    //   if (driverModel.value!.documentVerification != true) {
+    //     Get.dialog(AlertDialog(
+    //       title: Text('Information'.tr),
+    //       content: Text(
+    //           'Please complete your document verification to go online.'.tr),
+    //       actions: [
+    //         TextButton(child: Text('OK'.tr), onPressed: () => Get.back()),
+    //       ],
+    //     ));
+    //     return; // Stop execution
+    //   }
+    // }
 
     ShowToastDialog.showLoader("Updating Status...");
     isOnline.value = value;
@@ -169,12 +169,29 @@ class DashBoardController extends GetxController {
 
       ShowToastDialog.closeLoader();
       ShowToastDialog.showToast(
-          isOnline.value ? "You are now Online" : "You are now Offline");
+          isOnline.value ? "You are now Online".tr : "You are now Offline".tr);
     } catch (e) {
       // Revert the switch if the update fails
       isOnline.value = !value;
       ShowToastDialog.closeLoader();
       ShowToastDialog.showToast("Failed to update status: $e");
+    }
+  }
+
+  /// Method to update online status without showing UI feedback (used by lifecycle service)
+  Future<void> updateOnlineStatusSilently(bool value) async {
+    if (driverModel.value == null) return;
+
+    try {
+      isOnline.value = value;
+      driverModel.value!.isOnline = isOnline.value;
+      await FireStoreUtils.updateDriverUser(driverModel.value!);
+      _notifyOnlineStatusChange(value);
+      log('Driver status updated silently to: ${value ? "online" : "offline"}');
+    } catch (e) {
+      log('Failed to update driver status silently: $e');
+      // Revert on failure
+      isOnline.value = !value;
     }
   }
 

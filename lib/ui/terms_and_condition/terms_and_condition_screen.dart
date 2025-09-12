@@ -143,7 +143,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isPrivacy ? "Privacy Policy" : "Terms of Service",
+                          isPrivacy ? "Privacy Policy".tr : "Terms of Service".tr,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -154,7 +154,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Last updated: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
+                          "${"Last updated".tr}: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
                           style: TextStyle(
                             fontSize: 14,
                             color: isDarkMode
@@ -267,7 +267,7 @@ class _TermsAndConditionScreenState extends State<TermsAndConditionScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      "Questions? Contact our support team for assistance.",
+                      "Questions? Contact our support team for assistance.".tr,
                       style: TextStyle(
                         fontSize: 14,
                         color: isDarkMode

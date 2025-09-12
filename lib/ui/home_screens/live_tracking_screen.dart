@@ -126,6 +126,18 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
                         }
                       }
                       ShowToastDialog.closeLoader();
+                      
+                      // Center the map on driver's current location when map is created
+                      if (controller.currentPosition.value != null) {
+                        controller.centerMapOnDriver();
+                      } else {
+                        // If no current position, get it and then center
+                        await controller.getCurrentLocation();
+                        if (controller.currentPosition.value != null) {
+                          controller.centerMapOnDriver();
+                        }
+                      }
+                      
                       if (controller.isFollowingDriver.value) {
                         controller.updateNavigationView();
                       }
@@ -1135,31 +1147,241 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
   }
 
   Future<void> _handleCompleteRide(LiveTrackingController controller) async {
-    ShowToastDialog.showLoader("Completing ride...".tr);
-    OrderModel orderModel = controller.orderModel.value;
-    orderModel.status = Constant.rideComplete;
-    orderModel.paymentStatus = true;
-    orderModel.updateDate = Timestamp.now();
+    // Show payment summary popup first
+    bool? shouldComplete = await _showPaymentSummaryDialog(context, controller);
+    
+    if (shouldComplete == true) {
+      ShowToastDialog.showLoader("Completing ride...".tr);
+      OrderModel orderModel = controller.orderModel.value;
+      orderModel.status = Constant.rideComplete;
+      orderModel.paymentStatus = true;
+      orderModel.updateDate = Timestamp.now();
 
-    UserModel? customer =
-        await FireStoreUtils.getCustomer(orderModel.userId.toString());
-    if (customer?.fcmToken != null) {
-      Map<String, dynamic> playLoad = {
-        "type": "city_order_complete",
-        "orderId": orderModel.id
-      };
-      await SendNotification.sendOneNotification(
-        token: customer!.fcmToken.toString(),
-        title: 'Ride complete!'.tr,
-        body: 'Please complete your payment.'.tr,
-        payload: playLoad,
-      );
+      UserModel? customer =
+          await FireStoreUtils.getCustomer(orderModel.userId.toString());
+      if (customer?.fcmToken != null) {
+        Map<String, dynamic> playLoad = {
+          "type": "city_order_complete",
+          "orderId": orderModel.id
+        };
+        await SendNotification.sendOneNotification(
+          token: customer!.fcmToken.toString(),
+          title: 'Ride complete!'.tr,
+          body: 'Please complete your payment.'.tr,
+          payload: playLoad,
+        );
+      }
+
+      await FireStoreUtils.setOrder(orderModel);
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Ride completed successfully".tr);
+      Get.back();
     }
+  }
 
-    await FireStoreUtils.setOrder(orderModel);
-    ShowToastDialog.closeLoader();
-    ShowToastDialog.showToast("Ride completed successfully".tr);
-    Get.back();
+  Future<bool?> _showPaymentSummaryDialog(BuildContext context, LiveTrackingController controller) async {
+    final orderModel = controller.orderModel.value;
+    
+    // Calculate payment details
+    double rideFare = double.tryParse(orderModel.finalRate?.toString() ?? '0') ?? 0.0;
+    double couponAmount = 0.0;
+    
+    // Calculate coupon discount - Enhanced calculation matching customer app
+    if (orderModel.coupon != null && orderModel.coupon!.id != null && orderModel.coupon!.id!.isNotEmpty) {
+      final String type = orderModel.coupon?.type?.toString() ?? '';
+      final double amount = double.tryParse(orderModel.coupon?.amount
+                  ?.toString()
+                  .replaceAll(RegExp(r'[^\d.]'), '') ??
+              '0') ??
+          0.0;
+      
+      if (type.toLowerCase() == 'fix') {
+        couponAmount = amount.clamp(0, rideFare);
+      } else {
+        // percentage
+        couponAmount = (rideFare * amount / 100).clamp(0, rideFare);
+      }
+    }
+    
+    double fareAfterDiscount = rideFare - couponAmount;
+    
+    // Calculate taxes on the discounted amount
+    double totalTax = 0.0;
+    if (orderModel.taxList != null && fareAfterDiscount > 0) {
+      for (var tax in orderModel.taxList!) {
+        if (tax.type == "fix") {
+          totalTax += double.tryParse(tax.tax?.toString() ?? '0') ?? 0.0;
+        } else {
+          double percentage = double.tryParse(tax.tax?.toString() ?? '0') ?? 0.0;
+          totalTax += (fareAfterDiscount * percentage) / 100;
+        }
+      }
+    }
+    
+    double finalAmount = (fareAfterDiscount + totalTax).clamp(0, double.infinity);
+    
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.receipt_long, color: AppColors.primary, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              "Payment Summary".tr,
+              style: AppTypography.appTitle(context).copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Container(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Customer will pay:".tr,
+                style: AppTypography.boldLabel(context).copyWith(
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Ride Fare
+              _buildPaymentRow(
+                "Ride Fare".tr,
+                Constant.amountShow(amount: rideFare.toString()),
+              ),
+              
+              // Coupon Discount (if applicable)
+              if (couponAmount > 0) ...[
+                _buildPaymentRow(
+                  orderModel.coupon?.code != null 
+                      ? "Coupon Discount (${orderModel.coupon!.code})".tr
+                      : "Coupon Discount".tr,
+                  "-${Constant.amountShow(amount: couponAmount.toString())}",
+                  valueColor: Colors.green.shade600,
+                ),
+              ],
+              
+              // Taxes (if applicable)
+              if (orderModel.taxList != null && orderModel.taxList!.isNotEmpty) ...[
+                ...orderModel.taxList!.map((tax) => _buildPaymentRow(
+                  "${tax.title} (${tax.type == "fix" ? Constant.amountShow(amount: tax.tax) : "${tax.tax}%"})",
+                  Constant.amountShow(
+                    amount: tax.type == "fix" 
+                        ? (double.tryParse(tax.tax?.toString() ?? '0') ?? 0.0).toString()
+                        : ((fareAfterDiscount * (double.tryParse(tax.tax?.toString() ?? '0') ?? 0.0)) / 100).toString(),
+                  ),
+                )),
+              ],
+              
+              const Divider(height: 24, thickness: 1),
+              
+              // Total Amount
+              _buildPaymentRow(
+                "Total Amount".tr,
+                Constant.amountShow(amount: finalAmount.toString()),
+                titleStyle: AppTypography.appTitle(context).copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                valueStyle: AppTypography.appTitle(context).copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Payment Method
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      orderModel.paymentType?.toLowerCase() == 'cash' 
+                          ? Icons.money 
+                          : Icons.credit_card,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Payment Method: ${orderModel.paymentType ?? 'N/A'}".tr,
+                      style: AppTypography.boldLabel(context).copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              "Cancel".tr,
+              style: AppTypography.boldLabel(context).copyWith(
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              "Complete Ride".tr,
+              style: AppTypography.boldLabel(context).copyWith(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentRow(String title, String value, {
+    TextStyle? titleStyle,
+    TextStyle? valueStyle,
+    Color? valueColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: titleStyle ?? AppTypography.label(context),
+          ),
+          Text(
+            value,
+            style: valueStyle ?? AppTypography.boldLabel(context).copyWith(
+              color: valueColor,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleCancelRide(
@@ -1229,113 +1451,98 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
 
   Widget _otpDialog(BuildContext context, LiveTrackingController controller,
       OrderModel orderModel, InterCityOrderModel interOrderModel) {
-    return StatefulBuilder(
-      builder: (BuildContext context, StateSetter setState) {
-        String currentOtp = "";
-        // Create a new TextEditingController for each dialog instance
-        final TextEditingController otpTextController = TextEditingController();
-
-        return WillPopScope(
-          onWillPop: () async {
-            otpTextController
-                .dispose(); // Dispose the controller when back button is pressed
-            return true;
-          },
-          child: Dialog(
-            backgroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Verify OTP".tr,
-                    style: AppTypography.boldHeaders(context),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Enter the 6-digit code from the customer's app.".tr,
-                    style: AppTypography.caption(context),
-                  ),
-                  const SizedBox(height: 12),
-                  PinCodeTextField(
-                    length: 6,
-                    appContext: context,
-                    keyboardType: TextInputType.number,
-                    pinTheme: PinTheme(
-                      fieldHeight: 35,
-                      fieldWidth: 35,
-                      borderWidth: 1,
-                      activeColor: AppColors.primary,
-                      selectedColor: AppColors.primary,
-                      inactiveColor: Colors.grey.shade300,
-                      activeFillColor: AppColors.primary.withValues(alpha: 0.1),
-                      inactiveFillColor: Colors.grey.shade50,
-                      selectedFillColor: AppColors.primary.withValues(alpha: 0.1),
-                      shape: PinCodeFieldShape.box,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    textStyle: AppTypography.button(context),
-                    enableActiveFill: true,
-                    cursorColor: AppColors.primary,
-                    controller: otpTextController, // Use the local controller
-                    onCompleted: (v) => currentOtp = v,
-                    onChanged: (value) => currentOtp = value,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            otpTextController
-                                .dispose(); // Dispose the controller
-                            Navigator.of(context).pop(); // Close the dialog
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.grey.shade600,
-                            side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            "Cancel".tr,
-                            style: AppTypography.button(context),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await _verifyOtp(currentOtp, controller, orderModel,
-                                interOrderModel);
-                            otpTextController
-                                .dispose(); // Dispose the controller after verification
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: Text(
-                            "Verify ".tr,
-                            style: AppTypography.buttonlight(context),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+    final TextEditingController otpTextController = TextEditingController();
+    
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Verify OTP".tr,
+              style: AppTypography.boldHeaders(context),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 8),
+            Text(
+              "Enter the 6-digit code from the customer's app.".tr,
+              style: AppTypography.caption(context),
+            ),
+            const SizedBox(height: 12),
+            PinCodeTextField(
+              length: 6,
+              appContext: context,
+              keyboardType: TextInputType.number,
+              pinTheme: PinTheme(
+                fieldHeight: 35,
+                fieldWidth: 35,
+                borderWidth: 1,
+                activeColor: AppColors.primary,
+                selectedColor: AppColors.primary,
+                inactiveColor: Colors.grey.shade300,
+                activeFillColor: AppColors.primary.withValues(alpha: 0.1),
+                inactiveFillColor: Colors.grey.shade50,
+                selectedFillColor: AppColors.primary.withValues(alpha: 0.1),
+                shape: PinCodeFieldShape.box,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: AppTypography.button(context),
+              enableActiveFill: true,
+              cursorColor: AppColors.primary,
+              controller: otpTextController,
+              onCompleted: (v) async => await _verifyOtp(v, controller, orderModel, interOrderModel),
+              onChanged: (value) {
+                // Optional: You can add real-time validation here if needed
+              },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      otpTextController.dispose();
+                      Navigator.of(context).pop();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey.shade600,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      "Cancel".tr,
+                      style: AppTypography.button(context),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await _verifyOtp(otpTextController.text, controller, orderModel, interOrderModel);
+                      otpTextController.dispose();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: Text(
+                      "Verify".tr,
+                      style: AppTypography.buttonlight(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1349,30 +1556,56 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
         return;
       }
 
+      // Get the correct OTP based on order type
       String modelOtp = controller.type.value == "orderModel"
-          ? orderModel.otp ?? ''
-          : interOrderModel.otp ?? '';
+          ? (orderModel.otp ?? '')
+          : (interOrderModel.otp ?? '');
+          
       if (modelOtp == inputOtp) {
         // Close the dialog first
         Get.back();
         ShowToastDialog.showLoader("Starting ride...".tr);
-        OrderModel currentOrderModel = controller.orderModel.value;
-        currentOrderModel.status = Constant.rideInProgress;
+        
+        // Handle different order types
+        if (controller.type.value == "orderModel") {
+          // Regular city order
+          OrderModel currentOrderModel = controller.orderModel.value;
+          currentOrderModel.status = Constant.rideInProgress;
 
-        UserModel? customer = await FireStoreUtils.getCustomer(
-            currentOrderModel.userId.toString());
-        if (customer?.fcmToken != null) {
-          await SendNotification.sendOneNotification(
-            token: customer!.fcmToken.toString(),
-            title: 'Ride Started'.tr,
-            body:
-                'The ride has officially started. Please follow the designated route to the destination.'
-                    .tr,
-            payload: {"type": "city_order_started"},
-          );
+          UserModel? customer = await FireStoreUtils.getCustomer(
+              currentOrderModel.userId.toString());
+          if (customer?.fcmToken != null) {
+            await SendNotification.sendOneNotification(
+              token: customer!.fcmToken.toString(),
+              title: 'Ride Started'.tr,
+              body:
+                  'The ride has officially started. Please follow the designated route to the destination.'
+                      .tr,
+              payload: {"type": "city_order_started"},
+            );
+          }
+
+          await FireStoreUtils.setOrder(currentOrderModel);
+        } else {
+          // Intercity order
+          InterCityOrderModel currentInterOrderModel = controller.intercityOrderModel.value;
+          currentInterOrderModel.status = Constant.rideInProgress;
+
+          UserModel? customer = await FireStoreUtils.getCustomer(
+              currentInterOrderModel.userId.toString());
+          if (customer?.fcmToken != null) {
+            await SendNotification.sendOneNotification(
+              token: customer!.fcmToken.toString(),
+              title: 'Ride Started'.tr,
+              body:
+                  'Your inter-city ride has started. Enjoy your trip!'.tr,
+              payload: {"type": "intercity_order_started"},
+            );
+          }
+
+          await FireStoreUtils.setInterCityOrder(currentInterOrderModel);
         }
-
-        await FireStoreUtils.setOrder(currentOrderModel);
+        
         ShowToastDialog.closeLoader();
         ShowToastDialog.showToast("Customer pickup successful".tr);
         controller.status.value = Constant.rideInProgress;

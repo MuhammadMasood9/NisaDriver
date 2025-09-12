@@ -5,6 +5,7 @@ import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/order/location_lat_lng.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:map_launcher/map_launcher.dart';
+import 'package:get/get.dart';
 
 class Utils {
   static Future<Position> determinePosition() async {
@@ -84,7 +85,7 @@ class Utils {
           destination: Coords(latitude, longLatitude),
         );
       } else {
-        ShowToastDialog.showToast("Google map is not installed");
+        ShowToastDialog.showToast("Google map is not installed".tr);
       }
     } else if (Constant.mapType == "googleGo") {
       bool? isAvailable = await MapLauncher.isMapAvailable(MapType.googleGo);
@@ -96,7 +97,7 @@ class Utils {
           destination: Coords(latitude, longLatitude),
         );
       } else {
-        ShowToastDialog.showToast("Google Go map is not installed");
+        ShowToastDialog.showToast("Google Go map is not installed".tr);
       }
     } else if (Constant.mapType == "waze") {
       bool? isAvailable = await MapLauncher.isMapAvailable(MapType.waze);
@@ -108,7 +109,7 @@ class Utils {
           destination: Coords(latitude, longLatitude),
         );
       } else {
-        ShowToastDialog.showToast("Waze is not installed");
+        ShowToastDialog.showToast("Waze is not installed".tr);
       }
     } else if (Constant.mapType == "mapswithme") {
       bool? isAvailable = await MapLauncher.isMapAvailable(MapType.mapswithme);
@@ -120,7 +121,7 @@ class Utils {
           destination: Coords(latitude, longLatitude),
         );
       } else {
-        ShowToastDialog.showToast("Mapswithme is not installed");
+        ShowToastDialog.showToast("Mapswithme is not installed".tr);
       }
     } else if (Constant.mapType == "yandexNavi") {
       bool? isAvailable = await MapLauncher.isMapAvailable(MapType.yandexNavi);
@@ -132,7 +133,7 @@ class Utils {
           destination: Coords(latitude, longLatitude),
         );
       } else {
-        ShowToastDialog.showToast("YandexNavi is not installed");
+        ShowToastDialog.showToast("YandexNavi is not installed".tr);
       }
     } else if (Constant.mapType == "yandexMaps") {
       bool? isAvailable = await MapLauncher.isMapAvailable(MapType.yandexMaps);

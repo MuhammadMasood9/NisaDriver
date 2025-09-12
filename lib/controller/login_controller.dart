@@ -20,7 +20,7 @@ class LoginController extends GetxController {
   Rx<TextEditingController> phoneNumberController = TextEditingController().obs;
   Rx<TextEditingController> emailController = TextEditingController().obs;
   Rx<TextEditingController> passwordController = TextEditingController().obs;
-  RxString countryCode = "+1".obs;
+  RxString countryCode = "+92".obs;
   RxString loginMethod = "phone".obs;
   Rx<GlobalKey<FormState>> formKey = GlobalKey<FormState>().obs;
   RxBool obscurePassword = true.obs;

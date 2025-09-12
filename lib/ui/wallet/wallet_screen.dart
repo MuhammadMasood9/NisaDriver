@@ -144,7 +144,7 @@ class WalletScreen extends StatelessWidget {
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          "Start Date",
+                                          "Start Date".tr,
                                           style: AppTypography.headers(context),
                                         ),
                                         TextButton(
@@ -154,7 +154,7 @@ class WalletScreen extends StatelessWidget {
                                                   context, controller);
                                             },
                                             child: Text(
-                                              "Clear",
+                                              "Clear".tr,
                                               style: AppTypography.caption(
                                                   context),
                                             ))
@@ -284,7 +284,7 @@ class WalletScreen extends StatelessWidget {
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          "End Date",
+                                          "End Date".tr,
                                           style: AppTypography.headers(context),
                                         ),
                                         TextButton(
@@ -294,7 +294,7 @@ class WalletScreen extends StatelessWidget {
                                                 context, controller);
                                           },
                                           child: Text(
-                                            "Clear",
+                                            "Clear".tr,
                                             style:
                                                 AppTypography.caption(context),
                                           ),
@@ -538,7 +538,7 @@ class WalletScreen extends StatelessWidget {
                     size: 10,
                   ),
                   Text(
-                    "Export",
+                    "Export".tr,
                     style: AppTypography.smBoldLabel(context),
                   ),
                 ],
@@ -730,8 +730,8 @@ class WalletScreen extends StatelessWidget {
                   ),
                   child: Text(
                     walletTransactionModel.orderType == "city"
-                        ? "Ride"
-                        : "Parcel",
+                        ? "Ride".tr
+                        : "Parcel".tr,
                     style: AppTypography.smBoldLabel(context).copyWith(
                       color: Colors.white,
                     ),
@@ -765,7 +765,7 @@ class WalletScreen extends StatelessWidget {
                     child: SvgPicture.asset(
                       'assets/icons/ic_wallet.svg',
                       width: 22,
-                      color: AppColors.darkBackground,
+                      colorFilter: ColorFilter.mode(AppColors.darkBackground, BlendMode.srcIn),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1089,7 +1089,7 @@ class WalletScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          walletTransactionModel.paymentType ?? "Unknown",
+                          walletTransactionModel.paymentType ?? "Unknown".tr,
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,

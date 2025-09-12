@@ -11,6 +11,7 @@ class RatingController extends GetxController {
   RxBool isLoading = true.obs;
   RxDouble rating = 0.0.obs;
   Rx<TextEditingController> commentController = TextEditingController().obs;
+  RxBool hasAlreadyReviewed = false.obs;
 
   Rx<ReviewModel> reviewModel = ReviewModel().obs;
   Rx<UserModel> userModel = UserModel().obs;
@@ -47,6 +48,7 @@ class RatingController extends GetxController {
         reviewModel.value = value;
         rating.value = double.parse(reviewModel.value.rating.toString());
         commentController.value.text = reviewModel.value.comment.toString();
+        hasAlreadyReviewed.value = true;
       }
     });
     isLoading.value = false;

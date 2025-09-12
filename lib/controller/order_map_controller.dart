@@ -9,7 +9,9 @@ import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/order/driverId_accept_reject.dart';
 import 'package:driver/model/order_model.dart';
 import 'package:driver/themes/app_colors.dart';
-import 'package:driver/ui/home_screens/live_tracking_screen.dart';
+import 'package:driver/controller/home_controller.dart';
+import 'package:driver/controller/dash_board_controller.dart';
+import 'package:driver/controller/active_order_controller.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -62,91 +64,201 @@ class OrderMapController extends GetxController {
   // In OrderMapController class
 
   Future<void> acceptOrder() async {
-    // 1. Check if driver's wallet has sufficient funds
-    if (double.parse(driverModel.value.walletAmount.toString()) >=
-        double.parse(Constant.minimumDepositToRideAccept)) {
-      ShowToastDialog.showLoader("Please wait".tr);
+    // Prevent multiple simultaneous calls
+    if (_isAcceptingRide) {
+      ShowToastDialog.showToast("Please wait, processing previous request...".tr);
+      return;
+    }
 
-      try {
-        // 2. Create a map of the specific fields to update in Firestore
-        Map<String, dynamic> updatedData = {
-          'acceptedDriverId': [FireStoreUtils.getCurrentUid()],
-          'driverId': FireStoreUtils.getCurrentUid(),
-          'status': Constant.rideActive,
-          'finalRate': newAmount.value, // Use the final negotiated amount
-        };
+    try {
+      _isAcceptingRide = true;
 
-        // 3. Atomically update the document in Firestore using the update method
-        await FireStoreUtils.fireStore
-            .collection(CollectionName.orders)
-            .doc(orderModel.value.id)
-            .update(updatedData);
+      // 1. Quick validation
+      if (!_validateRideAcceptance()) {
+        return;
+      }
 
-        // 4. Update the local orderModel state to reflect the changes immediately
-        //    This ensures the data is correct when passed to the next screen
-        orderModel.value.driverId = FireStoreUtils.getCurrentUid();
-        orderModel.value.status = Constant.rideActive;
-        orderModel.value.finalRate = newAmount.value;
-        orderModel.value.acceptedDriverId = [FireStoreUtils.getCurrentUid()];
+      ShowToastDialog.showLoader("Accepting ride...".tr);
 
-        // 5. Notify the customer about the ride acceptance
-        var customer = await FireStoreUtils.getCustomer(
-            orderModel.value.userId.toString());
-        if (customer != null) {
-          await SendNotification.sendOneNotification(
-            token: customer.fcmToken.toString(),
-            title: 'Ride Accepted'.tr,
-            body:
-                'Your ride has been accepted by the driver for ${Constant.amountShow(amount: newAmount.value)}.'
-                    .tr,
-            payload: {'orderId': orderModel.value.id},
-          );
-        }
+      // 2. Update local state immediately for better UX
+      _updateLocalOrderState();
 
-        // 6. Save driver acceptance details (this seems to be for logging purposes)
-        DriverIdAcceptReject driverIdAcceptReject = DriverIdAcceptReject(
-          driverId: FireStoreUtils.getCurrentUid(),
-          acceptedRejectTime: cloudFirestore.Timestamp.now(),
-          offerAmount: newAmount.value,
+      // 3. Perform critical database update first
+      await _updateOrderInDatabase();
+
+      // 4. Send notification to customer and wait for it
+      await _sendCustomerNotification();
+
+      // 5. Navigate after notification is sent
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Ride Accepted".tr);
+
+      // 6. Navigate to active ride tab
+      _navigateToActiveRideTab();
+
+      // 7. Perform other non-critical operations in background
+      _performOtherBackgroundOperations();
+
+    } catch (e) {
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Failed to accept ride: $e".tr);
+      if (kDebugMode) {
+        print("Error accepting order: $e");
+      }
+      
+      // Reset local state if the operation failed
+      _resetLocalOrderState();
+    } finally {
+      _isAcceptingRide = false;
+    }
+  }
+
+  // Flag to prevent multiple simultaneous calls
+  bool _isAcceptingRide = false;
+
+  // Quick validation method
+  bool _validateRideAcceptance() {
+    // Validate offer amount
+    if (newAmount.value.isEmpty || double.tryParse(newAmount.value) == null) {
+      ShowToastDialog.showToast("Please enter a valid offer amount".tr);
+      return false;
+    }
+
+    double amount = double.parse(newAmount.value);
+    if (amount <= 0) {
+      ShowToastDialog.showToast("Please enter a valid offer amount".tr);
+      return false;
+    }
+
+    // Validate wallet balance
+    try {
+      double walletAmount = double.parse(driverModel.value.walletAmount.toString());
+      double minDeposit = double.parse(Constant.minimumDepositToRideAccept);
+      if (walletAmount < minDeposit) {
+        ShowToastDialog.showToast(
+          "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet to accept this order."
+              .tr,
         );
-        await FireStoreUtils.acceptRide(orderModel.value, driverIdAcceptReject);
+        return false;
+      }
+    } catch (e) {
+      ShowToastDialog.showToast("Invalid wallet data".tr);
+      return false;
+    }
 
-        // 7. Update driver subscription details if applicable
-        if (driverModel.value.subscriptionTotalOrders != "-1" &&
-            driverModel.value.subscriptionTotalOrders != null) {
-          try {
-            int totalOrders =
-                int.parse(driverModel.value.subscriptionTotalOrders.toString());
-            driverModel.value.subscriptionTotalOrders =
-                (totalOrders - 1).toString();
-            await FireStoreUtils.updateDriverUser(driverModel.value);
-          } catch (e) {
-            if (kDebugMode) {
-              print("Error parsing subscriptionTotalOrders: $e");
-            }
-          }
-        }
+    // Validate order model
+    if (orderModel.value.id?.isEmpty ?? true) {
+      ShowToastDialog.showToast("Invalid order data".tr);
+      return false;
+    }
 
-        ShowToastDialog.closeLoader();
-        ShowToastDialog.showToast("Ride Accepted".tr);
+    return true;
+  }
 
-        // 8. Navigate to the live tracking screen with the updated order model
-        Get.to(() => const LiveTrackingScreen(), arguments: {
-          "orderModel": orderModel.value,
-          "type": "orderModel",
-        });
+  // Update local order state immediately
+  void _updateLocalOrderState() {
+    orderModel.value.driverId = FireStoreUtils.getCurrentUid();
+    orderModel.value.status = Constant.rideActive;
+    orderModel.value.finalRate = newAmount.value;
+    orderModel.value.acceptedDriverId = [FireStoreUtils.getCurrentUid()];
+    orderModel.value.updateDate = cloudFirestore.Timestamp.now();
+  }
+
+  // Reset local order state on failure
+  void _resetLocalOrderState() {
+    orderModel.value.driverId = "";
+    orderModel.value.status = "";
+    orderModel.value.finalRate = "";
+    orderModel.value.acceptedDriverId = [];
+  }
+
+  // Critical database update
+  Future<void> _updateOrderInDatabase() async {
+    Map<String, dynamic> updatedData = {
+      'acceptedDriverId': [FireStoreUtils.getCurrentUid()],
+      'driverId': FireStoreUtils.getCurrentUid(),
+      'status': Constant.rideActive,
+      'finalRate': newAmount.value,
+      'updateDate': cloudFirestore.Timestamp.now(),
+    };
+
+    await FireStoreUtils.fireStore
+        .collection(CollectionName.orders)
+        .doc(orderModel.value.id)
+        .update(updatedData);
+  }
+
+  // Perform other non-critical operations in background
+  void _performOtherBackgroundOperations() {
+    // Run these operations asynchronously without blocking the UI
+    Future.microtask(() async {
+      try {
+        // Save driver acceptance details
+        await _saveDriverAcceptanceDetails();
+        
+        // Update driver subscription
+        await _updateDriverSubscription();
+        
+        // Notify other controllers (without excessive logging)
+        _notifyRideStateChange();
+        
       } catch (e) {
-        ShowToastDialog.closeLoader();
-        ShowToastDialog.showToast("Failed to accept ride: $e".tr);
         if (kDebugMode) {
-          print("Error accepting order: $e");
+          print("Background operation error: $e");
         }
       }
-    } else {
-      ShowToastDialog.showToast(
-        "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet to accept this order."
-            .tr,
+    });
+  }
+
+  // Send notification to customer
+  Future<void> _sendCustomerNotification() async {
+    try {
+      var customer = await FireStoreUtils.getCustomer(
+          orderModel.value.userId.toString());
+      if (customer?.fcmToken != null) {
+        await SendNotification.sendOneNotification(
+          token: customer!.fcmToken.toString(),
+          title: 'Ride Accepted'.tr,
+          body: 'Your ride has been accepted by the driver for ${Constant.amountShow(amount: newAmount.value)}.'.tr,
+          payload: {'orderId': orderModel.value.id},
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error sending notification: $e");
+      }
+    }
+  }
+
+  // Save driver acceptance details
+  Future<void> _saveDriverAcceptanceDetails() async {
+    try {
+      DriverIdAcceptReject driverIdAcceptReject = DriverIdAcceptReject(
+        driverId: FireStoreUtils.getCurrentUid(),
+        acceptedRejectTime: cloudFirestore.Timestamp.now(),
+        offerAmount: newAmount.value,
       );
+      await FireStoreUtils.acceptRide(orderModel.value, driverIdAcceptReject);
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error saving driver acceptance details: $e");
+      }
+    }
+  }
+
+  // Update driver subscription
+  Future<void> _updateDriverSubscription() async {
+    try {
+      if (driverModel.value.subscriptionTotalOrders != "-1" &&
+          driverModel.value.subscriptionTotalOrders != null) {
+        int totalOrders = int.parse(driverModel.value.subscriptionTotalOrders.toString());
+        driverModel.value.subscriptionTotalOrders = (totalOrders - 1).toString();
+        await FireStoreUtils.updateDriverUser(driverModel.value);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error updating driver subscription: $e");
+      }
     }
   }
 
@@ -327,6 +439,60 @@ class OrderMapController extends GetxController {
         position: position,
       );
       markers[markerId] = marker;
+    }
+  }
+
+  // Notify other controllers about ride state changes
+  void _notifyRideStateChange() {
+    try {
+      // Notify active order controller to refresh (most important)
+      if (Get.isRegistered<ActiveOrderController>()) {
+        final activeOrderController = Get.find<ActiveOrderController>();
+        activeOrderController.refreshData();
+      }
+      
+      // Notify dashboard controller if needed (less frequent)
+      if (Get.isRegistered<DashBoardController>()) {
+        final dashboardController = Get.find<DashBoardController>();
+        dashboardController.fetchDriverData();
+      }
+      
+      // Home controller will update automatically via its listener
+      // No need to call getActiveRide() here as it creates multiple listeners
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error notifying controllers about ride state change: $e");
+      }
+    }
+  }
+
+  // Navigate to active ride tab
+  void _navigateToActiveRideTab() {
+    try {
+      // Navigate back to home screen
+      Get.back();
+      
+      // Use a small delay to ensure the home screen is loaded
+      Future.delayed(const Duration(milliseconds: 200), () {
+        try {
+          // Find the HomeController using dynamic typing to avoid import issues
+          if (Get.isRegistered<HomeController>()) {
+            final homeController = Get.find<HomeController>();
+            homeController.selectedIndex.value = 2; // Active ride tab index
+            homeController.onItemTapped(2); // Trigger the tab change
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print("Error switching to active ride tab: $e");
+          }
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error navigating to active ride tab: $e");
+      }
+      // Fallback: just go back to previous screen
+      Get.back();
     }
   }
 }

@@ -118,7 +118,7 @@ class IntercityController extends GetxController {
 
         // Navigate to live tracking screen
         Get.to(() => const LiveTrackingScreen(), arguments: {
-          "orderModel": orderModel,
+          "interCityOrderModel": orderModel,
           "type": "interCityOrderModel",
         });
       } catch (e) {

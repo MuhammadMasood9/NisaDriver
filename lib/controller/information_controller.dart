@@ -34,7 +34,7 @@ class InformationController extends GetxController {
   Rx<TextEditingController> emailController = TextEditingController().obs;
   Rx<TextEditingController> passwordController = TextEditingController().obs;
   Rx<TextEditingController> phoneNumberController = TextEditingController().obs;
-  RxString countryCode = "+1".obs;
+  RxString countryCode = "+92".obs;
   RxString loginType = Constant.emailLoginType.obs;
   Rx<DriverUserModel> userModel = DriverUserModel().obs;
   RxString userImage = "".obs;
@@ -113,7 +113,7 @@ class InformationController extends GetxController {
       emailController.value.text = passedUserModel.email ?? '';
       userImage.value = passedUserModel.profilePic ?? '';
       phoneNumberController.value.text = passedUserModel.phoneNumber ?? '';
-      countryCode.value = passedUserModel.countryCode ?? '+1';
+      countryCode.value = passedUserModel.countryCode ?? '+92';
     }
     super.onInit();
   }
@@ -139,7 +139,7 @@ class InformationController extends GetxController {
           .then((value) => vehicleList.value = value ?? []),
       FireStoreUtils.getDocumentList().then((value) {
         documentList.value = value.where((doc) => doc.enable ?? false).toList();
-        for (var doc in documentList.value) {
+        for (var doc in documentList) {
           if (doc.id != null) {
             registrationDocuments[doc.id!] = Documents(documentId: doc.id);
           }

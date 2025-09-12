@@ -112,13 +112,13 @@ class WalletController extends GetxController {
           setRef();
         } else {
           log('Failed to load payment model');
-          ShowToastDialog.showToast("Payment configuration failed to load.");
+          ShowToastDialog.showToast("Payment configuration failed to load.".tr);
         }
       });
       filteredTransactionList.value = transactionList.toList();
     } catch (e) {
       log('Error in getPaymentData: $e');
-      ShowToastDialog.showToast("Failed to initialize payment configuration.");
+      ShowToastDialog.showToast("Failed to initialize payment configuration.".tr);
     } finally {
       isLoading.value = false;
       update();
@@ -158,7 +158,7 @@ class WalletController extends GetxController {
         transactionId: DateTime.now().millisecondsSinceEpoch.toString(),
         userId: FireStoreUtils.getCurrentUid(),
         userType: "driver",
-        note: "Wallet Topup");
+        note: "Wallet Topup".tr);
     await FireStoreUtils.setWalletTransaction(transactionModel)
         .then((value) async {
       if (value == true) {
@@ -170,7 +170,7 @@ class WalletController extends GetxController {
         });
       }
     });
-    ShowToastDialog.showToast("Amount added in your wallet.");
+    ShowToastDialog.showToast("Amount added in your wallet.".tr);
   }
 
   Future<void> stripeMakePayment({required String amount}) async {
@@ -185,7 +185,7 @@ class WalletController extends GetxController {
           await createStripeIntent(amount: amount);
       if (paymentIntentData == null || paymentIntentData.containsKey('error')) {
         ShowToastDialog.showToast(
-            "Failed to create payment intent. Please contact admin.");
+            "Failed to create payment intent. Please contact admin.".tr);
         return;
       }
       await Stripe.instance.initPaymentSheet(
@@ -295,14 +295,14 @@ class WalletController extends GetxController {
       Get.to(MercadoPagoScreen(initialURl: data['data']['link']))!
           .then((value) {
         if (value) {
-          ShowToastDialog.showToast("Payment Successful!!");
+          ShowToastDialog.showToast("Payment Successful!!".tr);
           walletTopUp();
         } else {
-          ShowToastDialog.showToast("Payment UnSuccessful!!");
+          ShowToastDialog.showToast("Payment UnSuccessful!!".tr);
         }
       });
     } else {
-      ShowToastDialog.showToast("Something went wrong, please contact admin.");
+      ShowToastDialog.showToast("Something went wrong, please contact admin.".tr);
       log('Payment initialization failed: ${response.body}');
       return null;
     }

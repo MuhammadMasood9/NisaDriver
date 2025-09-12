@@ -571,7 +571,7 @@ class FireStoreUtils {
           documentsList.insert(index, documents);
           driverDocumentModel.documents = documentsList;
           isAdded = false;
-          ShowToastDialog.showToast("Document is under verification");
+          ShowToastDialog.showToast("Document is under verification".tr);
         }
       } else {
         documentsList.add(documents);
@@ -651,16 +651,26 @@ class FireStoreUtils {
 
     stream.listen((List<DocumentSnapshot> documentList) {
       ordersList.clear();
+      final currentDriverId = FireStoreUtils.getCurrentUid();
+      
       for (var document in documentList) {
         final data = document.data() as Map<String, dynamic>;
         OrderModel orderModel = OrderModel.fromJson(data);
-        if (orderModel.acceptedDriverId != null &&
-            orderModel.acceptedDriverId!.isNotEmpty) {
-          if (!orderModel.acceptedDriverId!
-              .contains(FireStoreUtils.getCurrentUid())) {
-            ordersList.add(orderModel);
-          }
-        } else {
+        
+        // Show orders in two cases:
+        // 1. Normal orders (no acceptedDriverId or empty)
+        // 2. Timer orders (driver is in acceptedDriverId array)
+        bool shouldShowOrder = false;
+        
+        if (orderModel.acceptedDriverId == null || orderModel.acceptedDriverId!.isEmpty) {
+          // Normal order - show to all drivers
+          shouldShowOrder = true;
+        } else if (currentDriverId != null && orderModel.acceptedDriverId!.contains(currentDriverId)) {
+          // Timer order - show only to notified drivers
+          shouldShowOrder = true;
+        }
+        
+        if (shouldShowOrder) {
           ordersList.add(orderModel);
         }
       }
@@ -1240,7 +1250,7 @@ class FireStoreUtils {
                   userId: orderModel.driverId.toString(),
                   orderType: "intercity",
                   userType: "customer",
-                  note: "Referral Amount");
+                  note: "Referral Amount".tr);
 
               await FireStoreUtils.setWalletTransaction(transactionModel);
             } catch (error) {}
@@ -1307,7 +1317,7 @@ class FireStoreUtils {
                   userId: orderModel.driverId.toString(),
                   orderType: "city",
                   userType: "customer",
-                  note: "Referral Amount");
+                  note: "Referral Amount".tr);
 
               await FireStoreUtils.setWalletTransaction(transactionModel);
             } catch (error) {

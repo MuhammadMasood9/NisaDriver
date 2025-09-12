@@ -757,7 +757,7 @@ class InformationScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    value.isEmpty ? "Select $label" : value,
+                    value.isEmpty ? "${"Select".tr} $label" : value,
                     style: AppTypography.caption(context).copyWith(
                       color: value.isEmpty
                           ? Colors.grey.shade600
@@ -912,9 +912,9 @@ class InformationScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildSourceOption(context, controller, "Camera",
+                        _buildSourceOption(context, controller, "Camera".tr,
                             Icons.camera_alt_outlined, ImageSource.camera),
-                        _buildSourceOption(context, controller, "Gallery",
+                        _buildSourceOption(context, controller, "Gallery".tr,
                             Icons.photo_library_outlined, ImageSource.gallery),
                       ],
                     ),
@@ -1023,7 +1023,9 @@ class InformationScreen extends StatelessWidget {
                 CountryCodePicker(
                   onChanged: (value) =>
                       controller.countryCode.value = value.dialCode.toString(),
-                  initialSelection: controller.countryCode.value,
+                  initialSelection: controller.countryCode.value.isEmpty 
+                      ? "PK" 
+                      : controller.countryCode.value,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
                   textStyle: AppTypography.input(context),
@@ -1125,7 +1127,7 @@ class InformationScreen extends StatelessWidget {
                   controller.seatsController.value.text = value!;
                   Navigator.pop(context);
                 },
-                title: Text('$seats Seats', style: GoogleFonts.poppins()),
+                title: Text('$seats ${"Seats".tr}', style: GoogleFonts.poppins()),
               ));
         },
       ),

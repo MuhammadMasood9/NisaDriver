@@ -83,7 +83,7 @@ class MyProfileScreen extends StatelessWidget {
                       onChanged: (value) {
                         dashboardController.toggleOnlineStatus(value);
                       },
-                      activeThumbColor: AppColors.primary,
+                      activeTrackColor: AppColors.primary,
                       inactiveThumbColor: AppColors.grey500,
                     )),
               ),

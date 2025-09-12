@@ -228,12 +228,12 @@ class _InboxScreenState extends State<InboxScreen> {
           color: Colors.red.shade400,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Icon(Icons.delete_outline, color: Colors.white),
-            SizedBox(width: 8),
-            Text("Delete", style: TextStyle(color: Colors.white)),
+            const Icon(Icons.delete_outline, color: Colors.white),
+            const SizedBox(width: 8),
+            Text("Delete".tr, style: const TextStyle(color: Colors.white)),
           ],
         ),
       ),

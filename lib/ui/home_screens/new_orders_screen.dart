@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui; // Needed for map camera bounds and image codec
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
@@ -10,6 +9,7 @@ import 'package:driver/constant/send_notification.dart';
 import 'package:driver/constant/show_toast_dialog.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/order_model.dart';
+import 'package:driver/services/dynamic_timer_service.dart';
 import 'package:driver/themes/app_colors.dart';
 import 'package:driver/themes/typography.dart';
 import 'package:driver/ui/home_screens/order_map_screen.dart';
@@ -29,6 +29,40 @@ import 'package:intl/intl.dart';
 // Enum to identify the type of ride for conditional logic
 enum RideType { newRequest, scheduled, active }
 
+// Global timer state manager to persist timer states across widget recreations
+class TimerStateManager {
+  static final TimerStateManager _instance = TimerStateManager._internal();
+  factory TimerStateManager() => _instance;
+  TimerStateManager._internal();
+
+  final Map<String, DateTime> _expiryTimes = {};
+  
+  void setExpiryTime(String orderId, DateTime expiryTime) {
+    _expiryTimes[orderId] = expiryTime;
+  }
+  
+  DateTime? getExpiryTime(String orderId) {
+    return _expiryTimes[orderId];
+  }
+  
+  void removeExpiryTime(String orderId) {
+    _expiryTimes.remove(orderId);
+  }
+  
+  bool isExpired(String orderId) {
+    final expiryTime = _expiryTimes[orderId];
+    if (expiryTime == null) return false;
+    return DateTime.now().isAfter(expiryTime);
+  }
+  
+  int getRemainingSeconds(String orderId) {
+    final expiryTime = _expiryTimes[orderId];
+    if (expiryTime == null) return 0;
+    final now = DateTime.now();
+    return expiryTime.isAfter(now) ? expiryTime.difference(now).inSeconds : 0;
+  }
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~ UNIFIED ORDER CONTROLLER ~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -39,18 +73,26 @@ class NewOrderController extends GetxController {
   Rx<DriverUserModel> driverModel = DriverUserModel().obs;
 
   // Observables for ride lists
-  RxList<OrderModel> acceptedOrdersList = <OrderModel>[].obs;
   RxList<OrderModel> scheduledOrdersList = <OrderModel>[].obs;
   RxList<OrderModel> newOrdersList = <OrderModel>[].obs;
 
   // Stream subscriptions
-  StreamSubscription? _acceptedOrdersSubscription;
   StreamSubscription? _newOrdersSubscription;
   StreamSubscription? _locationSubscription;
+  
+  // Timer service for persistent timers
+  late DynamicTimerService _timerService;
+  
+  // Timer state for each order
+  final RxMap<String, String> _orderTimers = <String, String>{}.obs;
+  final RxMap<String, double> _orderProgress = <String, double>{}.obs;
+  final RxMap<String, bool> _orderTimerActive = <String, bool>{}.obs;
+  
 
   @override
   void onInit() {
     super.onInit();
+    _timerService = Get.find<DynamicTimerService>();
     initializeAllData();
 
     // Listen for driver status changes
@@ -58,9 +100,7 @@ class NewOrderController extends GetxController {
       if (driver.isOnline == true && driver.documentVerification == true) {
         setupStreams();
       } else {
-        _acceptedOrdersSubscription?.cancel();
         _newOrdersSubscription?.cancel();
-        acceptedOrdersList.clear();
         newOrdersList.clear();
       }
     });
@@ -76,7 +116,6 @@ class NewOrderController extends GetxController {
 
   @override
   void onClose() {
-    _acceptedOrdersSubscription?.cancel();
     _newOrdersSubscription?.cancel();
     _locationSubscription?.cancel();
     super.onClose();
@@ -95,9 +134,7 @@ class NewOrderController extends GetxController {
       setupStreams();
     } else {
       // Clear existing streams if driver is offline or not verified
-      _acceptedOrdersSubscription?.cancel();
       _newOrdersSubscription?.cancel();
-      acceptedOrdersList.clear();
       newOrdersList.clear();
     }
 
@@ -130,19 +167,7 @@ class NewOrderController extends GetxController {
 
   void setupStreams() {
     // Cancel existing streams before creating new ones
-    _acceptedOrdersSubscription?.cancel();
     _newOrdersSubscription?.cancel();
-
-    // Stream for accepted orders
-    _acceptedOrdersSubscription = FirebaseFirestore.instance
-        .collection(CollectionName.orders)
-        .where('acceptedDriverId',
-            arrayContains: FireStoreUtils.getCurrentUid())
-        .snapshots()
-        .listen((snapshot) {
-      acceptedOrdersList.value =
-          snapshot.docs.map((doc) => OrderModel.fromJson(doc.data())).toList();
-    });
 
     // Stream for new orders - only if we have current location
     if (Constant.currentLocation != null) {
@@ -150,7 +175,42 @@ class NewOrderController extends GetxController {
           .getOrders(driverModel.value, Constant.currentLocation?.latitude,
               Constant.currentLocation?.longitude)
           .listen((orders) {
+        // Store previous order IDs to detect new orders
+        final previousOrderIds = newOrdersList.map((order) => order.id).toSet();
+        
         newOrdersList.value = orders;
+        
+        // Start timers only for timer orders (orders where driver is in acceptedDriverId)
+        final currentDriverId = FireStoreUtils.getCurrentUid();
+        print('DEBUG: Current driver ID: $currentDriverId');
+        print('DEBUG: Processing ${orders.length} orders');
+        
+        for (final order in orders) {
+          print('DEBUG: Order ${order.id} - acceptedDriverId: ${order.acceptedDriverId}');
+          
+          // Check if this is a timer order (driver is in acceptedDriverId)
+          bool isTimerOrder = order.acceptedDriverId != null && 
+                              order.acceptedDriverId!.isNotEmpty && 
+                              currentDriverId != null &&
+                              order.acceptedDriverId!.contains(currentDriverId);
+          
+          // Only start timer for orders where driver is in acceptedDriverId (timer orders)
+          // and only if it's a new order (not already processed)
+          if (isTimerOrder && 
+              order.id != null &&
+              !previousOrderIds.contains(order.id) &&
+              !isOrderTimerActive(order.id!)) {
+            print('DEBUG: Starting timer for timer order ${order.id} (driver in acceptedDriverId)');
+            _startOrderTimer(order.id!);
+          } else if (isTimerOrder && 
+                     order.id != null &&
+                     previousOrderIds.contains(order.id) &&
+                     !isOrderTimerActive(order.id!)) {
+            print('DEBUG: Order ${order.id} is a timer order but already processed - not restarting timer');
+          } else {
+            print('DEBUG: Skipping timer for order ${order.id} - isTimerOrder: $isTimerOrder, already processed: ${previousOrderIds.contains(order.id)}, timer active: ${isOrderTimerActive(order.id ?? '')}');
+          }
+        }
       });
     } else {
       // If no location, clear the list
@@ -180,7 +240,7 @@ class NewOrderController extends GetxController {
 
   Future<void> acceptScheduledRide(OrderModel orderToAccept) async {
     if (double.parse(driverModel.value.walletAmount.toString()) <
-        double.parse(Constant.minimumDepositToRideAccept ?? '0.0')) {
+        double.parse(Constant.minimumDepositToRideAccept)) {
       ShowToastDialog.showToast(
           "You need at least ${Constant.amountShow(amount: Constant.minimumDepositToRideAccept)} in your wallet."
               .tr);
@@ -222,20 +282,173 @@ class NewOrderController extends GetxController {
     }
   }
 
-  Future<void> handleTimerExpiry(String orderId) async {
-    String? driverId = FireStoreUtils.getCurrentUid();
-    if (driverId == null) return;
+  // Timer management methods
+  void _startOrderTimer(String orderId) {
+    print('DEBUG: _startOrderTimer called for order $orderId');
+    final timerId = 'order_$orderId';
+    
     try {
-      await FirebaseFirestore.instance
-          .collection(CollectionName.orders)
-          .doc(orderId)
-          .update({
-        'acceptedDriverId': FieldValue.arrayRemove([driverId])
-      });
+      _timerService.startTimer(
+        timerId: timerId,
+        initialDurationSeconds: 30, // 30 seconds to match customer timeout
+        isCountdown: true,
+        onUpdate: (update) {
+          print('DEBUG: Timer update for $orderId - ${update.formattedTime}');
+          _orderTimers[orderId] = update.formattedTime;
+          _orderProgress[orderId] = update.progress;
+          _orderTimerActive[orderId] = true;
+        },
+        onExpired: () {
+          print('DEBUG: Timer expired for $orderId');
+          _orderTimerActive[orderId] = false;
+          _orderTimers[orderId] = "00:00";
+          _orderProgress[orderId] = 0.0;
+          _handleOrderExpiry(orderId);
+        },
+      );
+      print('DEBUG: Timer started successfully for $orderId');
     } catch (e) {
-      debugPrint("Error updating order on timer expiry: $e");
+      print('DEBUG: Error starting timer for $orderId: $e');
+      // Fallback: use a simple timer if the service fails
+      _orderTimerActive[orderId] = true;
+      _orderTimers[orderId] = "30:00";
+      _orderProgress[orderId] = 0.0;
+      
+      Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!_orderTimerActive[orderId]!) {
+          timer.cancel();
+          return;
+        }
+        
+        final currentTime = _orderTimers[orderId] ?? "30:00";
+        final parts = currentTime.split(':');
+        int minutes = int.parse(parts[0]);
+        int seconds = int.parse(parts[1]);
+        
+        if (seconds > 0) {
+          seconds--;
+        } else if (minutes > 0) {
+          minutes--;
+          seconds = 59;
+        } else {
+          // Timer expired
+          timer.cancel();
+          _orderTimerActive[orderId] = false;
+          _orderTimers[orderId] = "00:00";
+          _orderProgress[orderId] = 0.0;
+          _handleOrderExpiry(orderId);
+          return;
+        }
+        
+        _orderTimers[orderId] = "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+        _orderProgress[orderId] = (30 - (minutes * 60 + seconds)) / 30.0;
+      });
     }
   }
+
+  void _handleOrderExpiry(String orderId) async {
+    try {
+      print('DEBUG: Handling order expiry for $orderId');
+      
+      // Find the order in the list
+      final orderIndex = newOrdersList.indexWhere((order) => order.id == orderId);
+      if (orderIndex == -1) {
+        print('DEBUG: Order $orderId not found in list');
+        return;
+      }
+
+      final order = newOrdersList[orderIndex];
+      final currentDriverId = FireStoreUtils.getCurrentUid();
+      
+      print('DEBUG: Order $orderId - acceptedDriverId: ${order.acceptedDriverId}, currentDriverId: $currentDriverId');
+      
+      // Remove driver ID from the acceptedDriverId array to make it available to other drivers
+      if (order.acceptedDriverId != null && 
+          order.acceptedDriverId!.isNotEmpty && 
+          currentDriverId != null &&
+          order.acceptedDriverId!.contains(currentDriverId)) {
+        
+        final updatedAcceptedDriverIds = List<String>.from(order.acceptedDriverId!);
+        updatedAcceptedDriverIds.remove(currentDriverId);
+        
+        print('DEBUG: Removing driver $currentDriverId from order $orderId. Updated list: $updatedAcceptedDriverIds');
+        
+        await FirebaseFirestore.instance
+            .collection(CollectionName.orders)
+            .doc(order.id)
+            .update({
+          'acceptedDriverId': updatedAcceptedDriverIds,
+        });
+        
+        print('DEBUG: Successfully updated order $orderId in database');
+      }
+
+      // Remove from new orders list
+      newOrdersList.removeAt(orderIndex);
+      print('DEBUG: Removed order $orderId from local list');
+      
+      // Show notification
+      ShowToastDialog.showToast("Order expired - no longer available".tr);
+      
+    } catch (e) {
+      print('DEBUG: Error handling order expiry for $orderId: $e');
+      if (kDebugMode) print("Error handling order expiry: $e");
+    }
+  }
+
+  // Getters for UI
+  String getOrderTimer(String orderId) => _orderTimers[orderId] ?? "00:00";
+  double getOrderProgress(String orderId) => _orderProgress[orderId] ?? 0.0;
+  bool isOrderTimerActive(String orderId) => _orderTimerActive[orderId] ?? false;
+
+  // Timer card widget for new orders
+  Widget _buildTimerCard(String orderId) {
+    return Obx(() {
+      final isActive = isOrderTimerActive(orderId);
+      print('DEBUG: _buildTimerCard for $orderId - isActive: $isActive');
+      
+      if (!isActive) return const SizedBox.shrink();
+      
+      final timeText = getOrderTimer(orderId);
+      final progress = getOrderProgress(orderId);
+      
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange.shade200),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.timer, size: 16, color: Colors.orange.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  'Response Time: $timeText',
+                  style: TextStyle(
+                    color: Colors.orange.shade700,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.orange.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
+              minHeight: 3,
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -318,7 +531,6 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                       _buildLiveRidesNavigationCard(context),
 
                       // Sections for different ride types
-                      _buildAcceptedOrdersSection(context, controller),
                       _buildScheduledOrdersSection(context, controller),
                       _buildNewOrdersSection(context, controller),
 
@@ -431,39 +643,6 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     );
   }
 
-  Widget _buildAcceptedOrdersSection(
-      BuildContext context, NewOrderController controller) {
-    if (controller.acceptedOrdersList.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader(context, "Active Orders".tr),
-        ListView.builder(
-          itemCount: controller.acceptedOrdersList.length,
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemBuilder: (context, index) {
-            OrderModel orderModel = controller.acceptedOrdersList[index];
-            return InkWell(
-              onTap: () => _showRideDetailsBottomSheet(
-                  context, orderModel, RideType.active),
-              child: OrderItemWithTimer(
-                key: ValueKey("accepted-${orderModel.id}"),
-                orderModel: orderModel,
-                onExpired: () => controller.handleTimerExpiry(orderModel.id!),
-              ),
-            );
-          },
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
-          child: Divider(),
-        ),
-      ],
-    );
-  }
 
   Widget _buildScheduledOrdersSection(
       BuildContext context, NewOrderController controller) {
@@ -495,9 +674,8 @@ class _NewOrderScreenState extends State<NewOrderScreen>
   Widget _buildNewOrdersSection(
       BuildContext context, NewOrderController controller) {
     if (controller.newOrdersList.isEmpty) {
-      // Show "All Caught Up" only if there are no other rides either
-      if (controller.acceptedOrdersList.isEmpty &&
-          controller.scheduledOrdersList.isEmpty) {
+      // Show "All Caught Up" only if there are no scheduled rides either
+      if (controller.scheduledOrdersList.isEmpty) {
         return _buildInfoMessage("All Caught Up!", "No new rides found nearby.",
             icon: Icons.done_all_rounded);
       }
@@ -571,6 +749,21 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                   ],
                 ),
                 const Divider(height: 20, thickness: 1),
+              ],
+              // Timer card only for timer orders (orders where driver is in acceptedDriverId)
+              if (rideType == RideType.newRequest && 
+                  order.id != null && 
+                  order.acceptedDriverId != null &&
+                  order.acceptedDriverId!.isNotEmpty &&
+                  order.acceptedDriverId!.contains(FireStoreUtils.getCurrentUid())) ...[
+                Builder(
+                  builder: (context) {
+                    final controller = Get.find<NewOrderController>();
+                    final isTimerActive = controller.isOrderTimerActive(order.id!);
+                    print('DEBUG UI: Timer order ${order.id} - Timer active: $isTimerActive');
+                    return controller._buildTimerCard(order.id!);
+                  },
+                ),
               ],
               // Pickup point and Payment row
               Row(
@@ -1210,224 +1403,3 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
   }
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~ ORDER ITEM WITH TIMER ~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class OrderItemWithTimer extends StatefulWidget {
-  final OrderModel orderModel;
-  final VoidCallback onExpired;
-  const OrderItemWithTimer(
-      {super.key, required this.orderModel, required this.onExpired});
-  @override
-  State<OrderItemWithTimer> createState() => _OrderItemWithTimerState();
-}
-
-class _OrderItemWithTimerState extends State<OrderItemWithTimer> {
-  final RxInt _remainingSeconds = 30.obs;
-  final RxBool _isExpired = false.obs;
-  Timer? _timer;
-  DateTime? _expiryAt;
-
-  @override
-  void initState() {
-    super.initState();
-    _initTimer();
-  }
-
-  Future<void> _initTimer() async {
-    try {
-      final String? driverId = FireStoreUtils.getCurrentUid();
-      if (driverId != null && widget.orderModel.id != null) {
-        final info = await FireStoreUtils.getAcceptedOrders(
-            widget.orderModel.id!, driverId);
-        if (info?.acceptedRejectTime != null) {
-          final start = info!.acceptedRejectTime!.toDate();
-          _expiryAt = start.add(const Duration(seconds: 30));
-          final now = DateTime.now();
-          final int left = _expiryAt!.isAfter(now)
-              ? _expiryAt!.difference(now).inSeconds
-              : 0;
-          _remainingSeconds.value = left;
-        }
-      }
-    } catch (_) {}
-    _startTimer();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      int next;
-      if (_expiryAt != null) {
-        final now = DateTime.now();
-        next = _expiryAt!.isAfter(now)
-            ? _expiryAt!.difference(now).inSeconds
-            : 0;
-      } else {
-        next = _remainingSeconds.value - 1;
-      }
-
-      if (next > 0) {
-        _remainingSeconds.value = next;
-      } else {
-        _timer?.cancel();
-        if (mounted) {
-          _isExpired.value = true;
-        }
-        widget.onExpired();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(
-      () => _isExpired.value
-          ? const SizedBox.shrink()
-          : Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      spreadRadius: 1,
-                      blurRadius: 20,
-                      offset: const Offset(0, 5),
-                    )
-                  ]),
-              child: Column(
-                children: [
-                  TimerIndicator(remainingSeconds: _remainingSeconds),
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.arrow_circle_down,
-                                size: 22, color: AppColors.primary),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                      widget.orderModel.sourceLocationName
-                                          .toString(),
-                                      style: AppTypography.boldLabel(context)
-                                          .copyWith(
-                                              fontWeight: FontWeight.w500,
-                                              height: 1.3)),
-                                  Text("Pickup point".tr,
-                                      style: AppTypography.caption(context)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Container(
-                              width: 22,
-                              alignment: Alignment.center,
-                              child: Container(
-                                  height: 20,
-                                  width: 1.5,
-                                  color: AppColors.grey200),
-                            ),
-                            Expanded(child: Container()),
-                          ],
-                        ),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.location_on,
-                                size: 22, color: Colors.black),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                      widget.orderModel.destinationLocationName
-                                          .toString(),
-                                      style: AppTypography.boldLabel(context)
-                                          .copyWith(
-                                              fontWeight: FontWeight.w500,
-                                              height: 1.3)),
-                                  Text("Destination".tr,
-                                      style: AppTypography.caption(context)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  )
-                ],
-              ),
-            ),
-    );
-  }
-}
-
-class TimerIndicator extends StatelessWidget {
-  final RxInt remainingSeconds;
-  const TimerIndicator({super.key, required this.remainingSeconds});
-  Color _getTimerColor(int seconds) {
-    if (seconds > 20) return Colors.green;
-    if (seconds > 10) return Colors.orange;
-    return Colors.red;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      int seconds = remainingSeconds.value;
-      double progress = seconds / 30.0;
-      Color timerColor = _getTimerColor(seconds);
-
-      return Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding:
-                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            decoration: BoxDecoration(
-              color: timerColor.withValues(alpha: 0.1),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: Center(
-              child: Text(
-                'Awaiting Confirmation: $seconds s'.tr,
-                style: GoogleFonts.poppins(
-                  color: timerColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.transparent,
-            color: timerColor,
-            minHeight: 4,
-          ),
-        ],
-      );
-    });
-  }
-}

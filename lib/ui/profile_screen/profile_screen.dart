@@ -358,7 +358,7 @@ class ProfileScreen extends StatelessWidget {
                 },
                 dialogBackgroundColor: Theme.of(context).colorScheme.surface,
                 initialSelection: controller.countryCode.value.isEmpty
-                    ? "+1"
+                    ? "PK"
                     : controller.countryCode.value,
                 flagDecoration: const BoxDecoration(
                   borderRadius: BorderRadius.all(Radius.circular(2)),

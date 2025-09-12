@@ -1,5 +1,6 @@
 import 'package:driver/themes/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:story_view/story_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -36,49 +37,49 @@ class SafetyScreen extends StatelessWidget {
   // List of safety features with their corresponding popup data
   static final List<SafetyFeature> safetyFeatures = [
     SafetyFeature(
-      title: "Proactive safety support",
+      title: "Proactive safety support".tr,
       iconPath: 'assets/images/Protecting.png',
       popupImagePath:
           'assets/images/Protecting.png', // Replace with a relevant image
-      popupTitle: "We've got your back",
+      popupTitle: "We've got your back".tr,
       popupDescription:
-          "Our system proactively checks in on you if we detect any unusual activity during your ride, like a long, unexpected stop.",
+          "Our system proactively checks in on you if we detect any unusual activity during your ride, like a long, unexpected stop.".tr,
     ),
     SafetyFeature(
-      title: "Passengers verification",
+      title: "Passengers verification".tr,
       iconPath: 'assets/images/Verfication.png',
       popupImagePath:
           'assets/images/Verfication.png', // This is the image from your screenshot
-      popupTitle: "Choose your passenger",
+      popupTitle: "Choose your passenger".tr,
       popupDescription:
-          "Before accepting a request, check the passenger's destination, name, profile picture, and ratings. Accept only the rides that suit you best.",
+          "Before accepting a request, check the passenger's destination, name, profile picture, and ratings. Accept only the rides that suit you best.".tr,
     ),
     SafetyFeature(
-      title: "Protecting your privacy",
+      title: "Protecting your privacy".tr,
       iconPath: 'assets/images/Safety-Support.png',
       popupImagePath:
           'assets/images/Safety-Support.png', // Replace with a relevant image
-      popupTitle: "Your details are private",
+      popupTitle: "Your details are private".tr,
       popupDescription:
-          "Your phone number is anonymized when you call or text through the app, so your personal contact information stays private.",
+          "Your phone number is anonymized when you call or text through the app, so your personal contact information stays private.".tr,
     ),
     SafetyFeature(
-      title: "Staying safe on every ride",
+      title: "Staying safe on every ride".tr,
       iconPath: 'assets/images/Every-Ride.png',
       popupImagePath:
           'assets/images/Every-Ride.png', // Replace with a relevant image
-      popupTitle: "Safety for every journey",
+      popupTitle: "Safety for every journey".tr,
       popupDescription:
-          "From GPS tracking to our 24/7 support team, we have features in place to help you stay safe from pickup to drop-off.",
+          "From GPS tracking to our 24/7 support team, we have features in place to help you stay safe from pickup to drop-off.".tr,
     ),
     SafetyFeature(
-      title: "Accidents: Steps to take",
+      title: "Accidents: Steps to take".tr,
       iconPath: 'assets/images/Accident.png',
       popupImagePath:
           'assets/images/Accident.png', // Replace with a relevant image
-      popupTitle: "In case of an accident",
+      popupTitle: "In case of an accident".tr,
       popupDescription:
-          "If you're involved in an accident, first ensure your safety and call local emergency services if needed. You can then report the incident to us directly through the app.",
+          "If you're involved in an accident, first ensure your safety and call local emergency services if needed. You can then report the incident to us directly through the app.".tr,
     ),
   ];
 
@@ -122,7 +123,7 @@ class SafetyScreen extends StatelessWidget {
         Expanded(
           child: _buildTopActionCard(
             context: context,
-            title: "Support and backup",
+            title: "Support and backup".tr,
             iconPath: 'assets/images/Protecting.png',
             onTap: () {},
           ),
@@ -131,7 +132,7 @@ class SafetyScreen extends StatelessWidget {
         Expanded(
           child: _buildTopActionCard(
             context: context,
-            title: "Emergency contacts",
+            title: "Emergency contacts".tr,
             iconPath: 'assets/images/Protecting.png',
             onTap: () {},
           ),
@@ -290,7 +291,7 @@ class SafetyStoryViewer extends StatefulWidget {
   });
 
   @override
-  _SafetyStoryViewerState createState() => _SafetyStoryViewerState();
+  State<SafetyStoryViewer> createState() => _SafetyStoryViewerState();
 }
 
 class _SafetyStoryViewerState extends State<SafetyStoryViewer> {
@@ -309,7 +310,8 @@ class _SafetyStoryViewerState extends State<SafetyStoryViewer> {
       // Pass the custom widget as the first POSITIONAL argument to StoryItem.
       return StoryItem(
         _StoryPageLayout(feature: feature, storyController: _storyController),
-        duration: const Duration(seconds: 10),
+        duration: const Duration(
+            seconds: 3), // Changed to 3 seconds like Instagram/WhatsApp
       );
     }).toList();
   }
@@ -323,6 +325,7 @@ class _SafetyStoryViewerState extends State<SafetyStoryViewer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: StoryView(
         storyItems: _storyItems,
         controller: _storyController,
@@ -331,6 +334,10 @@ class _SafetyStoryViewerState extends State<SafetyStoryViewer> {
           if (direction == Direction.down) {
             Navigator.of(context).pop();
           }
+        },
+        onStoryShow: (storyItem, index) {
+          // Optional: Add haptic feedback when story changes
+          // HapticFeedback.lightImpact();
         },
         progressPosition: ProgressPosition.top,
         repeat: false,
@@ -353,49 +360,106 @@ class _StoryPageLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF1a1a1a),
+            Color(0xFF2d2d2d),
+          ],
+        ),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Spacer(),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.close, size: 30),
-                  onPressed: () => Navigator.of(context).pop(),
-                  color: Colors.black,
-                )
-              ],
-            ),
-            const SizedBox(height: 30),
-            Center(
-              child: Image.asset(
-                feature.popupImagePath,
-                height: 200,
-              ),
-            ),
+            // Header with close button
             const SizedBox(height: 40),
-            Text(
-              feature.popupTitle,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                decoration: TextDecoration.none,
+
+            // Main content
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image with rounded container
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        feature.popupImagePath,
+                        height: 120,
+                        width: 120,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Title
+                  Text(
+                    feature.popupTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.none,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  Text(
+                    feature.popupDescription,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 16,
+                      height: 1.5,
+                      fontWeight: FontWeight.w400,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              feature.popupDescription,
-              style: TextStyle(
-                color: Colors.grey[850],
-                fontSize: 16,
-                height: 1.5,
-                fontWeight: FontWeight.normal,
-                decoration: TextDecoration.none,
+
+            // Bottom indicator
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.swipe_down,
+                      color: Colors.white.withOpacity(0.6),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Swipe down to close',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 12,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

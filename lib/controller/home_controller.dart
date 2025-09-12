@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:driver/constant/collection_name.dart';
 import 'package:driver/constant/constant.dart';
+import 'package:driver/controller/active_order_controller.dart';
 import 'package:driver/controller/dash_board_controller.dart';
 import 'package:driver/model/driver_user_model.dart';
 import 'package:driver/model/order/location_lat_lng.dart';
@@ -68,9 +71,19 @@ class HomeController extends GetxController {
   }
 
   RxInt isActiveValue = 0.obs;
+  StreamSubscription? _activeRideSubscription;
+
+  @override
+  void onClose() {
+    _activeRideSubscription?.cancel();
+    super.onClose();
+  }
 
   getActiveRide() {
-    FirebaseFirestore.instance
+    // Cancel existing subscription to prevent multiple listeners
+    _activeRideSubscription?.cancel();
+    
+    _activeRideSubscription = FirebaseFirestore.instance
         .collection(CollectionName.orders)
         .where('driverId', isEqualTo: FireStoreUtils.getCurrentUid())
         .where('status',
@@ -78,6 +91,20 @@ class HomeController extends GetxController {
         .snapshots()
         .listen((event) {
           isActiveValue.value = event.size;
+          // Removed excessive logging to prevent crashes
+          
+          // Force refresh of the active order screen if it exists
+          try {
+            if (Get.isRegistered<ActiveOrderController>()) {
+              final activeOrderController = Get.find<ActiveOrderController>();
+              activeOrderController.refreshData();
+            }
+          } catch (e) {
+            // Removed excessive logging to prevent crashes
+            if (kDebugMode) {
+              print("Error refreshing active order controller: $e");
+            }
+          }
         });
   }
 
@@ -86,7 +113,12 @@ class HomeController extends GetxController {
   updateCurrentLocation() async {
     PermissionStatus permissionStatus = await location.hasPermission();
     if (permissionStatus == PermissionStatus.granted) {
-      location.enableBackgroundMode(enable: true);
+      try {
+        await location.enableBackgroundMode(enable: true);
+      } catch (e) {
+        print('Background location permission denied: $e');
+        // Continue without background mode if permission is denied
+      }
       location.changeSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter:
@@ -118,7 +150,12 @@ class HomeController extends GetxController {
     } else {
       location.requestPermission().then((permissionStatus) {
         if (permissionStatus == PermissionStatus.granted) {
-          location.enableBackgroundMode(enable: true);
+          try {
+            location.enableBackgroundMode(enable: true);
+          } catch (e) {
+            print('Background location permission denied: $e');
+            // Continue without background mode if permission is denied
+          }
           location.changeSettings(
               accuracy: LocationAccuracy.high,
               distanceFilter:

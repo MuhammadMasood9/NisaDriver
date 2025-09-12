@@ -6,6 +6,7 @@ import 'package:driver/themes/typography.dart';
 import 'package:driver/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
 
 class UserDriverView extends StatelessWidget {
   final String? userId;
@@ -50,7 +51,7 @@ class UserDriverView extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("Asynchronous user", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                                Text("Asynchronous user".tr, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                                 Row(
                                   children: [
                                     Expanded(

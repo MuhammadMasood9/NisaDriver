@@ -280,7 +280,7 @@ class _CompleteIntercityOrderScreenState
               _buildLocationRow(
                 icon: Icons.trip_origin,
                 iconColor: AppColors.primary,
-                title: "Pickup point",
+                title: "Pickup point".tr,
                 subtitle:
                     controller.orderModel.value.sourceLocationName ?? 'N/A',
               ),
@@ -288,7 +288,7 @@ class _CompleteIntercityOrderScreenState
               _buildLocationRow(
                 icon: Icons.location_on,
                 iconColor: Colors.red.shade700,
-                title: "Destination",
+                title: "Destination".tr,
                 subtitle: controller.orderModel.value.destinationLocationName ??
                     'N/A',
               ),
@@ -375,6 +375,10 @@ class _CompleteIntercityOrderScreenState
                       _verticalSpacing,
                       _buildUserSection(context),
                       _verticalSpacing,
+                      if (controller.orderModel.value.coupon != null && couponAmount > 0)
+                        _buildCouponDetailsSection(context, couponAmount),
+                      if (controller.orderModel.value.coupon != null && couponAmount > 0)
+                        _verticalSpacing,
                       _buildFareDetailsSection(context, rideFare, couponAmount,
                           rideFareAfterDiscount),
                       _verticalSpacing,
@@ -488,6 +492,63 @@ class _CompleteIntercityOrderScreenState
     );
   }
 
+  Widget _buildCouponDetailsSection(BuildContext context, double couponAmount) {
+    return _buildInfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCardHeader(context, "Coupon Applied".tr),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.local_offer,
+                  color: Colors.green.shade600,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      controller.orderModel.value.coupon?.code ?? "Discount Applied",
+                      style: AppTypography.boldLabel(context).copyWith(
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      controller.orderModel.value.coupon?.type == "fix"
+                          ? "Fixed Amount Discount"
+                          : "Percentage Discount (${controller.orderModel.value.coupon?.amount}%)",
+                      style: AppTypography.caption(context),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                "-${Constant.amountShow(amount: couponAmount.toString())}",
+                style: AppTypography.appTitle(context).copyWith(
+                  color: Colors.green.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFareDetailsSection(BuildContext context, double rideFare,
       double couponAmount, double rideFareAfterDiscount) {
     return _buildInfoCard(
@@ -501,27 +562,30 @@ class _CompleteIntercityOrderScreenState
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildFinanceGridItem(context,
-                  title: "Distance",
+                  title: "Distance".tr,
                   value:
                       "${_parseAmount(controller.orderModel.value.distance).toStringAsFixed(2)} ${controller.orderModel.value.distanceType}" ??
                           'N/A',
                   valueColor: Colors.black),
               _buildFinanceGridItem(context,
-                  title: "Payment",
+                  title: "Payment".tr,
                   value: controller.orderModel.value.paymentType ?? 'N/A'),
               _buildFinanceGridItem(context,
-                  title: "Travel Time", value: _routeDuration),
+                  title: "Travel Time".tr, value: _routeDuration),
             ],
           ),
           const Divider(height: 24),
           _buildSummaryRow(context,
-              title: "Ride Fare",
+              title: "Ride Fare".tr,
               value: Constant.amountShow(amount: rideFare.toString())),
-          _buildSummaryRow(context,
-              title: "Discount",
-              value:
-                  "(-${Constant.amountShow(amount: couponAmount.toString())})",
-              valueColor: Colors.green),
+          if (couponAmount > 0)
+            _buildSummaryRow(context,
+                title: controller.orderModel.value.coupon?.code != null 
+                    ? "Discount (${controller.orderModel.value.coupon!.code})".tr
+                    : "Discount".tr,
+                value:
+                    "(-${Constant.amountShow(amount: couponAmount.toString())})",
+                valueColor: Colors.green),
           if (controller.orderModel.value.taxList != null)
             ...controller.orderModel.value.taxList!
                 .map((tax) => _buildSummaryRow(
@@ -538,7 +602,7 @@ class _CompleteIntercityOrderScreenState
                     )),
           _buildSummaryRow(
             context,
-            title: "Admin Commission",
+            title: "Admin Commission".tr,
             value:
                 "(-${Constant.amountShow(amount: Constant.calculateAdminCommission(amount: rideFareAfterDiscount.toString(), adminCommission: controller.orderModel.value.adminCommission).toString())})",
             valueColor: Colors.red,

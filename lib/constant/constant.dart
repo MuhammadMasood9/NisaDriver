@@ -83,48 +83,60 @@ class Constant {
   }
 
   static String localizationName(List<LanguageName>? name) {
-    if (name!
-        .firstWhere((element) => element.type == Constant.getLanguage().code)
-        .name!
-        .isNotEmpty) {
-      return name
-          .firstWhere((element) => element.type == Constant.getLanguage().code)
-          .name!;
-    } else {
-      return name.firstWhere((element) => element.type == "en").name.toString();
+    if (name == null || name.isEmpty) return "";
+    
+    // Try to find the current language
+    final currentLang = name.where((element) => element.type == Constant.getLanguage().code).firstOrNull;
+    if (currentLang != null && currentLang.name != null && currentLang.name!.isNotEmpty) {
+      return currentLang.name!;
     }
+    
+    // Fallback to English
+    final englishLang = name.where((element) => element.type == "en").firstOrNull;
+    if (englishLang != null && englishLang.name != null) {
+      return englishLang.name!;
+    }
+    
+    // Final fallback - return first available name
+    return name.isNotEmpty && name.first.name != null ? name.first.name! : "";
   }
 
   static String localizationTitle(List<LanguageTitle>? name) {
-    if (name!
-        .firstWhere((element) => element.type == Constant.getLanguage().code)
-        .title!
-        .isNotEmpty) {
-      return name
-          .firstWhere((element) => element.type == Constant.getLanguage().code)
-          .title!;
-    } else {
-      return name
-          .firstWhere((element) => element.type == "en")
-          .title
-          .toString();
+    if (name == null || name.isEmpty) return "";
+    
+    // Try to find the current language
+    final currentLang = name.where((element) => element.type == Constant.getLanguage().code).firstOrNull;
+    if (currentLang != null && currentLang.title != null && currentLang.title!.isNotEmpty) {
+      return currentLang.title!;
     }
+    
+    // Fallback to English
+    final englishLang = name.where((element) => element.type == "en").firstOrNull;
+    if (englishLang != null && englishLang.title != null) {
+      return englishLang.title!;
+    }
+    
+    // Final fallback - return first available title
+    return name.isNotEmpty && name.first.title != null ? name.first.title! : "";
   }
 
   static String localizationDescription(List<LanguageDescription>? name) {
-    if (name!
-        .firstWhere((element) => element.type == Constant.getLanguage().code)
-        .description!
-        .isNotEmpty) {
-      return name
-          .firstWhere((element) => element.type == Constant.getLanguage().code)
-          .description!;
-    } else {
-      return name
-          .firstWhere((element) => element.type == "en")
-          .description
-          .toString();
+    if (name == null || name.isEmpty) return "";
+    
+    // Try to find the current language
+    final currentLang = name.where((element) => element.type == Constant.getLanguage().code).firstOrNull;
+    if (currentLang != null && currentLang.description != null && currentLang.description!.isNotEmpty) {
+      return currentLang.description!;
     }
+    
+    // Fallback to English
+    final englishLang = name.where((element) => element.type == "en").firstOrNull;
+    if (englishLang != null && englishLang.description != null) {
+      return englishLang.description!;
+    }
+    
+    // Final fallback - return first available description
+    return name.isNotEmpty && name.first.description != null ? name.first.description! : "";
   }
 
   static String timestampToDateTime(Timestamp timestamp,
@@ -151,35 +163,41 @@ class Constant {
   }
 
   static String localizationPrivacyPolicy(List<LanguagePrivacyPolicy>? name) {
-    if (name!
-        .firstWhere((element) => element.type == Constant.getLanguage().code)
-        .privacyPolicy!
-        .isNotEmpty) {
-      return name
-          .firstWhere((element) => element.type == Constant.getLanguage().code)
-          .privacyPolicy!;
-    } else {
-      return name
-          .firstWhere((element) => element.type == "en")
-          .privacyPolicy
-          .toString();
+    if (name == null || name.isEmpty) return "";
+    
+    // Try to find the current language
+    final currentLang = name.where((element) => element.type == Constant.getLanguage().code).firstOrNull;
+    if (currentLang != null && currentLang.privacyPolicy != null && currentLang.privacyPolicy!.isNotEmpty) {
+      return currentLang.privacyPolicy!;
     }
+    
+    // Fallback to English
+    final englishLang = name.where((element) => element.type == "en").firstOrNull;
+    if (englishLang != null && englishLang.privacyPolicy != null) {
+      return englishLang.privacyPolicy!;
+    }
+    
+    // Final fallback - return first available privacy policy
+    return name.isNotEmpty && name.first.privacyPolicy != null ? name.first.privacyPolicy! : "";
   }
 
   static String localizationTermsCondition(List<LanguageTermsCondition>? name) {
-    if (name!
-        .firstWhere((element) => element.type == Constant.getLanguage().code)
-        .termsAndConditions!
-        .isNotEmpty) {
-      return name
-          .firstWhere((element) => element.type == Constant.getLanguage().code)
-          .termsAndConditions!;
-    } else {
-      return name
-          .firstWhere((element) => element.type == "en")
-          .termsAndConditions
-          .toString();
+    if (name == null || name.isEmpty) return "";
+    
+    // Try to find the current language
+    final currentLang = name.where((element) => element.type == Constant.getLanguage().code).firstOrNull;
+    if (currentLang != null && currentLang.termsAndConditions != null && currentLang.termsAndConditions!.isNotEmpty) {
+      return currentLang.termsAndConditions!;
     }
+    
+    // Fallback to English
+    final englishLang = name.where((element) => element.type == "en").firstOrNull;
+    if (englishLang != null && englishLang.termsAndConditions != null) {
+      return englishLang.termsAndConditions!;
+    }
+    
+    // Final fallback - return first available terms and conditions
+    return name.isNotEmpty && name.first.termsAndConditions != null ? name.first.termsAndConditions! : "";
   }
 
   static Future<mapModels.MapModel?> getDurationDistance(
