@@ -13,6 +13,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
 import 'services/localization_service.dart';
@@ -36,10 +37,10 @@ void main() async {
 
   // Initialize LanguageController first for better performance
   final languageController = Get.put(LanguageController());
-  
+
   // Initialize language from saved preference with performance optimization
   await languageController.initializeLanguage();
-  
+
   // Preload translations for better performance
   await LanguageUtils.preloadTranslations();
 
@@ -81,19 +82,19 @@ void _configLoading() {
 /// Initialize enhanced localization features for development
 void _initializeEnhancedLocalization() {
   if (!kDebugMode) return;
-  
+
   // Print initial translation coverage report
   LocalizationService.printTranslationCoverageReport();
-  
+
   // Print validation report
   TranslationValidator.printValidationReport();
-  
+
   // Print comprehensive translation report
   TranslationManager.printTranslationReport();
-  
+
   // Run error handling demonstration
   TranslationDemo.runAllDemonstrations();
-  
+
   print('🌐 Enhanced localization features initialized');
 }
 
@@ -148,7 +149,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return GetMaterialApp(
           title: 'NisaRide'.tr,
           debugShowCheckedModeBanner: false,
-          localizationsDelegates: const [
+          localizationsDelegates: [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
@@ -161,10 +162,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           builder: (context, child) {
             // Apply RTL support and EasyLoading initialization
             final easyLoadingChild = EasyLoading.init()(context, child);
-            
+
             // Get text direction from optimized controller
             final textDirection = languageController.getTextDirection();
-            
+
             return Directionality(
               textDirection: textDirection,
               child: easyLoadingChild,
