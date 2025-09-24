@@ -498,18 +498,24 @@ class SettingScreen extends StatelessWidget {
                       onPressed: () async {
                         Get.back();
                         ShowToastDialog.showLoader("Deleting account...".tr);
-                        await FireStoreUtils.deleteUser().then((value) {
+                        try {
+                          bool? result = await FireStoreUtils.deleteUser();
                           ShowToastDialog.closeLoader();
-                          if (value == true) {
+                          
+                          if (result == true) {
                             ShowToastDialog.showToast(
                                 "Account deleted successfully".tr);
                             Get.offAll(const LoginScreen());
                           } else {
                             ShowToastDialog.showToast(
-                                "Failed to delete account. Please contact support."
+                                "Failed to delete account. This may require recent authentication. Please log out and log back in, then try again."
                                     .tr);
                           }
-                        });
+                        } catch (e) {
+                          ShowToastDialog.closeLoader();
+                          ShowToastDialog.showToast(
+                              "Error deleting account: ${e.toString()}".tr);
+                        }
                       },
                       child: Text("Delete".tr,
                           style: AppTypography.boldLabel(context)

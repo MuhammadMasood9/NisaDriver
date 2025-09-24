@@ -281,6 +281,8 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 _buildModernPhoneField(context, controller),
                 const SizedBox(height: 20),
+                _buildEmailVerificationCard(context, controller),
+                const SizedBox(height: 20),
                 _buildVerificationStatusCard(context, controller),
               ],
             ),
@@ -388,6 +390,95 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildEmailVerificationCard(
+      BuildContext context, ProfileController controller) {
+    return Obx(() {
+      bool isEmailVerified = controller.isEmailVerified.value;
+      bool isEmailSent = controller.isEmailVerificationSent.value;
+      
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isEmailVerified ? Colors.green.shade50 : Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isEmailVerified ? Colors.green.shade200 : Colors.blue.shade200,
+            width: 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isEmailVerified 
+                  ? Icons.verified_user_outlined 
+                  : isEmailSent 
+                      ? Icons.email_outlined 
+                      : Icons.email_outlined,
+              color: isEmailVerified 
+                  ? Colors.green.shade700 
+                  : Colors.blue.shade700,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isEmailVerified
+                        ? "Email Verified".tr
+                        : isEmailSent
+                            ? "Check Your Email".tr
+                            : "Email Verification".tr,
+                    style: AppTypography.headers(context).copyWith(
+                      color: isEmailVerified
+                          ? Colors.green.shade800
+                          : Colors.blue.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isEmailVerified
+                        ? "Your email address is verified.".tr
+                        : isEmailSent
+                            ? "We sent a verification link to your email.".tr
+                            : "Verify your email to complete your profile.".tr,
+                    style: AppTypography.caption(context)
+                        .copyWith(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            if (!isEmailVerified) ...[
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () {
+                  if (isEmailSent) {
+                    controller.checkEmailVerificationStatus();
+                  } else {
+                    controller.sendEmailVerification();
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    isEmailSent ? 'Check Status'.tr : 'Verify Email'.tr,
+                    style: AppTypography.boldLabel(context)
+                        .copyWith(color: AppColors.primary),
+                  ),
+                ),
+              ),
+            ]
+          ],
+        ),
+      );
+    });
+  }
+
   Widget _buildVerificationStatusCard(
       BuildContext context, ProfileController controller) {
     bool isVerified = controller.driverModel.value.profileVerify == true;
@@ -426,8 +517,8 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   isVerified
-                      ? "Your phone number is successfully verified.".tr
-                      : "Verify your number to complete your profile.".tr,
+                      ? "Your profile is fully verified.".tr
+                      : "Complete verification to access all features.".tr,
                   style: AppTypography.caption(context)
                       .copyWith(color: Colors.grey.shade600),
                 ),
@@ -446,7 +537,7 @@ class ProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  'Verify'.tr,
+                  'Verify Phone'.tr,
                   style: AppTypography.boldLabel(context)
                       .copyWith(color: AppColors.primary),
                 ),

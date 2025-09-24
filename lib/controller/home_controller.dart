@@ -130,8 +130,9 @@ class HomeController extends GetxController {
         String? driverId = FireStoreUtils.getCurrentUid();
         if (driverId != null) {
           FireStoreUtils.getDriverProfile(driverId).then((value) {
-            DriverUserModel driverUserModel = value!;
-            if (driverUserModel.isOnline == true) {
+            if (value != null) {
+              DriverUserModel driverUserModel = value;
+              if (driverUserModel.isOnline == true) {
               driverUserModel.location = LocationLatLng(
                   latitude: locationData.latitude,
                   longitude: locationData.longitude);
@@ -143,6 +144,7 @@ class HomeController extends GetxController {
                   geoPoint: position.geoPoint, geohash: position.hash);
               driverUserModel.rotation = locationData.heading;
               FireStoreUtils.updateDriverUser(driverUserModel);
+              }
             }
           });
         }

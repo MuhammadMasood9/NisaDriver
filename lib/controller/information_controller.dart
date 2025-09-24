@@ -38,6 +38,16 @@ class InformationController extends GetxController {
   RxString loginType = Constant.emailLoginType.obs;
   Rx<DriverUserModel> userModel = DriverUserModel().obs;
   RxString userImage = "".obs;
+  
+  // Additional Personal Info
+  Rx<DateTime?> dateOfBirth = Rx<DateTime?>(null);
+  RxInt age = 0.obs;
+  RxString gender = "".obs;
+  RxBool isFemale = false.obs;
+  RxBool confirmFemaleRegistration = false.obs;
+  
+  // Validation states
+  RxBool showValidationErrors = false.obs;
 
   // Service Selection
   RxList<ServiceModel> serviceList = <ServiceModel>[].obs;
@@ -67,19 +77,7 @@ class InformationController extends GetxController {
   List<String> sheetList = [
     '1',
     '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    '10',
-    '11',
-    '12',
-    '13',
-    '14',
-    '15'
+    '3'
   ];
   RxList<VehicleTypeModel> vehicleList = <VehicleTypeModel>[].obs;
   Rx<VehicleTypeModel> selectedVehicle = VehicleTypeModel().obs;
@@ -115,6 +113,9 @@ class InformationController extends GetxController {
       phoneNumberController.value.text = passedUserModel.phoneNumber ?? '';
       countryCode.value = passedUserModel.countryCode ?? '+92';
     }
+    // Automatically set gender to Female
+    gender.value = 'Female';
+    isFemale.value = true;
     super.onInit();
   }
 
@@ -128,6 +129,32 @@ class InformationController extends GetxController {
     } catch (e) {
       ShowToastDialog.showToast("Failed to pick image: $e".tr);
     }
+  }
+
+  void setDateOfBirth(DateTime date) {
+    dateOfBirth.value = date;
+    calculateAge(date);
+  }
+
+  void calculateAge(DateTime birthDate) {
+    final now = DateTime.now();
+    int calculatedAge = now.year - birthDate.year;
+    if (now.month < birthDate.month || 
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      calculatedAge--;
+    }
+    age.value = calculatedAge;
+  }
+
+  void setGender(String selectedGender) {
+    gender.value = selectedGender;
+    isFemale.value = selectedGender.toLowerCase() == 'female';
+    // Clear validation errors when user makes a selection
+    showValidationErrors.value = false;
+  }
+
+  void clearValidationErrors() {
+    showValidationErrors.value = false;
   }
 
   Future<void> getInitialData() async {
@@ -234,7 +261,7 @@ class InformationController extends GetxController {
   }
 
   Widget _buildDocumentNumberSection(BuildContext context) {
-    return Column(
+    return Obx(() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text("Document Number".tr, style: AppTypography.boldLabel(context)),
@@ -242,6 +269,11 @@ class InformationController extends GetxController {
         TextField(
           controller: documentNumberController.value,
           style: AppTypography.input(context),
+          onChanged: (value) {
+            if (value.isNotEmpty) {
+              clearValidationErrors();
+            }
+          },
           decoration: InputDecoration(
             hintText: "Enter number".tr,
             hintStyle:
@@ -250,18 +282,45 @@ class InformationController extends GetxController {
             fillColor: Colors.white,
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.grey.shade300, width: 1)),
+                borderSide: BorderSide(
+                  color: showValidationErrors.value && 
+                         documentNumberController.value.text.isEmpty
+                      ? Colors.red 
+                      : Colors.grey.shade300, 
+                  width: 1)),
             enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.grey.shade300, width: 1)),
+                borderSide: BorderSide(
+                  color: showValidationErrors.value && 
+                         documentNumberController.value.text.isEmpty
+                      ? Colors.red 
+                      : Colors.grey.shade300, 
+                  width: 1)),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: AppColors.primary, width: 1)),
+                borderSide: BorderSide(
+                  color: showValidationErrors.value && 
+                         documentNumberController.value.text.isEmpty
+                      ? Colors.red 
+                      : AppColors.primary, 
+                  width: 1)),
           ),
         ),
+        if (showValidationErrors.value && 
+            documentNumberController.value.text.isEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            "Document number is required".tr,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.red[700],
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
       ],
-    );
+    ));
   }
 
   Widget _buildExpiryDateSection(BuildContext context) {
@@ -271,12 +330,14 @@ class InformationController extends GetxController {
           selectedDate: selectedDocumentDate.value,
           onDateSelected: (date) {
             selectedDocumentDate.value = date;
+            clearValidationErrors();
           },
           onClear: () => selectedDocumentDate.value = null,
           firstDate: DateTime.now(),
           lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
           isRequired: true,
-          errorText: selectedDocumentDate.value == null
+          errorText: showValidationErrors.value && 
+                    selectedDocumentDate.value == null
               ? "Please select an expiry date".tr
               : null,
         ));
@@ -285,6 +346,8 @@ class InformationController extends GetxController {
   Widget _buildImageUploadSection(BuildContext context, String title,
       String imagePath, String type, IconData icon) {
     bool hasImage = imagePath.isNotEmpty;
+    bool hasError = showValidationErrors.value && !hasImage;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -297,7 +360,9 @@ class InformationController extends GetxController {
             borderType: BorderType.RRect,
             radius: const Radius.circular(16),
             dashPattern: const [8, 4],
-            color: AppColors.primary.withValues(alpha: 0.5),
+            color: hasError 
+                ? Colors.red.withValues(alpha: 0.7)
+                : AppColors.primary.withValues(alpha: 0.5),
             strokeWidth: 1.5,
             child: Container(
               width: double.infinity,
@@ -313,6 +378,17 @@ class InformationController extends GetxController {
             ),
           ),
         ),
+        if (hasError) ...[
+          const SizedBox(height: 8),
+          Text(
+            "$title is required".tr,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.red[700],
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
       ],
     );
@@ -476,27 +552,34 @@ class InformationController extends GetxController {
       } else {
         backImage.value = image.path;
       }
+      // Clear validation errors when image is picked
+      clearValidationErrors();
     } catch (e) {
       ShowToastDialog.showToast("Failed to Pick: $e".tr);
     }
   }
 
   void saveDocumentLocally() {
+    // Check for validation errors and show them under fields
+    bool hasErrors = false;
+    
     if (documentNumberController.value.text.isEmpty) {
-      ShowToastDialog.showToast("Please enter document number".tr);
-      return;
+      hasErrors = true;
     }
     if (currentDocument.value.frontSide == true && frontImage.value.isEmpty) {
-      ShowToastDialog.showToast("Please upload front side image.".tr);
-      return;
+      hasErrors = true;
     }
     if (currentDocument.value.backSide == true && backImage.value.isEmpty) {
-      ShowToastDialog.showToast("Please upload back side image.".tr);
-      return;
+      hasErrors = true;
     }
     if (currentDocument.value.expireAt == true &&
         selectedDocumentDate.value == null) {
-      ShowToastDialog.showToast("Please select an expiry date".tr);
+      hasErrors = true;
+    }
+    
+    if (hasErrors) {
+      // Show validation errors under fields
+      showValidationErrors.value = true;
       return;
     }
 
@@ -512,6 +595,9 @@ class InformationController extends GetxController {
         verified: false);
     // Force a refresh for the UI in _buildVerificationStep
     registrationDocuments.refresh();
+    
+    // Clear validation errors when document is saved
+    clearValidationErrors();
 
     ShowToastDialog.showToast("Document saved locally.".tr);
     Get.back();
@@ -550,69 +636,118 @@ class InformationController extends GetxController {
         currentStep.value++;
         break;
       case 1:
+        // Validate all fields and show errors under fields
+        bool hasErrors = false;
+        
         if (fullNameController.value.text.isEmpty) {
-          ShowToastDialog.showToast("Please enter your full name".tr);
-          return;
+          hasErrors = true;
         }
         if (emailController.value.text.isEmpty ||
             !Constant.validateEmail(emailController.value.text)) {
-          ShowToastDialog.showToast("Please enter a valid email".tr);
-          return;
+          hasErrors = true;
         }
         if (loginType.value == Constant.emailLoginType &&
             passwordController.value.text.length < 6) {
-          ShowToastDialog.showToast(
-              "Password must be at least 6 characters".tr);
-          return;
+          hasErrors = true;
         }
         if (phoneNumberController.value.text.isEmpty) {
-          ShowToastDialog.showToast("Please enter your phone number".tr);
-          return;
+          hasErrors = true;
         }
         if (userImage.value.isEmpty) {
-          ShowToastDialog.showToast("Please upload your profile image".tr);
+          hasErrors = true;
+        }
+        if (dateOfBirth.value == null) {
+          hasErrors = true;
+        }
+        if (age.value < 18) {
+          hasErrors = true;
+        }
+        if (gender.value.isEmpty) {
+          hasErrors = true;
+        }
+        if (!confirmFemaleRegistration.value) {
+          hasErrors = true;
+        }
+        
+        if (hasErrors) {
+          // Show validation errors under fields
+          showValidationErrors.value = true;
           return;
         }
+        
         currentStep.value++;
         break;
       case 2:
+        // Validate vehicle fields and show errors under fields
+        bool hasErrors = false;
+        
         if (vehicleNumberController.value.text.isEmpty) {
-          ShowToastDialog.showToast("Please enter a vehicle number".tr);
-          return;
+          hasErrors = true;
         }
         if (selectedDate.value == null) {
-          ShowToastDialog.showToast("Please select a registration date".tr);
-          return;
+          hasErrors = true;
         }
         if (selectedVehicle.value.id == null) {
-          ShowToastDialog.showToast("Please select a vehicle type".tr);
-          return;
+          hasErrors = true;
         }
         if (selectedColor.value.isEmpty) {
-          ShowToastDialog.showToast("Please select a vehicle color".tr);
-          return;
+          hasErrors = true;
         }
         if (seatsController.value.text.isEmpty) {
-          ShowToastDialog.showToast("Please enter number of seats".tr);
-          return;
+          hasErrors = true;
         }
         if (selectedZone.isEmpty) {
-          ShowToastDialog.showToast("Please select a service zone".tr);
+          hasErrors = true;
+        }
+        
+        if (hasErrors) {
+          // Show validation errors under fields
+          showValidationErrors.value = true;
           return;
         }
+        
         currentStep.value++;
         break;
       case 3:
+        // Validate document fields and show errors under fields
+        bool hasErrors = false;
+        
         for (var doc in documentList) {
           final uploadedDoc = registrationDocuments[doc.id];
           if (uploadedDoc == null ||
               uploadedDoc.documentNumber?.isEmpty == true) {
-            ShowToastDialog.showToast(
-                "Please upload details for ${Constant.localizationTitle(doc.title)}"
-                    .tr);
-            return;
+            hasErrors = true;
+            break;
+          }
+          
+          // Check if front side is required and uploaded
+          if (doc.frontSide == true && 
+              (uploadedDoc.frontImage?.isEmpty ?? true)) {
+            hasErrors = true;
+            break;
+          }
+          
+          // Check if back side is required and uploaded
+          if (doc.backSide == true && 
+              (uploadedDoc.backImage?.isEmpty ?? true)) {
+            hasErrors = true;
+            break;
+          }
+          
+          // Check if expiry date is required and provided
+          if (doc.expireAt == true && 
+              uploadedDoc.expireAt == null) {
+            hasErrors = true;
+            break;
           }
         }
+        
+        if (hasErrors) {
+          // Show validation errors under fields
+          showValidationErrors.value = true;
+          return;
+        }
+        
         submitRegistration();
         break;
     }
@@ -644,6 +779,9 @@ class InformationController extends GetxController {
         ..zoneIds = selectedZone.toList()
         ..loginType = loginType.value
         ..fcmToken = await NotificationService.getToken()
+        ..dateOfBirth = dateOfBirth.value != null ? Timestamp.fromDate(dateOfBirth.value!) : null
+        ..gender = gender.value
+        ..age = age.value
         ..vehicleInformation = VehicleInformation(
           vehicleNumber: vehicleNumberController.value.text,
           registrationDate: Timestamp.fromDate(selectedDate.value!),

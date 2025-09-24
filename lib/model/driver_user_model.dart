@@ -33,6 +33,9 @@ class DriverUserModel {
   Timestamp? subscriptionExpiryDate;
   SubscriptionPlanModel? subscriptionPlan;
   bool? profileVerify;
+  Timestamp? dateOfBirth;
+  String? gender;
+  int? age;
 
   DriverUserModel({
     this.phoneNumber,
@@ -60,6 +63,9 @@ class DriverUserModel {
     this.subscriptionExpiryDate,
     this.subscriptionPlan,
     this.profileVerify = false,
+    this.dateOfBirth,
+    this.gender,
+    this.age,
   });
 
   DriverUserModel.fromJson(Map<String, dynamic> json) {
@@ -96,6 +102,9 @@ class DriverUserModel {
         ? SubscriptionPlanModel.fromJson(json['subscription_plan'])
         : null;
     profileVerify = json['profileVerify'] ?? false;
+    dateOfBirth = json['dateOfBirth'];
+    gender = json['gender'];
+    age = json['age'];
   }
 
   Map<String, dynamic> toJson() {
@@ -132,7 +141,10 @@ class DriverUserModel {
     data['subscriptionPlanId'] = subscriptionPlanId;
     data['subscriptionExpiryDate'] = subscriptionExpiryDate;
     data['subscription_plan'] = subscriptionPlan?.toJson();
-    data['profileVerify'] = profileVerify; // Added to serializer
+    data['profileVerify'] = profileVerify;
+    data['dateOfBirth'] = dateOfBirth;
+    data['gender'] = gender;
+    data['age'] = age;
     return data;
   }
 }

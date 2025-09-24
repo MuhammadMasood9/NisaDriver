@@ -128,13 +128,15 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
 
   final double _matchingToleranceMeters = 1000.0;
 
-  BitmapDescriptor _originIcon = BitmapDescriptor.defaultMarker;
-  BitmapDescriptor _destinationIcon = BitmapDescriptor.defaultMarker;
+  late BitmapDescriptor _originIcon;
+  late BitmapDescriptor _destinationIcon;
+  late BitmapDescriptor _pickupIcon;
+  late BitmapDescriptor _dropoffIcon;
 
   @override
   void initState() {
     super.initState();
-    _loadCustomMarkers();
+    _initializeMarkers();
     _fetchAndDrawDriverZones();
 
     _allNewOrdersBroadcastStream = FireStoreUtils()
@@ -450,9 +452,18 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
           _polygons.add(Polygon(
             polygonId: PolygonId(zone.id!),
             points: polygonPoints,
-            strokeWidth: 2,
+            strokeWidth: 1,
             strokeColor: AppColors.primary.withValues(alpha: 0.8),
             fillColor: AppColors.primary.withValues(alpha: 0.1),
+          ));
+          
+          // Add dashed polyline for the border
+          _polylines.add(Polyline(
+            polylineId: PolylineId('zone_border_${zone.id}'),
+            points: [...polygonPoints, polygonPoints.first], // Close the polygon
+            color: AppColors.primary.withValues(alpha: 0.8),
+            width: 1,
+            patterns: [PatternItem.dash(10), PatternItem.gap(5)],
           ));
         }
       }
@@ -484,13 +495,13 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
     _markers.add(Marker(
       markerId: const MarkerId('user_pickup'),
       position: userPickup,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+      icon: _pickupIcon,
       infoWindow: InfoWindow(title: 'Passenger Pickup'.tr),
     ));
     _markers.add(Marker(
       markerId: const MarkerId('user_dropoff'),
       position: userDropoff,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+      icon: _dropoffIcon,
       infoWindow: InfoWindow(title: 'Passenger Drop-off'.tr),
     ));
 
@@ -1036,17 +1047,25 @@ class _RouteMatchingScreenState extends State<RouteMatchingScreen> {
     );
   }
 
-  Future<void> _loadCustomMarkers() async {
+  Future<void> _initializeMarkers() async {
     try {
       _originIcon = await _bitmapDescriptorFromAsset(
-          'assets/images/marker_origin.png', 100);
+          'assets/images/ic_cab.png', 55);
       _destinationIcon = await _bitmapDescriptorFromAsset(
-          'assets/images/marker_destination.png', 100);
+          'assets/images/ic_cab.png', 55);
+      _pickupIcon = await _bitmapDescriptorFromAsset(
+          'assets/images/green_mark.png', 50);
+      _dropoffIcon = await _bitmapDescriptorFromAsset(
+          'assets/images/red_mark.png', 50);
     } catch (e) {
       debugPrint("Custom markers not found, using defaults. Error: $e");
       _originIcon =
-          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
       _destinationIcon =
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+      _pickupIcon =
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+      _dropoffIcon =
           BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
     }
     if (mounted) setState(() {});

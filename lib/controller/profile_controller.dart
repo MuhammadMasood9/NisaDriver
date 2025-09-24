@@ -115,6 +115,16 @@ class ProfileController extends GetxController {
   RxInt otpStep = 1.obs;
   String? verificationId;
   int? _resendToken;
+  
+  // Email Verification State
+  RxBool isEmailVerificationSent = false.obs;
+  RxBool isEmailVerified = false.obs;
+  
+  // Additional Personal Info
+  Rx<DateTime?> dateOfBirth = Rx<DateTime?>(null);
+  RxInt age = 0.obs;
+  RxString gender = "".obs;
+  RxBool isFemale = false.obs;
 
   // --- Dependencies ---
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -889,6 +899,23 @@ class ProfileController extends GetxController {
         emailController.value.text = value.email ?? '';
         fullNameController.value.text = value.fullName ?? '';
         profileImage.value = value.profilePic ?? '';
+        
+        // Initialize additional fields
+        if (value.dateOfBirth != null) {
+          dateOfBirth.value = value.dateOfBirth!.toDate();
+          calculateAge(dateOfBirth.value!);
+        }
+        if (value.gender != null) {
+          gender.value = value.gender!;
+          isFemale.value = value.gender!.toLowerCase() == 'female';
+        }
+        
+        // Initialize email verification status
+        User? currentUser = _auth.currentUser;
+        if (currentUser != null) {
+          isEmailVerified.value = currentUser.emailVerified;
+        }
+        
         await syncProfileVerification();
         print("Profile loaded successfully: ${value.fullName}");
       } else {
@@ -905,14 +932,25 @@ class ProfileController extends GetxController {
 
   Future<void> syncProfileVerification() async {
     User? currentUser = _auth.currentUser;
-    if (currentUser != null && currentUser.phoneNumber != null) {
-      String fullPhoneNumber =
-          '${countryCode.value}${phoneNumberController.value.text}';
-      if (currentUser.phoneNumber == fullPhoneNumber &&
-          driverModel.value.profileVerify == false) {
-        await updateFirestore(fullPhoneNumber);
-        ShowToastDialog.showToast(
-            "Profile verification synced with Firebase".tr);
+    if (currentUser != null) {
+      // Check phone verification
+      if (currentUser.phoneNumber != null) {
+        String fullPhoneNumber =
+            '${countryCode.value}${phoneNumberController.value.text}';
+        if (currentUser.phoneNumber == fullPhoneNumber &&
+            driverModel.value.profileVerify == false) {
+          await updateFirestore(fullPhoneNumber);
+          ShowToastDialog.showToast(
+              "Profile verification synced with Firebase".tr);
+        }
+      }
+      
+      // Check email verification
+      if (currentUser.emailVerified != isEmailVerified.value) {
+        isEmailVerified.value = currentUser.emailVerified;
+        if (currentUser.emailVerified && driverModel.value.profileVerify == false) {
+          await updateEmailVerificationStatus();
+        }
       }
     }
   }
@@ -1053,5 +1091,104 @@ class ProfileController extends GetxController {
     otpController.value.clear();
     verificationId = null;
     _resendToken = null;
+  }
+
+  // Email Verification Methods
+  Future<void> sendEmailVerification() async {
+    User? currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      ShowToastDialog.showToast("No authenticated user found".tr);
+      return;
+    }
+
+    if (currentUser.email == null || currentUser.email!.isEmpty) {
+      ShowToastDialog.showToast("No email address found".tr);
+      return;
+    }
+
+    if (currentUser.emailVerified) {
+      ShowToastDialog.showToast("Email is already verified".tr);
+      isEmailVerified.value = true;
+      return;
+    }
+
+    ShowToastDialog.showLoader("Sending verification email...".tr);
+    
+    try {
+      await currentUser.sendEmailVerification();
+      isEmailVerificationSent.value = true;
+      ShowToastDialog.closeLoader();
+      ShowToastDialog.showToast("Verification email sent to ${currentUser.email}".tr);
+    } catch (e) {
+      ShowToastDialog.closeLoader();
+      String errorMessage = "Failed to send verification email".tr;
+      
+      if (e is FirebaseAuthException) {
+        switch (e.code) {
+          case 'too-many-requests':
+            errorMessage = "Too many requests. Please try again later.".tr;
+            break;
+          case 'user-not-found':
+            errorMessage = "User not found".tr;
+            break;
+          case 'invalid-email':
+            errorMessage = "Invalid email address".tr;
+            break;
+          default:
+            errorMessage = e.message ?? errorMessage;
+        }
+      }
+      
+      ShowToastDialog.showToast(errorMessage);
+    }
+  }
+
+  Future<void> checkEmailVerificationStatus() async {
+    User? currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      await currentUser.reload();
+      currentUser = _auth.currentUser;
+      
+      if (currentUser != null && currentUser.emailVerified) {
+        isEmailVerified.value = true;
+        isEmailVerificationSent.value = false;
+        
+        // Update profile verification status in Firestore
+        if (driverModel.value.profileVerify == false) {
+          await updateEmailVerificationStatus();
+        }
+        
+        ShowToastDialog.showToast("Email verified successfully!".tr);
+      }
+    } catch (e) {
+      print("Error checking email verification status: $e");
+    }
+  }
+
+  Future<void> updateEmailVerificationStatus() async {
+    try {
+      driverModel.value.profileVerify = true;
+      await FireStoreUtils.updateDriverUser(driverModel.value);
+      ShowToastDialog.showToast("Profile verification updated".tr);
+    } catch (e) {
+      print("Error updating email verification status: $e");
+      ShowToastDialog.showToast("Failed to update verification status".tr);
+    }
+  }
+
+  Future<void> resendEmailVerification() async {
+    await sendEmailVerification();
+  }
+
+  void calculateAge(DateTime birthDate) {
+    final now = DateTime.now();
+    int calculatedAge = now.year - birthDate.year;
+    if (now.month < birthDate.month || 
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      calculatedAge--;
+    }
+    age.value = calculatedAge;
   }
 }

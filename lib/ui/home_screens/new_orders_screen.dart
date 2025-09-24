@@ -223,6 +223,67 @@ class NewOrderController extends GetxController {
     await initializeAllData();
   }
 
+  // Method to force refresh orders (useful for push notification handling)
+  Future<void> forceRefreshOrders() async {
+    print('DEBUG: Force refreshing orders...');
+    if (driverModel.value.isOnline == true &&
+        driverModel.value.documentVerification == true &&
+        Constant.currentLocation != null) {
+      _refreshNewOrdersStream();
+    }
+  }
+
+  // Method to handle driver rejection
+  Future<void> rejectRide(OrderModel order) async {
+    try {
+      final currentDriverId = FireStoreUtils.getCurrentUid();
+      if (currentDriverId == null) return;
+
+      // Update the order to move driver from accepted to rejected
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final orderRef = FirebaseFirestore.instance
+            .collection(CollectionName.orders)
+            .doc(order.id);
+        
+        final orderSnapshot = await transaction.get(orderRef);
+        if (orderSnapshot.exists) {
+          final orderData = orderSnapshot.data() as Map<String, dynamic>;
+          final rejectedDriverIds = List<dynamic>.from(orderData['rejectedDriverId'] ?? []);
+          final acceptedDriverIds = List<dynamic>.from(orderData['acceptedDriverId'] ?? []);
+
+          // Add driver to rejected list if not already there
+          if (!rejectedDriverIds.contains(currentDriverId)) {
+            rejectedDriverIds.add(currentDriverId);
+          }
+          
+          // Remove driver from accepted list
+          acceptedDriverIds.remove(currentDriverId);
+
+          transaction.update(orderRef, {
+            'rejectedDriverId': rejectedDriverIds,
+            'acceptedDriverId': acceptedDriverIds,
+          });
+        }
+      });
+
+      // Remove from local list
+      newOrdersList.removeWhere((o) => o.id == order.id);
+      
+      // Stop timer if active
+      if (order.id != null) {
+        _timerService.stopTimer('order_${order.id}');
+        _orderTimerActive[order.id!] = false;
+        _orderTimers[order.id!] = "00:00";
+        _orderProgress[order.id!] = 0.0;
+      }
+
+      ShowToastDialog.showToast("Ride declined".tr);
+    } catch (e) {
+      print('Error rejecting ride: $e');
+      ShowToastDialog.showToast("Failed to decline ride".tr);
+    }
+  }
+
   // Method to refresh new orders stream when location changes
   void _refreshNewOrdersStream() {
     if (driverModel.value.isOnline == true &&
@@ -233,7 +294,42 @@ class NewOrderController extends GetxController {
           .getOrders(driverModel.value, Constant.currentLocation?.latitude,
               Constant.currentLocation?.longitude)
           .listen((orders) {
+        // Store previous order IDs to detect new orders
+        final previousOrderIds = newOrdersList.map((order) => order.id).toSet();
+        
         newOrdersList.value = orders;
+        
+        // Start timers only for timer orders (orders where driver is in acceptedDriverId)
+        final currentDriverId = FireStoreUtils.getCurrentUid();
+        print('DEBUG REFRESH: Current driver ID: $currentDriverId');
+        print('DEBUG REFRESH: Processing ${orders.length} orders');
+        
+        for (final order in orders) {
+          print('DEBUG REFRESH: Order ${order.id} - acceptedDriverId: ${order.acceptedDriverId}');
+          
+          // Check if this is a timer order (driver is in acceptedDriverId)
+          bool isTimerOrder = order.acceptedDriverId != null && 
+                              order.acceptedDriverId!.isNotEmpty && 
+                              currentDriverId != null &&
+                              order.acceptedDriverId!.contains(currentDriverId);
+          
+          // Only start timer for orders where driver is in acceptedDriverId (timer orders)
+          // and only if it's a new order (not already processed)
+          if (isTimerOrder && 
+              order.id != null &&
+              !previousOrderIds.contains(order.id) &&
+              !isOrderTimerActive(order.id!)) {
+            print('DEBUG REFRESH: Starting timer for timer order ${order.id} (driver in acceptedDriverId)');
+            _startOrderTimer(order.id!);
+          } else if (isTimerOrder && 
+                     order.id != null &&
+                     previousOrderIds.contains(order.id) &&
+                     !isOrderTimerActive(order.id!)) {
+            print('DEBUG REFRESH: Order ${order.id} is a timer order but already processed - not restarting timer');
+          } else {
+            print('DEBUG REFRESH: Skipping timer for order ${order.id} - isTimerOrder: $isTimerOrder, already processed: ${previousOrderIds.contains(order.id)}, timer active: ${isOrderTimerActive(order.id ?? '')}');
+          }
+        }
       });
     }
   }
@@ -287,6 +383,11 @@ class NewOrderController extends GetxController {
     print('DEBUG: _startOrderTimer called for order $orderId');
     final timerId = 'order_$orderId';
     
+    // Initialize timer state
+    _orderTimerActive[orderId] = true;
+    _orderTimers[orderId] = "30:00";
+    _orderProgress[orderId] = 0.0;
+    
     try {
       _timerService.startTimer(
         timerId: timerId,
@@ -310,40 +411,40 @@ class NewOrderController extends GetxController {
     } catch (e) {
       print('DEBUG: Error starting timer for $orderId: $e');
       // Fallback: use a simple timer if the service fails
-      _orderTimerActive[orderId] = true;
-      _orderTimers[orderId] = "30:00";
-      _orderProgress[orderId] = 0.0;
-      
-      Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (!_orderTimerActive[orderId]!) {
-          timer.cancel();
-          return;
-        }
-        
-        final currentTime = _orderTimers[orderId] ?? "30:00";
-        final parts = currentTime.split(':');
-        int minutes = int.parse(parts[0]);
-        int seconds = int.parse(parts[1]);
-        
-        if (seconds > 0) {
-          seconds--;
-        } else if (minutes > 0) {
-          minutes--;
-          seconds = 59;
-        } else {
-          // Timer expired
-          timer.cancel();
-          _orderTimerActive[orderId] = false;
-          _orderTimers[orderId] = "00:00";
-          _orderProgress[orderId] = 0.0;
-          _handleOrderExpiry(orderId);
-          return;
-        }
-        
-        _orderTimers[orderId] = "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
-        _orderProgress[orderId] = (30 - (minutes * 60 + seconds)) / 30.0;
-      });
+      _startFallbackTimer(orderId);
     }
+  }
+
+  void _startFallbackTimer(String orderId) {
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!(_orderTimerActive[orderId] ?? false)) {
+        timer.cancel();
+        return;
+      }
+      
+      final currentTime = _orderTimers[orderId] ?? "30:00";
+      final parts = currentTime.split(':');
+      int minutes = int.parse(parts[0]);
+      int seconds = int.parse(parts[1]);
+      
+      if (seconds > 0) {
+        seconds--;
+      } else if (minutes > 0) {
+        minutes--;
+        seconds = 59;
+      } else {
+        // Timer expired
+        timer.cancel();
+        _orderTimerActive[orderId] = false;
+        _orderTimers[orderId] = "00:00";
+        _orderProgress[orderId] = 0.0;
+        _handleOrderExpiry(orderId);
+        return;
+      }
+      
+      _orderTimers[orderId] = "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+      _orderProgress[orderId] = (30 - (minutes * 60 + seconds)) / 30.0;
+    });
   }
 
   void _handleOrderExpiry(String orderId) async {
@@ -401,16 +502,36 @@ class NewOrderController extends GetxController {
   double getOrderProgress(String orderId) => _orderProgress[orderId] ?? 0.0;
   bool isOrderTimerActive(String orderId) => _orderTimerActive[orderId] ?? false;
 
+  // Debug method to check current state
+  void debugCurrentState() {
+    print('=== DEBUG CURRENT STATE ===');
+    print('Driver ID: ${FireStoreUtils.getCurrentUid()}');
+    print('Driver Online: ${driverModel.value.isOnline}');
+    print('Driver Verified: ${driverModel.value.documentVerification}');
+    print('Current Location: ${Constant.currentLocation?.latitude}, ${Constant.currentLocation?.longitude}');
+    print('New Orders Count: ${newOrdersList.length}');
+    print('Active Timers: ${_orderTimerActive.length}');
+    
+    for (final order in newOrdersList) {
+      print('Order ${order.id}:');
+      print('  - acceptedDriverId: ${order.acceptedDriverId}');
+      print('  - rejectedDriverId: ${order.rejectedDriverId}');
+      print('  - Timer Active: ${isOrderTimerActive(order.id ?? '')}');
+      print('  - Timer Text: ${getOrderTimer(order.id ?? '')}');
+    }
+    print('========================');
+  }
+
   // Timer card widget for new orders
   Widget _buildTimerCard(String orderId) {
     return Obx(() {
       final isActive = isOrderTimerActive(orderId);
-      print('DEBUG: _buildTimerCard for $orderId - isActive: $isActive');
-      
-      if (!isActive) return const SizedBox.shrink();
-      
       final timeText = getOrderTimer(orderId);
       final progress = getOrderProgress(orderId);
+      
+      print('DEBUG: _buildTimerCard for $orderId - isActive: $isActive, timeText: $timeText, progress: $progress');
+      
+      if (!isActive || timeText == "00:00") return const SizedBox.shrink();
       
       return Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -483,6 +604,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // Refresh data when app comes back to foreground
+      print('DEBUG: App resumed, refreshing data...');
       controller.refreshData();
     }
   }
@@ -492,6 +614,7 @@ class _NewOrderScreenState extends State<NewOrderScreen>
     super.didChangeDependencies();
     // Refresh data when screen becomes visible
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('DEBUG: Screen became visible, refreshing data...');
       controller.refreshData();
     });
   }
@@ -760,7 +883,17 @@ class _NewOrderScreenState extends State<NewOrderScreen>
                   builder: (context) {
                     final controller = Get.find<NewOrderController>();
                     final isTimerActive = controller.isOrderTimerActive(order.id!);
-                    print('DEBUG UI: Timer order ${order.id} - Timer active: $isTimerActive');
+                    final timeText = controller.getOrderTimer(order.id!);
+                    print('DEBUG UI: Timer order ${order.id} - Timer active: $isTimerActive, timeText: $timeText');
+                    
+                    // Force start timer if it's a timer order but timer is not active
+                    if (isTimerActive == false && timeText == "00:00") {
+                      print('DEBUG UI: Force starting timer for order ${order.id}');
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        controller._startOrderTimer(order.id!);
+                      });
+                    }
+                    
                     return controller._buildTimerCard(order.id!);
                   },
                 ),
@@ -1362,8 +1495,14 @@ class _RideDetailBottomSheetState extends State<RideDetailBottomSheet> {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: () =>
-                Navigator.pop(context), // Pops with null, won't trigger .then()
+            onPressed: () {
+              if (widget.rideType == RideType.newRequest) {
+                // Handle decline for new ride requests
+                final controller = Get.find<NewOrderController>();
+                controller.rejectRide(widget.orderModel);
+              }
+              Navigator.pop(context);
+            },
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.grey.shade800,
               side: BorderSide(color: Colors.grey.shade400),

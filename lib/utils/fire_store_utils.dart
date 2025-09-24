@@ -41,8 +41,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get_utils/get_utils.dart';
 import 'package:uuid/uuid.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class FireStoreUtils {
   static FirebaseFirestore fireStore = FirebaseFirestore.instance;
@@ -657,13 +655,20 @@ class FireStoreUtils {
         final data = document.data() as Map<String, dynamic>;
         OrderModel orderModel = OrderModel.fromJson(data);
         
+        // Don't show orders to rejected drivers
+        if (currentDriverId != null && 
+            orderModel.rejectedDriverId != null && 
+            orderModel.rejectedDriverId!.contains(currentDriverId)) {
+          continue; // Skip this order
+        }
+        
         // Show orders in two cases:
         // 1. Normal orders (no acceptedDriverId or empty)
         // 2. Timer orders (driver is in acceptedDriverId array)
         bool shouldShowOrder = false;
         
         if (orderModel.acceptedDriverId == null || orderModel.acceptedDriverId!.isEmpty) {
-          // Normal order - show to all drivers
+          // Normal order - show to all drivers (except rejected ones)
           shouldShowOrder = true;
         } else if (currentDriverId != null && orderModel.acceptedDriverId!.contains(currentDriverId)) {
           // Timer order - show only to notified drivers
@@ -1177,17 +1182,28 @@ class FireStoreUtils {
   static Future<bool?> deleteUser() async {
     bool? isDelete;
     try {
+      // First delete from Firestore
       await fireStore
           .collection(CollectionName.driverUsers)
           .doc(FireStoreUtils.getCurrentUid())
           .delete();
 
-      // delete user  from firebase auth
-      await FirebaseAuth.instance.currentUser!.delete().then((value) {
+      // Then delete from Firebase Auth
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        await currentUser.delete();
         isDelete = true;
-      });
+      } else {
+        log('No current user found for deletion');
+        isDelete = false;
+      }
     } catch (e, s) {
-      log('FireStoreUtils.firebaseCreateNewUser $e $s');
+      log('FireStoreUtils.deleteUser error: $e $s');
+      // Check if it's an authentication error
+      if (e.toString().contains('requires-recent-login')) {
+        log('User needs to re-authenticate before account deletion');
+        return false;
+      }
       return false;
     }
     return isDelete;

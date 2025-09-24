@@ -77,7 +77,7 @@ class EnhancedDateSelector extends StatelessWidget {
           onTap: () async {
             final DateTime? picked = await showDatePicker(
               context: context,
-              initialDate: selectedDate ?? DateTime.now(),
+              initialDate: selectedDate ?? (lastDate ?? DateTime.now()),
               firstDate: firstDate ?? DateTime(1900),
               lastDate: lastDate ?? DateTime(2100),
               builder: (context, child) {
@@ -88,7 +88,8 @@ class EnhancedDateSelector extends StatelessWidget {
                       onPrimary: Colors.white,
                       surface: Colors.white,
                       onSurface: Colors.black,
-                    ), dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+                    ),
+                    dialogTheme: DialogThemeData(backgroundColor: Colors.white),
                   ),
                   child: child!,
                 );
@@ -584,7 +585,7 @@ class InformationScreen extends StatelessWidget {
 
   Widget _buildPersonalInfoStep(
       BuildContext context, InformationController controller) {
-    return Column(
+    return Obx(() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Center(
@@ -593,26 +594,41 @@ class InformationScreen extends StatelessWidget {
               InkWell(
                 onTap: () => _showImageSourceSelector(context, controller),
                 borderRadius: BorderRadius.circular(60),
-                child: Obx(
-                  () => Container(
-                    height: 120,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade200, width: 2),
-                    ),
-                    child: controller.userImage.value.isEmpty
-                        ? _buildImagePlaceholder(context)
-                        : _buildImagePreview(
-                            context, controller.userImage.value),
+                child: Container(
+                  height: 120,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: controller.showValidationErrors.value && 
+                             controller.userImage.value.isEmpty 
+                          ? Colors.red 
+                          : Colors.grey.shade200, 
+                      width: 2),
                   ),
+                  child: controller.userImage.value.isEmpty
+                      ? _buildImagePlaceholder(context)
+                      : _buildImagePreview(
+                          context, controller.userImage.value),
                 ),
               ),
               const SizedBox(height: 8),
               if (controller.userImage.value.isEmpty)
                 Text("Tap to upload profile picture".tr,
                     style: AppTypography.smBoldLabel(context)
-                        .copyWith(color: AppColors.grey500))
+                        .copyWith(color: AppColors.grey500)),
+              if (controller.showValidationErrors.value && 
+                  controller.userImage.value.isEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  "Please upload your profile image".tr,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.red[700],
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -621,22 +637,37 @@ class InformationScreen extends StatelessWidget {
             controller: controller.fullNameController.value,
             label: 'Full Name'.tr,
             hint: "Enter your full name".tr,
-            icon: Icons.person_outline),
+            icon: Icons.person_outline,
+            errorText: controller.showValidationErrors.value && 
+                      controller.fullNameController.value.text.isEmpty
+                  ? "Please enter your full name".tr
+                  : null),
         _buildTextField(
             controller: controller.emailController.value,
             label: 'Email'.tr,
             hint: "Enter your email".tr,
-            icon: Icons.email_outlined),
+            icon: Icons.email_outlined,
+            errorText: controller.showValidationErrors.value && 
+                      (controller.emailController.value.text.isEmpty ||
+                       !Constant.validateEmail(controller.emailController.value.text))
+                  ? "Please enter a valid email".tr
+                  : null),
         if (controller.loginType.value == Constant.emailLoginType)
           _buildTextField(
               controller: controller.passwordController.value,
               label: 'Password'.tr,
               hint: "Enter your password".tr,
               icon: Icons.lock_outline,
-              obscureText: true),
+              obscureText: true,
+              errorText: controller.showValidationErrors.value && 
+                        controller.passwordController.value.text.length < 6
+                  ? "Password must be at least 6 characters".tr
+                  : null),
         _buildPhoneField(context, controller),
+        _buildDateOfBirthField(context, controller),
+        _buildGenderField(context, controller),
       ],
-    );
+    ));
   }
 
   Widget _buildImagePreview(BuildContext context, String imagePath) {
@@ -684,13 +715,17 @@ class InformationScreen extends StatelessWidget {
 
   Widget _buildVehicleInfoStep(
       BuildContext context, InformationController controller) {
-    return Column(
+    return Obx(() => Column(
       children: [
         _buildTextField(
             controller: controller.vehicleNumberController.value,
             label: 'Vehicle Number'.tr,
             hint: "Enter vehicle number".tr,
-            icon: Icons.confirmation_number_outlined),
+            icon: Icons.confirmation_number_outlined,
+            errorText: controller.showValidationErrors.value && 
+                      controller.vehicleNumberController.value.text.isEmpty
+                  ? "Please enter a vehicle number".tr
+                  : null),
         Obx(
           () => EnhancedDateSelector(
             label: 'Registration Date'.tr,
@@ -698,8 +733,13 @@ class InformationScreen extends StatelessWidget {
             selectedDate: controller.selectedDate.value,
             onDateSelected: (date) {
               controller.selectedDate.value = date;
+              controller.clearValidationErrors();
             },
             isRequired: true,
+            errorText: controller.showValidationErrors.value && 
+                      controller.selectedDate.value == null
+                  ? "Please select a registration date".tr
+                  : null,
           ),
         ),
         _buildSelectorField(context, controller,
@@ -708,32 +748,49 @@ class InformationScreen extends StatelessWidget {
                 ? ''
                 : Constant.localizationName(
                     controller.selectedVehicle.value.name),
-            onTap: () => _showVehicleTypeSelector(context, controller)),
+            onTap: () => _showVehicleTypeSelector(context, controller),
+            errorText: controller.showValidationErrors.value && 
+                      controller.selectedVehicle.value.id == null
+                  ? "Please select a vehicle type".tr
+                  : null),
         const SizedBox(height: 24),
         _buildSelectorField(context, controller,
             label: 'Vehicle Color'.tr,
             value: controller.selectedColor.value,
-            onTap: () => _showColorSelector(context, controller)),
+            onTap: () => _showColorSelector(context, controller),
+            errorText: controller.showValidationErrors.value && 
+                      controller.selectedColor.value.isEmpty
+                  ? "Please select a vehicle color".tr
+                  : null),
         const SizedBox(height: 24),
         _buildSelectorField(context, controller,
             label: 'Number of Seats'.tr,
             value: controller.seatsController.value.text,
-            onTap: () => _showSeatsSelector(context, controller)),
+            onTap: () => _showSeatsSelector(context, controller),
+            errorText: controller.showValidationErrors.value && 
+                      controller.seatsController.value.text.isEmpty
+                  ? "Please select number of seats".tr
+                  : null),
         const SizedBox(height: 24),
         _buildSelectorField(context, controller,
-            label: 'Service Zone'.tr,
+            label: 'Service Area'.tr,
             value: controller.zoneNameController.value.text,
-            onTap: () => _showZoneSelector(context, controller)),
+            onTap: () => _showZoneSelector(context, controller),
+            errorText: controller.showValidationErrors.value && 
+                      controller.selectedZone.isEmpty
+                  ? "Please select a service area".tr
+                  : null),
         const SizedBox(height: 24),
       ],
-    );
+    ));
   }
 
   Widget _buildSelectorField(
       BuildContext context, InformationController controller,
       {required String label,
       required String value,
-      required VoidCallback onTap}) {
+      required VoidCallback onTap,
+      String? errorText}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -751,7 +808,9 @@ class InformationScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AppColors.grey200, width: 1),
+              border: Border.all(
+                color: errorText != null ? Colors.red : AppColors.grey200, 
+                width: 1),
             ),
             child: Row(
               children: [
@@ -772,6 +831,17 @@ class InformationScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (errorText != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              errorText,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.red[700],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -800,6 +870,23 @@ class InformationScreen extends StatelessWidget {
               (documentModel.backSide != true ||
                   (documents.backImage?.isNotEmpty ?? false));
 
+          // Check if this document has validation error
+          bool hasError = controller.showValidationErrors.value && 
+                         (documents.documentNumber?.isEmpty ?? true);
+          
+          // Check for specific field errors
+          bool hasDocumentNumberError = controller.showValidationErrors.value && 
+                                       (documents.documentNumber?.isEmpty ?? true);
+          bool hasFrontImageError = controller.showValidationErrors.value && 
+                                   documentModel.frontSide == true && 
+                                   (documents.frontImage?.isEmpty ?? true);
+          bool hasBackImageError = controller.showValidationErrors.value && 
+                                  documentModel.backSide == true && 
+                                  (documents.backImage?.isEmpty ?? true);
+          bool hasExpiryDateError = controller.showValidationErrors.value && 
+                                   documentModel.expireAt == true && 
+                                   documents.expireAt == null;
+
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             child: InkWell(
@@ -811,70 +898,128 @@ class InformationScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.grey200, width: 1),
+                  border: Border.all(
+                    color: hasError ? Colors.red : AppColors.grey200, 
+                    width: 1),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: isVerified
-                            ? Colors.green.withValues(alpha: 0.1)
-                            : isUploaded
-                                ? AppColors.primary.withValues(alpha: 0.1)
-                                : Colors.grey.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        isVerified
-                            ? Icons.check_circle_outline_rounded
-                            : Icons.description_outlined,
-                        color: isVerified
-                            ? Colors.green
-                            : (isUploaded
-                                ? AppColors.primary
-                                : Colors.grey.shade600),
-                        size: 26,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: isVerified
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : isUploaded
+                                    ? AppColors.primary.withValues(alpha: 0.1)
+                                    : Colors.grey.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            isVerified
+                                ? Icons.check_circle_outline_rounded
+                                : Icons.description_outlined,
+                            color: isVerified
+                                ? Colors.green
+                                : (isUploaded
+                                    ? AppColors.primary
+                                    : Colors.grey.shade600),
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                Constant.localizationTitle(documentModel.title),
+                                style: AppTypography.boldLabel(context),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isVerified
+                                    ? "Document verified successfully".tr
+                                    : "Tap to upload document".tr,
+                                style: AppTypography.label(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isVerified
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isVerified ? "Verified".tr : "Pending".tr,
+                            style: AppTypography.smBoldLabel(context).copyWith(
+                              color: isVerified
+                                  ? Colors.green.shade700
+                                  : Colors.orange.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
+                    if (hasError) ...[
+                      const SizedBox(height: 8),
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            Constant.localizationTitle(documentModel.title),
-                            style: AppTypography.boldLabel(context),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isVerified
-                                ? "Document verified successfully".tr
-                                : "Tap to upload document".tr,
-                            style: AppTypography.label(context),
-                          ),
+                          if (hasDocumentNumberError) ...[
+                            Text(
+                              "Document number is required".tr,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          if (hasFrontImageError) ...[
+                            Text(
+                              "Front image is required".tr,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          if (hasBackImageError) ...[
+                            Text(
+                              "Back image is required".tr,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          if (hasExpiryDateError) ...[
+                            Text(
+                              "Expiry date is required".tr,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
                         ],
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isVerified
-                            ? Colors.green.withValues(alpha: 0.1)
-                            : Colors.orange.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        isVerified ? "Verified".tr : "Pending".tr,
-                        style: AppTypography.smBoldLabel(context).copyWith(
-                          color: isVerified
-                              ? Colors.green.shade700
-                              : Colors.orange.shade800,
-                        ),
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -958,7 +1103,8 @@ class InformationScreen extends StatelessWidget {
       required String label,
       required String hint,
       required IconData icon,
-      bool obscureText = false}) {
+      bool obscureText = false,
+      String? errorText}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Column(
@@ -974,6 +1120,12 @@ class InformationScreen extends StatelessWidget {
             controller: controller,
             obscureText: obscureText,
             style: AppTypography.input(Get.context!),
+            onChanged: (value) {
+              // Clear validation errors when user starts typing
+              if (value.isNotEmpty) {
+                Get.find<InformationController>().clearValidationErrors();
+              }
+            },
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: AppTypography.input(Get.context!)
@@ -985,17 +1137,32 @@ class InformationScreen extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide:
-                      BorderSide(color: Colors.grey.shade300, width: 1)),
+                  borderSide: BorderSide(
+                      color: errorText != null ? Colors.red : Colors.grey.shade300, 
+                      width: 1)),
               enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide:
-                      BorderSide(color: Colors.grey.shade300, width: 1)),
+                  borderSide: BorderSide(
+                      color: errorText != null ? Colors.red : Colors.grey.shade300, 
+                      width: 1)),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: AppColors.primary, width: 1)),
+                  borderSide: BorderSide(
+                      color: errorText != null ? Colors.red : AppColors.primary, 
+                      width: 1)),
             ),
           ),
+          if (errorText != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              errorText,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.red[700],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1003,7 +1170,7 @@ class InformationScreen extends StatelessWidget {
 
   Widget _buildPhoneField(
       BuildContext context, InformationController controller) {
-    return Padding(
+    return Obx(() => Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1016,7 +1183,12 @@ class InformationScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AppColors.grey200, width: 1),
+              border: Border.all(
+                color: controller.showValidationErrors.value && 
+                       controller.phoneNumberController.value.text.isEmpty
+                    ? Colors.red 
+                    : AppColors.grey200, 
+                width: 1),
             ),
             child: Row(
               children: [
@@ -1037,6 +1209,12 @@ class InformationScreen extends StatelessWidget {
                     controller: controller.phoneNumberController.value,
                     keyboardType: TextInputType.phone,
                     style: AppTypography.input(context),
+                    onChanged: (value) {
+                      // Clear validation errors when user starts typing
+                      if (value.isNotEmpty) {
+                        controller.clearValidationErrors();
+                      }
+                    },
                     decoration: InputDecoration(
                       hintText: "Enter your phone number".tr,
                       hintStyle: AppTypography.input(context)
@@ -1050,10 +1228,149 @@ class InformationScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (controller.showValidationErrors.value && 
+              controller.phoneNumberController.value.text.isEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              "Please enter your phone number".tr,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.red[700],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ],
+      ),
+    ));
+  }
+
+  Widget _buildDateOfBirthField(
+      BuildContext context, InformationController controller) {
+    return Obx(() => EnhancedDateSelector(
+      label: 'Date of Birth'.tr,
+      hintText: 'Select your date of birth'.tr,
+      selectedDate: controller.dateOfBirth.value,
+      onDateSelected: (date) {
+        controller.setDateOfBirth(date);
+      },
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now().subtract(const Duration(days: 18 * 365)), // Must be at least 18
+      isRequired: true,
+      errorText: controller.dateOfBirth.value == null
+          ? "Please select your date of birth".tr
+          : controller.age.value < 18
+              ? "You must be at least 18 years old".tr
+              : null,
+    ));
+  }
+
+  Widget _buildGenderField(
+      BuildContext context, InformationController controller) {
+    return Obx(() => Padding(
+      padding: const EdgeInsets.only(bottom: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Gender'.tr,
+              style: AppTypography.boldLabel(context)
+                  .copyWith(color: AppColors.darkBackground.withValues(alpha: 0.8))),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+            ),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: controller.gender.value == 'Female',
+                  onChanged: (value) {
+                    if (value == true) {
+                      controller.setGender('Female');
+                    }
+                  },
+                  activeColor: AppColors.primary,
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  Icons.female,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Female'.tr,
+                  style: AppTypography.input(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildFemaleConfirmationCheckbox(context, controller),
+          if (controller.showValidationErrors.value && 
+              controller.gender.value.isEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              "Please select your gender".tr,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.red[700],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+          if (controller.showValidationErrors.value && 
+              !controller.confirmFemaleRegistration.value) ...[
+            const SizedBox(height: 8),
+            Text(
+              "Please confirm that you are registering as a female driver".tr,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.red[700],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ],
+      ),
+    ));
+  }
+
+  Widget _buildFemaleConfirmationCheckbox(
+      BuildContext context, InformationController controller) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: controller.confirmFemaleRegistration.value,
+            onChanged: (value) {
+              controller.confirmFemaleRegistration.value = value ?? false;
+            },
+            activeColor: AppColors.primary,
+          ),
+          Expanded(
+            child: Text(
+              "I confirm that I am registering as a female driver".tr,
+              style: AppTypography.caption(context).copyWith(
+                color: Colors.orange.shade800,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
+
 
   void _showVehicleTypeSelector(
       BuildContext context, InformationController controller) {
@@ -1072,6 +1389,7 @@ class InformationScreen extends StatelessWidget {
                 activeColor: AppColors.primary,
                 onChanged: (value) {
                   controller.selectedVehicle.value = value!;
+                  controller.clearValidationErrors();
                   Navigator.pop(context);
                 },
                 title: Text(Constant.localizationName(vehicleType.name),
@@ -1099,6 +1417,7 @@ class InformationScreen extends StatelessWidget {
                 activeColor: AppColors.primary,
                 onChanged: (value) {
                   controller.selectedColor.value = value!;
+                  controller.clearValidationErrors();
                   Navigator.pop(context);
                 },
                 title: Text(color, style: GoogleFonts.poppins()),
@@ -1125,6 +1444,7 @@ class InformationScreen extends StatelessWidget {
                 activeColor: AppColors.primary,
                 onChanged: (value) {
                   controller.seatsController.value.text = value!;
+                  controller.clearValidationErrors();
                   Navigator.pop(context);
                 },
                 title: Text('$seats ${"Seats".tr}', style: GoogleFonts.poppins()),
@@ -1138,7 +1458,7 @@ class InformationScreen extends StatelessWidget {
       BuildContext context, InformationController controller) {
     _showAppBottomSheet(
       context,
-      title: 'Select Service Zones'.tr,
+      title: 'Select Service Areas'.tr,
       child: SizedBox(
         height:
             400, // or use MediaQuery.of(context).size.height * 0.5 for 50% of screen
@@ -1202,6 +1522,7 @@ class InformationScreen extends StatelessWidget {
                                               .firstWhere((z) => z.id == id)
                                               .name))
                                       .join(", ");
+                              controller.clearValidationErrors();
                               Navigator.pop(context);
                             }
                           },
